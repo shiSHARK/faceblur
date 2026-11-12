@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Baseline of scripts/check-internal-ids.py: lines that still carry an internal process ID. It is empty: every
+# pinned line has been rewritten. CI rejects any new entry. Format:
+#   <path><TAB><SHA-256 of the whitespace-stripped line>
+# A pinned line passes only while it is unchanged; any new or edited line is checked. Entries may only be REMOVED
+# (when the owner rewrites the line); adding entries is not allowed.

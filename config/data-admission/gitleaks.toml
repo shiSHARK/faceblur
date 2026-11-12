@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
+# gitleaks configuration for the data-admission guard. Extends the default rule set of the pinned gitleaks
+# version. The guard passes this file explicitly (-c), ignores inline "gitleaks:allow" comments and reads a
+# .gitleaksignore only from this directory, so a commit cannot silence the scan from elsewhere in the tree.
+title = "faceblur data-admission"
+
+[extend]
+useDefault = true

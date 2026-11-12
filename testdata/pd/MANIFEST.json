@@ -1,0 +1,804 @@
+{
+ "generator": "build_pd_fixtures.py",
+ "opencv": "5.0.0",
+ "resampling": "cv2.INTER_AREA, size round-half-up(W*s), round-half-up(H*s)",
+ "window": 640,
+ "face_margin_px": 8,
+ "subset_selector": "select_subset.py",
+ "subset_rule": "Compact subset: per (source, scale) the crop with the most reviewed faces fully inside (ties: most OpenCV boxes >= 0.5, then file name); plus the single-face crop; plus every crop with an OpenCV candidate in [0.495, 0.505). Selection uses only the manifest and the OpenCV reference, never a library or bench result.",
+ "comparison_rule": "The reference test compares library and OpenCV boxes and landmarks clamped to the image bounds ([0, width] x [0, height]) identically on both sides, as in ADR 0009; yunet_reference.json stores the raw OpenCV values.",
+ "files": [
+  {
+   "file": "pd-p01-s025-x00938-y00610.png",
+   "role": "strict",
+   "sha256": "6af7d5662f95b31ec6625969ec87f397b065f9770ec95fc614ed19eb80d875ae",
+   "bytes": 594459,
+   "source": "P01",
+   "source_file": "P01_ppmsca-35519u.tif",
+   "source_sha256": "028fe96959e31e027928e544de0b814adc380ab6773af78e881a38fea267947f",
+   "loc_digital_id": "LC-DIG-ppmsca-35519",
+   "lccn": "2013646606",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/35500/35519u.tif",
+   "source_size": [
+    11057,
+    7810
+   ],
+   "scale": 0.25,
+   "scaled_size": [
+    2764,
+    1953
+   ],
+   "crop_in_scaled": [
+    938,
+    610,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    3752.0,
+    2440.0,
+    2560.0,
+    2560.0
+   ],
+   "reviewed_faces_fully_inside": 13,
+   "png_compression": 9,
+   "selected_because": "best yield for P01 scale 0.25"
+  },
+  {
+   "file": "pd-p01-s035-x01339-y00967.png",
+   "role": "strict",
+   "sha256": "a4f0416189c1e4b45130f1d2e452043d3652dd1e002b77a2f9d48a5468aeb7d8",
+   "bytes": 586995,
+   "source": "P01",
+   "source_file": "P01_ppmsca-35519u.tif",
+   "source_sha256": "028fe96959e31e027928e544de0b814adc380ab6773af78e881a38fea267947f",
+   "loc_digital_id": "LC-DIG-ppmsca-35519",
+   "lccn": "2013646606",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/35500/35519u.tif",
+   "source_size": [
+    11057,
+    7810
+   ],
+   "scale": 0.35,
+   "scaled_size": [
+    3870,
+    2734
+   ],
+   "crop_in_scaled": [
+    1339,
+    967,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    3825.71,
+    2762.86,
+    1828.57,
+    1828.57
+   ],
+   "reviewed_faces_fully_inside": 10,
+   "png_compression": 9,
+   "selected_because": "best yield for P01 scale 0.35"
+  },
+  {
+   "file": "pd-p01-s050-x02090-y01537.png",
+   "role": "strict",
+   "sha256": "73a54ada32edb99421cab2fd3faafb3f95f33b2beebe27e5ec686d99b3a96ab9",
+   "bytes": 584930,
+   "source": "P01",
+   "source_file": "P01_ppmsca-35519u.tif",
+   "source_sha256": "028fe96959e31e027928e544de0b814adc380ab6773af78e881a38fea267947f",
+   "loc_digital_id": "LC-DIG-ppmsca-35519",
+   "lccn": "2013646606",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/35500/35519u.tif",
+   "source_size": [
+    11057,
+    7810
+   ],
+   "scale": 0.5,
+   "scaled_size": [
+    5529,
+    3905
+   ],
+   "crop_in_scaled": [
+    2090,
+    1537,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    4180.0,
+    3074.0,
+    1280.0,
+    1280.0
+   ],
+   "reviewed_faces_fully_inside": 7,
+   "png_compression": 9,
+   "selected_because": "best yield for P01 scale 0.5"
+  },
+  {
+   "file": "pd-p01-s075-x03369-y02443.png",
+   "role": "strict",
+   "sha256": "28d95d935ec5ea2bdeb7a0916793f35775f37541c4b09a246fd406c8499bc95c",
+   "bytes": 551588,
+   "source": "P01",
+   "source_file": "P01_ppmsca-35519u.tif",
+   "source_sha256": "028fe96959e31e027928e544de0b814adc380ab6773af78e881a38fea267947f",
+   "loc_digital_id": "LC-DIG-ppmsca-35519",
+   "lccn": "2013646606",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/35500/35519u.tif",
+   "source_size": [
+    11057,
+    7810
+   ],
+   "scale": 0.75,
+   "scaled_size": [
+    8293,
+    5858
+   ],
+   "crop_in_scaled": [
+    3369,
+    2443,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    4492.0,
+    3257.33,
+    853.33,
+    853.33
+   ],
+   "reviewed_faces_fully_inside": 5,
+   "png_compression": 9,
+   "selected_because": "best yield for P01 scale 0.75"
+  },
+  {
+   "file": "pd-p01-s075-x04860-y02556.png",
+   "role": "strict",
+   "sha256": "b5a94b82a3b77a79785870ed768ad7a4fccbd5a7ec3208404a5fc5426c47646d",
+   "bytes": 560701,
+   "source": "P01",
+   "source_file": "P01_ppmsca-35519u.tif",
+   "source_sha256": "028fe96959e31e027928e544de0b814adc380ab6773af78e881a38fea267947f",
+   "loc_digital_id": "LC-DIG-ppmsca-35519",
+   "lccn": "2013646606",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/35500/35519u.tif",
+   "source_size": [
+    11057,
+    7810
+   ],
+   "scale": 0.75,
+   "scaled_size": [
+    8293,
+    5858
+   ],
+   "crop_in_scaled": [
+    4860,
+    2556,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    6480.0,
+    3408.0,
+    853.33,
+    853.33
+   ],
+   "reviewed_faces_fully_inside": 1,
+   "png_compression": 9,
+   "selected_because": "borderline candidate in [0.495, 0.505)"
+  },
+  {
+   "file": "pd-p01-s100-x05759-y03433.png",
+   "role": "strict",
+   "sha256": "9540252d5b4d9d0ba09496ca4f0663a33a40cd65f01e5a31712ab137d3cf96c4",
+   "bytes": 661606,
+   "source": "P01",
+   "source_file": "P01_ppmsca-35519u.tif",
+   "source_sha256": "028fe96959e31e027928e544de0b814adc380ab6773af78e881a38fea267947f",
+   "loc_digital_id": "LC-DIG-ppmsca-35519",
+   "lccn": "2013646606",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/35500/35519u.tif",
+   "source_size": [
+    11057,
+    7810
+   ],
+   "scale": 1.0,
+   "scaled_size": [
+    11057,
+    7810
+   ],
+   "crop_in_scaled": [
+    5759,
+    3433,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    5759.0,
+    3433.0,
+    640.0,
+    640.0
+   ],
+   "reviewed_faces_fully_inside": 4,
+   "png_compression": 9,
+   "selected_because": "best yield for P01 scale 1.0"
+  },
+  {
+   "file": "pd-p03-s025-x00000-y00014.png",
+   "role": "strict",
+   "sha256": "3cbbeb88843c0eb19ca5221114f9c278f6b52915927abed82cdd4873e231f380",
+   "bytes": 298639,
+   "source": "P03",
+   "source_file": "P03_cwpb-00269u.tif",
+   "source_sha256": "2b280038a6a1000ed45b3aa0071761f18f20e6f97c416401dfeb1e8fd2f5fcf0",
+   "loc_digital_id": "LC-DIG-cwpb-00269",
+   "lccn": "2018671862",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/cwpb/00200/00269u.tif",
+   "source_size": [
+    7500,
+    3137
+   ],
+   "scale": 0.25,
+   "scaled_size": [
+    1875,
+    784
+   ],
+   "crop_in_scaled": [
+    0,
+    14,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    0.0,
+    56.0,
+    2560.0,
+    2560.0
+   ],
+   "reviewed_faces_fully_inside": 5,
+   "png_compression": 9,
+   "selected_because": "best yield for P03 scale 0.25"
+  },
+  {
+   "file": "pd-p03-s035-x00277-y00161.png",
+   "role": "strict",
+   "sha256": "7900975a449a7891374fd829181b161d12eeefbcec94638a77def9ccd2673250",
+   "bytes": 292862,
+   "source": "P03",
+   "source_file": "P03_cwpb-00269u.tif",
+   "source_sha256": "2b280038a6a1000ed45b3aa0071761f18f20e6f97c416401dfeb1e8fd2f5fcf0",
+   "loc_digital_id": "LC-DIG-cwpb-00269",
+   "lccn": "2018671862",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/cwpb/00200/00269u.tif",
+   "source_size": [
+    7500,
+    3137
+   ],
+   "scale": 0.35,
+   "scaled_size": [
+    2625,
+    1098
+   ],
+   "crop_in_scaled": [
+    277,
+    161,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    791.43,
+    460.0,
+    1828.57,
+    1828.57
+   ],
+   "reviewed_faces_fully_inside": 5,
+   "png_compression": 9,
+   "selected_because": "best yield for P03 scale 0.35"
+  },
+  {
+   "file": "pd-p03-s050-x00532-y00367.png",
+   "role": "strict",
+   "sha256": "7827ff924013b46d028146cff0ef213014b480343538d23424058f5e422d3440",
+   "bytes": 303358,
+   "source": "P03",
+   "source_file": "P03_cwpb-00269u.tif",
+   "source_sha256": "2b280038a6a1000ed45b3aa0071761f18f20e6f97c416401dfeb1e8fd2f5fcf0",
+   "loc_digital_id": "LC-DIG-cwpb-00269",
+   "lccn": "2018671862",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/cwpb/00200/00269u.tif",
+   "source_size": [
+    7500,
+    3137
+   ],
+   "scale": 0.5,
+   "scaled_size": [
+    3750,
+    1569
+   ],
+   "crop_in_scaled": [
+    532,
+    367,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    1064.0,
+    734.0,
+    1280.0,
+    1280.0
+   ],
+   "reviewed_faces_fully_inside": 5,
+   "png_compression": 9,
+   "selected_because": "best yield for P03 scale 0.5"
+  },
+  {
+   "file": "pd-p03-s075-x01154-y00684.png",
+   "role": "strict",
+   "sha256": "d3421be3957847e989a86a5e2adf64555798f3e2b4cc21bee2bfea26febd16ac",
+   "bytes": 288322,
+   "source": "P03",
+   "source_file": "P03_cwpb-00269u.tif",
+   "source_sha256": "2b280038a6a1000ed45b3aa0071761f18f20e6f97c416401dfeb1e8fd2f5fcf0",
+   "loc_digital_id": "LC-DIG-cwpb-00269",
+   "lccn": "2018671862",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/cwpb/00200/00269u.tif",
+   "source_size": [
+    7500,
+    3137
+   ],
+   "scale": 0.75,
+   "scaled_size": [
+    5625,
+    2353
+   ],
+   "crop_in_scaled": [
+    1154,
+    684,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    1538.67,
+    912.0,
+    853.33,
+    853.33
+   ],
+   "reviewed_faces_fully_inside": 3,
+   "png_compression": 9,
+   "selected_because": "best yield for P03 scale 0.75"
+  },
+  {
+   "file": "pd-p03-s100-x01141-y01015.png",
+   "role": "strict",
+   "sha256": "6a440039914f7ceb456544bda6b826f34a38bff0fdb0dbbc4ac9e6fedacaf79e",
+   "bytes": 308448,
+   "source": "P03",
+   "source_file": "P03_cwpb-00269u.tif",
+   "source_sha256": "2b280038a6a1000ed45b3aa0071761f18f20e6f97c416401dfeb1e8fd2f5fcf0",
+   "loc_digital_id": "LC-DIG-cwpb-00269",
+   "lccn": "2018671862",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/cwpb/00200/00269u.tif",
+   "source_size": [
+    7500,
+    3137
+   ],
+   "scale": 1.0,
+   "scaled_size": [
+    7500,
+    3137
+   ],
+   "crop_in_scaled": [
+    1141,
+    1015,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    1141.0,
+    1015.0,
+    640.0,
+    640.0
+   ],
+   "reviewed_faces_fully_inside": 2,
+   "png_compression": 9,
+   "selected_because": "best yield for P03 scale 1.0"
+  },
+  {
+   "file": "pd-p06-s026-x00000-y00191.png",
+   "role": "strict",
+   "sha256": "638860551ed8bfad2565a130f0e8e0b836ba428afcbaff6524a73fccd9bac024",
+   "bytes": 666369,
+   "source": "P06",
+   "source_file": "P06_ppmsca-87046u.tif",
+   "source_sha256": "1594c6b461bf90b0891ddbda14deeab20c9b26e42da9f27939cf4c8c13a4bf34",
+   "loc_digital_id": "LC-DIG-ppmsca-87046",
+   "lccn": "2023631085",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/87000/87046u.tif",
+   "source_size": [
+    2532,
+    4128
+   ],
+   "scale": 0.26,
+   "scaled_size": [
+    658,
+    1073
+   ],
+   "crop_in_scaled": [
+    0,
+    191,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    0.0,
+    734.62,
+    2461.54,
+    2461.54
+   ],
+   "reviewed_faces_fully_inside": 6,
+   "png_compression": 9,
+   "selected_because": "best yield for P06 scale 0.26"
+  },
+  {
+   "file": "pd-p06-s035-x00145-y00379.png",
+   "role": "strict",
+   "sha256": "c1fd3870ade10668df70ddc065b32631adee37885804478de9ec3322310f4c76",
+   "bytes": 649739,
+   "source": "P06",
+   "source_file": "P06_ppmsca-87046u.tif",
+   "source_sha256": "1594c6b461bf90b0891ddbda14deeab20c9b26e42da9f27939cf4c8c13a4bf34",
+   "loc_digital_id": "LC-DIG-ppmsca-87046",
+   "lccn": "2023631085",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/87000/87046u.tif",
+   "source_size": [
+    2532,
+    4128
+   ],
+   "scale": 0.35,
+   "scaled_size": [
+    886,
+    1445
+   ],
+   "crop_in_scaled": [
+    145,
+    379,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    414.29,
+    1082.86,
+    1828.57,
+    1828.57
+   ],
+   "reviewed_faces_fully_inside": 6,
+   "png_compression": 9,
+   "selected_because": "best yield for P06 scale 0.35"
+  },
+  {
+   "file": "pd-p06-s050-x00258-y00663.png",
+   "role": "strict",
+   "sha256": "0eccb129787fa4f87773a58e284f5a118b1adbf323ffb663585956024c303e43",
+   "bytes": 641569,
+   "source": "P06",
+   "source_file": "P06_ppmsca-87046u.tif",
+   "source_sha256": "1594c6b461bf90b0891ddbda14deeab20c9b26e42da9f27939cf4c8c13a4bf34",
+   "loc_digital_id": "LC-DIG-ppmsca-87046",
+   "lccn": "2023631085",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/87000/87046u.tif",
+   "source_size": [
+    2532,
+    4128
+   ],
+   "scale": 0.5,
+   "scaled_size": [
+    1266,
+    2064
+   ],
+   "crop_in_scaled": [
+    258,
+    663,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    516.0,
+    1326.0,
+    1280.0,
+    1280.0
+   ],
+   "reviewed_faces_fully_inside": 4,
+   "png_compression": 9,
+   "selected_because": "best yield for P06 scale 0.5"
+  },
+  {
+   "file": "pd-p06-s075-x00950-y01178.png",
+   "role": "strict",
+   "sha256": "a6e7845be10736e3816a08db1ac4e82ce18a89b14449583c73587260a2ef2beb",
+   "bytes": 585346,
+   "source": "P06",
+   "source_file": "P06_ppmsca-87046u.tif",
+   "source_sha256": "1594c6b461bf90b0891ddbda14deeab20c9b26e42da9f27939cf4c8c13a4bf34",
+   "loc_digital_id": "LC-DIG-ppmsca-87046",
+   "lccn": "2023631085",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/87000/87046u.tif",
+   "source_size": [
+    2532,
+    4128
+   ],
+   "scale": 0.75,
+   "scaled_size": [
+    1899,
+    3096
+   ],
+   "crop_in_scaled": [
+    950,
+    1178,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    1266.67,
+    1570.67,
+    853.33,
+    853.33
+   ],
+   "reviewed_faces_fully_inside": 4,
+   "png_compression": 9,
+   "selected_because": "best yield for P06 scale 0.75"
+  },
+  {
+   "file": "pd-p06-s100-x01377-y01454.png",
+   "role": "strict",
+   "sha256": "a3a203061433f6333f75077ed605e0b5c51c31ffa5e4054d7a3e90416f6a3708",
+   "bytes": 614221,
+   "source": "P06",
+   "source_file": "P06_ppmsca-87046u.tif",
+   "source_sha256": "1594c6b461bf90b0891ddbda14deeab20c9b26e42da9f27939cf4c8c13a4bf34",
+   "loc_digital_id": "LC-DIG-ppmsca-87046",
+   "lccn": "2023631085",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/87000/87046u.tif",
+   "source_size": [
+    2532,
+    4128
+   ],
+   "scale": 1.0,
+   "scaled_size": [
+    2532,
+    4128
+   ],
+   "crop_in_scaled": [
+    1377,
+    1454,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    1377.0,
+    1454.0,
+    640.0,
+    640.0
+   ],
+   "reviewed_faces_fully_inside": 2,
+   "png_compression": 9,
+   "selected_because": "best yield for P06 scale 1.0"
+  },
+  {
+   "file": "pd-p06-single-face-s100-x00200-y01600.png",
+   "role": "single-face",
+   "sha256": "b1377fec3446c8baf4189fbb8c155759ac6c052a6b000fe202e5409c8b8ce77d",
+   "bytes": 610364,
+   "source": "P06",
+   "source_file": "P06_ppmsca-87046u.tif",
+   "source_sha256": "1594c6b461bf90b0891ddbda14deeab20c9b26e42da9f27939cf4c8c13a4bf34",
+   "loc_digital_id": "LC-DIG-ppmsca-87046",
+   "lccn": "2023631085",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/87000/87046u.tif",
+   "source_size": [
+    2532,
+    4128
+   ],
+   "scale": 1.0,
+   "scaled_size": [
+    2532,
+    4128
+   ],
+   "crop_in_scaled": [
+    200,
+    1600,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    200.0,
+    1600.0,
+    640.0,
+    640.0
+   ],
+   "reviewed_faces_fully_inside": 1,
+   "png_compression": 9,
+   "selected_because": "single-face crop (walking-skeleton test)"
+  },
+  {
+   "file": "pd-p07-s026-x00183-y00018.png",
+   "role": "strict",
+   "sha256": "34c8f590a71553ce468e5cc705c2a97740f8a008f46ad554b345e60060d1c521",
+   "bytes": 624570,
+   "source": "P07",
+   "source_file": "P07_ppmsca-70251u.tif",
+   "source_sha256": "6e39dfc2c8f1a20c51e9087d2f7b9ecb6a56485d80bc2b5ed8cb65e303074e57",
+   "loc_digital_id": "LC-DIG-ppmsca-70251",
+   "lccn": "2020634812",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/70200/70251u.tif",
+   "source_size": [
+    4101,
+    2531
+   ],
+   "scale": 0.26,
+   "scaled_size": [
+    1066,
+    658
+   ],
+   "crop_in_scaled": [
+    183,
+    18,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    703.85,
+    69.23,
+    2461.54,
+    2461.54
+   ],
+   "reviewed_faces_fully_inside": 9,
+   "png_compression": 9,
+   "selected_because": "best yield for P07 scale 0.26"
+  },
+  {
+   "file": "pd-p07-s035-x00442-y00052.png",
+   "role": "strict",
+   "sha256": "baacc39e8e1fd3fcd3b3bae8db97fdbf6c7c4b8503848ae80895eaec2ec7297b",
+   "bytes": 624172,
+   "source": "P07",
+   "source_file": "P07_ppmsca-70251u.tif",
+   "source_sha256": "6e39dfc2c8f1a20c51e9087d2f7b9ecb6a56485d80bc2b5ed8cb65e303074e57",
+   "loc_digital_id": "LC-DIG-ppmsca-70251",
+   "lccn": "2020634812",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/70200/70251u.tif",
+   "source_size": [
+    4101,
+    2531
+   ],
+   "scale": 0.35,
+   "scaled_size": [
+    1435,
+    886
+   ],
+   "crop_in_scaled": [
+    442,
+    52,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    1262.86,
+    148.57,
+    1828.57,
+    1828.57
+   ],
+   "reviewed_faces_fully_inside": 9,
+   "png_compression": 9,
+   "selected_because": "best yield for P07 scale 0.35"
+  },
+  {
+   "file": "pd-p07-s050-x00635-y00212.png",
+   "role": "strict",
+   "sha256": "36493b92aabad1ae3a3cfa1c594ad7e948ffd6c0078c38d28084870de6ac005f",
+   "bytes": 612450,
+   "source": "P07",
+   "source_file": "P07_ppmsca-70251u.tif",
+   "source_sha256": "6e39dfc2c8f1a20c51e9087d2f7b9ecb6a56485d80bc2b5ed8cb65e303074e57",
+   "loc_digital_id": "LC-DIG-ppmsca-70251",
+   "lccn": "2020634812",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/70200/70251u.tif",
+   "source_size": [
+    4101,
+    2531
+   ],
+   "scale": 0.5,
+   "scaled_size": [
+    2051,
+    1266
+   ],
+   "crop_in_scaled": [
+    635,
+    212,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    1270.0,
+    424.0,
+    1280.0,
+    1280.0
+   ],
+   "reviewed_faces_fully_inside": 7,
+   "png_compression": 7,
+   "selected_because": "best yield for P07 scale 0.5"
+  },
+  {
+   "file": "pd-p07-s075-x01273-y00525.png",
+   "role": "strict",
+   "sha256": "ae1ec8774c64a815455742b39a699d19d50a4870b3de3bad36be3e67a5924554",
+   "bytes": 613709,
+   "source": "P07",
+   "source_file": "P07_ppmsca-70251u.tif",
+   "source_sha256": "6e39dfc2c8f1a20c51e9087d2f7b9ecb6a56485d80bc2b5ed8cb65e303074e57",
+   "loc_digital_id": "LC-DIG-ppmsca-70251",
+   "lccn": "2020634812",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/70200/70251u.tif",
+   "source_size": [
+    4101,
+    2531
+   ],
+   "scale": 0.75,
+   "scaled_size": [
+    3076,
+    1898
+   ],
+   "crop_in_scaled": [
+    1273,
+    525,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    1697.33,
+    700.0,
+    853.33,
+    853.33
+   ],
+   "reviewed_faces_fully_inside": 5,
+   "png_compression": 9,
+   "selected_because": "best yield for P07 scale 0.75"
+  },
+  {
+   "file": "pd-p07-s100-x01616-y01074.png",
+   "role": "strict",
+   "sha256": "c68aecefe78a4912d0a9689a14a1f243527bbb1af4c43ec47a1d9633e15e8c8e",
+   "bytes": 698721,
+   "source": "P07",
+   "source_file": "P07_ppmsca-70251u.tif",
+   "source_sha256": "6e39dfc2c8f1a20c51e9087d2f7b9ecb6a56485d80bc2b5ed8cb65e303074e57",
+   "loc_digital_id": "LC-DIG-ppmsca-70251",
+   "lccn": "2020634812",
+   "source_url": "https://tile.loc.gov/storage-services/master/pnp/ppmsca/70200/70251u.tif",
+   "source_size": [
+    4101,
+    2531
+   ],
+   "scale": 1.0,
+   "scaled_size": [
+    4101,
+    2531
+   ],
+   "crop_in_scaled": [
+    1616,
+    1074,
+    640,
+    640
+   ],
+   "crop_in_source": [
+    1616.0,
+    1074.0,
+    640.0,
+    640.0
+   ],
+   "reviewed_faces_fully_inside": 2,
+   "png_compression": 9,
+   "selected_because": "best yield for P07 scale 1.0"
+  }
+ ]
+}

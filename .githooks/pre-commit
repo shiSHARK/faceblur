@@ -1,0 +1,61 @@
+#!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# 1. Data-admission guard: staged content, identity, gitleaks --staged (config/data-admission/README.md).
+# 2. SPDX line on staged source files (LIC-001). 3. Wording lint on staged files (DOC-008; NOT RUN until the
+#    legal term list exists). Checks 2 and 3 read the STAGED content (exported to a temporary directory), not the
+#    working tree; the wording lint uses the STAGED term and allow lists, including when this commit changes them,
+#    and then checks every tracked public text file. Once the term list is committed, a commit that removes,
+#    renames or empties it is rejected (the lint runs with --require).
+#    4. No figures from internal data (scripts/check-internal-figures.py: internal-data wording near a number) in the
+#    staged files; when this commit changes its term or allow list, in every tracked file.
+#    Never bypass these hooks.
+set -eu
+top=$(git rev-parse --show-toplevel)
+cd "$top"
+sh config/data-admission/check.sh pre-commit
+terms=config/wording/terms.txt
+require=""
+if git cat-file -e "HEAD:$terms" 2>/dev/null; then
+    require=--require
+    if ! git cat-file -e ":$terms" 2>/dev/null; then
+        echo "pre-commit: $terms cannot be removed or renamed; the wording lint requires it (DOC-008)" >&2
+        exit 1
+    fi
+fi
+staged=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRT)
+[ -n "$staged" ] || exit 0
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT INT TERM
+# Export the staged files and the wording configuration from the index in ONE call (a path that is both staged and
+# part of the configuration is exported once; exporting it twice made checkout-index refuse and the hook abort).
+# If this commit changes the term or allow list, the new list is applied to EVERY tracked public text file (same
+# file set as the CI run of scripts/check-wording.sh), not only to the staged ones.
+# The wording lint covers the same file set as its CI run; the scope is defined once, in scripts/check-wording.sh
+# (public text, ABI dumps, string resources, production and sample sources incl. KDoc; not tests, not scripts).
+wording_targets=$(printf '%s\n' "$staged" | sh "$top/scripts/check-wording.sh" --scope-filter)
+if printf '%s\n' "$staged" | grep -q '^config/wording/'; then
+    wording_targets=$(git -c core.quotePath=false ls-files | sh "$top/scripts/check-wording.sh" --scope-filter)
+fi
+figure_config='scripts/internal-figures-terms.txt scripts/internal-figures-allow.txt'
+figure_targets=$staged
+if printf '%s\n' "$staged" | grep -q -x -e scripts/internal-figures-terms.txt -e scripts/internal-figures-allow.txt; then
+    figure_targets=$(git -c core.quotePath=false ls-files)
+fi
+# shellcheck disable=SC2086 # two fixed paths
+export_list=$(printf '%s\n' "$staged" "$wording_targets" "$figure_targets" "$(git -c core.quotePath=false ls-files -- \
+    'config/wording/*' scripts/internal-id-baseline.txt $figure_config)" | sed '/^$/d' | sort -u)
+# shellcheck disable=SC2086 # one path per word; repository paths contain no spaces (data admission)
+git checkout-index --prefix="$tmp/" -- $export_list
+cd "$tmp"
+# shellcheck disable=SC2086
+sh "$top/scripts/check-spdx.sh" $staged
+# No internal process IDs or workspace paths in staged files (pinned baseline lines excepted).
+# shellcheck disable=SC2086
+python3 -I "$top/scripts/check-internal-ids.py" --files $staged
+# The term list itself is always passed: the lint validates it (present with --require, entries, valid expressions)
+# even when no public text file is staged; it skips config/wording/* when scanning.
+# shellcheck disable=SC2086
+sh "$top/scripts/check-wording.sh" $require config/wording/terms.txt $wording_targets
+# No figures from internal data in the staged files (the staged term and allow lists apply).
+# shellcheck disable=SC2086
+python3 -I "$top/scripts/check-internal-figures.py" --files $figure_targets

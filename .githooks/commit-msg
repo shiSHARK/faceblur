@@ -1,0 +1,13 @@
+#!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# 1. Data-admission guard: commit message + identity (config/data-admission/README.md).
+# 2. DCO sign-off by the commit author (LIC-006; use `git commit -s`).
+# 3. No internal process IDs or workspace paths in the message (scripts/check-internal-ids.py).
+# 4. No figures from internal data in the message (scripts/check-internal-figures.py; committed term list).
+set -eu
+top=$(git rev-parse --show-toplevel)
+sh "$top/config/data-admission/check.sh" commit-msg "$1"
+sh "$top/scripts/check-dco.sh" --message "$1"
+python3 -I "$top/scripts/check-internal-ids.py" --message "$1"
+cd "$top"
+python3 -I scripts/check-internal-figures.py --message "$1"

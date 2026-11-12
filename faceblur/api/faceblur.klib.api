@@ -1,0 +1,785 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.shishark:faceblur>
+final enum class io.github.shishark.faceblur.ios/IosPixelLayout : kotlin/Enum<io.github.shishark.faceblur.ios/IosPixelLayout> { // io.github.shishark.faceblur.ios/IosPixelLayout|null[0]
+    enum entry BGRA_NONE_SKIP // io.github.shishark.faceblur.ios/IosPixelLayout.BGRA_NONE_SKIP|null[0]
+    enum entry BGRA_PREMULTIPLIED // io.github.shishark.faceblur.ios/IosPixelLayout.BGRA_PREMULTIPLIED|null[0]
+    enum entry RGBA_NONE_SKIP // io.github.shishark.faceblur.ios/IosPixelLayout.RGBA_NONE_SKIP|null[0]
+    enum entry RGBA_PREMULTIPLIED // io.github.shishark.faceblur.ios/IosPixelLayout.RGBA_PREMULTIPLIED|null[0]
+
+    final val entries // io.github.shishark.faceblur.ios/IosPixelLayout.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.shishark.faceblur.ios/IosPixelLayout> // io.github.shishark.faceblur.ios/IosPixelLayout.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.shishark.faceblur.ios/IosPixelLayout // io.github.shishark.faceblur.ios/IosPixelLayout.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.shishark.faceblur.ios/IosPixelLayout> // io.github.shishark.faceblur.ios/IosPixelLayout.values|values#static(){}[0]
+}
+
+final enum class io.github.shishark.faceblur/BoxFormat : kotlin/Enum<io.github.shishark.faceblur/BoxFormat> { // io.github.shishark.faceblur/BoxFormat|null[0]
+    enum entry CXCYWH // io.github.shishark.faceblur/BoxFormat.CXCYWH|null[0]
+    enum entry XYWH // io.github.shishark.faceblur/BoxFormat.XYWH|null[0]
+    enum entry XYXY // io.github.shishark.faceblur/BoxFormat.XYXY|null[0]
+
+    final val entries // io.github.shishark.faceblur/BoxFormat.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.shishark.faceblur/BoxFormat> // io.github.shishark.faceblur/BoxFormat.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.shishark.faceblur/BoxFormat // io.github.shishark.faceblur/BoxFormat.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.shishark.faceblur/BoxFormat> // io.github.shishark.faceblur/BoxFormat.values|values#static(){}[0]
+}
+
+final enum class io.github.shishark.faceblur/ColorOrder : kotlin/Enum<io.github.shishark.faceblur/ColorOrder> { // io.github.shishark.faceblur/ColorOrder|null[0]
+    enum entry BGR // io.github.shishark.faceblur/ColorOrder.BGR|null[0]
+    enum entry RGB // io.github.shishark.faceblur/ColorOrder.RGB|null[0]
+
+    final val entries // io.github.shishark.faceblur/ColorOrder.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.shishark.faceblur/ColorOrder> // io.github.shishark.faceblur/ColorOrder.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.shishark.faceblur/ColorOrder // io.github.shishark.faceblur/ColorOrder.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.shishark.faceblur/ColorOrder> // io.github.shishark.faceblur/ColorOrder.values|values#static(){}[0]
+}
+
+final enum class io.github.shishark.faceblur/CoordinateSpace : kotlin/Enum<io.github.shishark.faceblur/CoordinateSpace> { // io.github.shishark.faceblur/CoordinateSpace|null[0]
+    enum entry INPUT_PIXELS // io.github.shishark.faceblur/CoordinateSpace.INPUT_PIXELS|null[0]
+    enum entry NORMALIZED // io.github.shishark.faceblur/CoordinateSpace.NORMALIZED|null[0]
+
+    final val entries // io.github.shishark.faceblur/CoordinateSpace.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.shishark.faceblur/CoordinateSpace> // io.github.shishark.faceblur/CoordinateSpace.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.shishark.faceblur/CoordinateSpace // io.github.shishark.faceblur/CoordinateSpace.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.shishark.faceblur/CoordinateSpace> // io.github.shishark.faceblur/CoordinateSpace.values|values#static(){}[0]
+}
+
+final enum class io.github.shishark.faceblur/MaskOrigin : kotlin/Enum<io.github.shishark.faceblur/MaskOrigin> { // io.github.shishark.faceblur/MaskOrigin|null[0]
+    enum entry DETECTED // io.github.shishark.faceblur/MaskOrigin.DETECTED|null[0]
+    enum entry MANUAL // io.github.shishark.faceblur/MaskOrigin.MANUAL|null[0]
+
+    final val entries // io.github.shishark.faceblur/MaskOrigin.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.shishark.faceblur/MaskOrigin> // io.github.shishark.faceblur/MaskOrigin.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.shishark.faceblur/MaskOrigin // io.github.shishark.faceblur/MaskOrigin.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.shishark.faceblur/MaskOrigin> // io.github.shishark.faceblur/MaskOrigin.values|values#static(){}[0]
+}
+
+final enum class io.github.shishark.faceblur/MaskShape : kotlin/Enum<io.github.shishark.faceblur/MaskShape> { // io.github.shishark.faceblur/MaskShape|null[0]
+    enum entry ELLIPSE // io.github.shishark.faceblur/MaskShape.ELLIPSE|null[0]
+    enum entry RECTANGLE // io.github.shishark.faceblur/MaskShape.RECTANGLE|null[0]
+
+    final val entries // io.github.shishark.faceblur/MaskShape.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.shishark.faceblur/MaskShape> // io.github.shishark.faceblur/MaskShape.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.shishark.faceblur/MaskShape // io.github.shishark.faceblur/MaskShape.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.shishark.faceblur/MaskShape> // io.github.shishark.faceblur/MaskShape.values|values#static(){}[0]
+}
+
+final enum class io.github.shishark.faceblur/MaskStyle : kotlin/Enum<io.github.shishark.faceblur/MaskStyle> { // io.github.shishark.faceblur/MaskStyle|null[0]
+    enum entry GRADIENT_OVAL // io.github.shishark.faceblur/MaskStyle.GRADIENT_OVAL|null[0]
+    enum entry SMOOTH_FILL // io.github.shishark.faceblur/MaskStyle.SMOOTH_FILL|null[0]
+    enum entry SOLID // io.github.shishark.faceblur/MaskStyle.SOLID|null[0]
+
+    final val entries // io.github.shishark.faceblur/MaskStyle.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.shishark.faceblur/MaskStyle> // io.github.shishark.faceblur/MaskStyle.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.shishark.faceblur/MaskStyle // io.github.shishark.faceblur/MaskStyle.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.shishark.faceblur/MaskStyle> // io.github.shishark.faceblur/MaskStyle.values|values#static(){}[0]
+}
+
+final enum class io.github.shishark.faceblur/RowLayout : kotlin/Enum<io.github.shishark.faceblur/RowLayout> { // io.github.shishark.faceblur/RowLayout|null[0]
+    enum entry COLUMNS // io.github.shishark.faceblur/RowLayout.COLUMNS|null[0]
+    enum entry ROWS // io.github.shishark.faceblur/RowLayout.ROWS|null[0]
+
+    final val entries // io.github.shishark.faceblur/RowLayout.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.shishark.faceblur/RowLayout> // io.github.shishark.faceblur/RowLayout.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.shishark.faceblur/RowLayout // io.github.shishark.faceblur/RowLayout.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.shishark.faceblur/RowLayout> // io.github.shishark.faceblur/RowLayout.values|values#static(){}[0]
+}
+
+final enum class io.github.shishark.faceblur/TensorLayout : kotlin/Enum<io.github.shishark.faceblur/TensorLayout> { // io.github.shishark.faceblur/TensorLayout|null[0]
+    enum entry NCHW // io.github.shishark.faceblur/TensorLayout.NCHW|null[0]
+    enum entry NHWC // io.github.shishark.faceblur/TensorLayout.NHWC|null[0]
+
+    final val entries // io.github.shishark.faceblur/TensorLayout.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.shishark.faceblur/TensorLayout> // io.github.shishark.faceblur/TensorLayout.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.shishark.faceblur/TensorLayout // io.github.shishark.faceblur/TensorLayout.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.shishark.faceblur/TensorLayout> // io.github.shishark.faceblur/TensorLayout.values|values#static(){}[0]
+}
+
+abstract fun interface io.github.shishark.faceblur.ios/OnnxBridgeFactory { // io.github.shishark.faceblur.ios/OnnxBridgeFactory|null[0]
+    abstract fun create(): io.github.shishark.faceblur.ios/OnnxBridge // io.github.shishark.faceblur.ios/OnnxBridgeFactory.create|create(){}[0]
+}
+
+abstract interface io.github.shishark.faceblur.ios/OnnxBridge { // io.github.shishark.faceblur.ios/OnnxBridge|null[0]
+    abstract fun close() // io.github.shishark.faceblur.ios/OnnxBridge.close|close(){}[0]
+    abstract fun executionProvider(): kotlin/String // io.github.shishark.faceblur.ios/OnnxBridge.executionProvider|executionProvider(){}[0]
+    abstract fun open(kotlin/Long, kotlin/Long, kotlin/Int, kotlin/String, kotlin/LongArray, kotlin.collections/List<kotlin/String>): kotlin/Int // io.github.shishark.faceblur.ios/OnnxBridge.open|open(kotlin.Long;kotlin.Long;kotlin.Int;kotlin.String;kotlin.LongArray;kotlin.collections.List<kotlin.String>){}[0]
+    abstract fun run(kotlin/Long, kotlin/Long, kotlin/Long): kotlin/Int // io.github.shishark.faceblur.ios/OnnxBridge.run|run(kotlin.Long;kotlin.Long;kotlin.Long){}[0]
+    abstract fun runtimeVersion(): kotlin/String // io.github.shishark.faceblur.ios/OnnxBridge.runtimeVersion|runtimeVersion(){}[0]
+
+    final object Companion { // io.github.shishark.faceblur.ios/OnnxBridge.Companion|null[0]
+        final const val OUTPUT_ROW_LONGS // io.github.shishark.faceblur.ios/OnnxBridge.Companion.OUTPUT_ROW_LONGS|{}OUTPUT_ROW_LONGS[0]
+            final fun <get-OUTPUT_ROW_LONGS>(): kotlin/Int // io.github.shishark.faceblur.ios/OnnxBridge.Companion.OUTPUT_ROW_LONGS.<get-OUTPUT_ROW_LONGS>|<get-OUTPUT_ROW_LONGS>(){}[0]
+    }
+}
+
+abstract interface io.github.shishark.faceblur/CancellationToken { // io.github.shishark.faceblur/CancellationToken|null[0]
+    abstract val isCancellationRequested // io.github.shishark.faceblur/CancellationToken.isCancellationRequested|{}isCancellationRequested[0]
+        abstract fun <get-isCancellationRequested>(): kotlin/Boolean // io.github.shishark.faceblur/CancellationToken.isCancellationRequested.<get-isCancellationRequested>|<get-isCancellationRequested>(){}[0]
+}
+
+abstract interface io.github.shishark.faceblur/MutablePixelImage : io.github.shishark.faceblur/PixelImage { // io.github.shishark.faceblur/MutablePixelImage|null[0]
+    abstract fun writePixels(kotlin/Int, kotlin/Int, kotlin/Int, kotlin/Int, kotlin/IntArray) // io.github.shishark.faceblur/MutablePixelImage.writePixels|writePixels(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.IntArray){}[0]
+}
+
+abstract interface io.github.shishark.faceblur/PixelImage { // io.github.shishark.faceblur/PixelImage|null[0]
+    abstract val height // io.github.shishark.faceblur/PixelImage.height|{}height[0]
+        abstract fun <get-height>(): kotlin/Int // io.github.shishark.faceblur/PixelImage.height.<get-height>|<get-height>(){}[0]
+    abstract val width // io.github.shishark.faceblur/PixelImage.width|{}width[0]
+        abstract fun <get-width>(): kotlin/Int // io.github.shishark.faceblur/PixelImage.width.<get-width>|<get-width>(){}[0]
+
+    abstract fun readPixels(kotlin/Int, kotlin/Int, kotlin/Int, kotlin/Int, kotlin/IntArray) // io.github.shishark.faceblur/PixelImage.readPixels|readPixels(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.IntArray){}[0]
+}
+
+final class io.github.shishark.faceblur.ios/EncodedJpeg { // io.github.shishark.faceblur.ios/EncodedJpeg|null[0]
+    final val byteCount // io.github.shishark.faceblur.ios/EncodedJpeg.byteCount|{}byteCount[0]
+        final fun <get-byteCount>(): kotlin/Int // io.github.shishark.faceblur.ios/EncodedJpeg.byteCount.<get-byteCount>|<get-byteCount>(){}[0]
+
+    final fun exportTo(kotlin/Long, kotlin/Long) // io.github.shishark.faceblur.ios/EncodedJpeg.exportTo|exportTo(kotlin.Long;kotlin.Long){}[0]
+    final fun toByteArray(): kotlin/ByteArray // io.github.shishark.faceblur.ios/EncodedJpeg.toByteArray|toByteArray(){}[0]
+}
+
+final class io.github.shishark.faceblur/Detection { // io.github.shishark.faceblur/Detection|null[0]
+    final val faces // io.github.shishark.faceblur/Detection.faces|{}faces[0]
+        final fun <get-faces>(): kotlin.collections/List<io.github.shishark.faceblur/FaceBox> // io.github.shishark.faceblur/Detection.faces.<get-faces>|<get-faces>(){}[0]
+    final val hasGainMap // io.github.shishark.faceblur/Detection.hasGainMap|{}hasGainMap[0]
+        final fun <get-hasGainMap>(): kotlin/Boolean // io.github.shishark.faceblur/Detection.hasGainMap.<get-hasGainMap>|<get-hasGainMap>(){}[0]
+    final val height // io.github.shishark.faceblur/Detection.height|{}height[0]
+        final fun <get-height>(): kotlin/Int // io.github.shishark.faceblur/Detection.height.<get-height>|<get-height>(){}[0]
+    final val masking // io.github.shishark.faceblur/Detection.masking|{}masking[0]
+        final fun <get-masking>(): io.github.shishark.faceblur/MaskingConfig // io.github.shishark.faceblur/Detection.masking.<get-masking>|<get-masking>(){}[0]
+    final val outputHeight // io.github.shishark.faceblur/Detection.outputHeight|{}outputHeight[0]
+        final fun <get-outputHeight>(): kotlin/Int // io.github.shishark.faceblur/Detection.outputHeight.<get-outputHeight>|<get-outputHeight>(){}[0]
+    final val outputWidth // io.github.shishark.faceblur/Detection.outputWidth|{}outputWidth[0]
+        final fun <get-outputWidth>(): kotlin/Int // io.github.shishark.faceblur/Detection.outputWidth.<get-outputWidth>|<get-outputWidth>(){}[0]
+    final val timings // io.github.shishark.faceblur/Detection.timings|{}timings[0]
+        final fun <get-timings>(): io.github.shishark.faceblur/Timings // io.github.shishark.faceblur/Detection.timings.<get-timings>|<get-timings>(){}[0]
+    final val warnings // io.github.shishark.faceblur/Detection.warnings|{}warnings[0]
+        final fun <get-warnings>(): kotlin.collections/List<kotlin/String> // io.github.shishark.faceblur/Detection.warnings.<get-warnings>|<get-warnings>(){}[0]
+    final val width // io.github.shishark.faceblur/Detection.width|{}width[0]
+        final fun <get-width>(): kotlin/Int // io.github.shishark.faceblur/Detection.width.<get-width>|<get-width>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/Detection.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/Detection.hashCode|hashCode(){}[0]
+    final fun toMaskPlan(): io.github.shishark.faceblur/MaskPlan // io.github.shishark.faceblur/Detection.toMaskPlan|toMaskPlan(){}[0]
+    final fun toMaskPlan(io.github.shishark.faceblur/MaskingConfig): io.github.shishark.faceblur/MaskPlan // io.github.shishark.faceblur/Detection.toMaskPlan|toMaskPlan(io.github.shishark.faceblur.MaskingConfig){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/Detection.toString|toString(){}[0]
+}
+
+final class io.github.shishark.faceblur/DetectorModel { // io.github.shishark.faceblur/DetectorModel|null[0]
+    final val info // io.github.shishark.faceblur/DetectorModel.info|{}info[0]
+        final fun <get-info>(): io.github.shishark.faceblur/ModelInfo // io.github.shishark.faceblur/DetectorModel.info.<get-info>|<get-info>(){}[0]
+    final val profile // io.github.shishark.faceblur/DetectorModel.profile|{}profile[0]
+        final fun <get-profile>(): io.github.shishark.faceblur/DetectorProfile // io.github.shishark.faceblur/DetectorModel.profile.<get-profile>|<get-profile>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/DetectorModel.toString|toString(){}[0]
+
+    final object Companion { // io.github.shishark.faceblur/DetectorModel.Companion|null[0]
+        final const val DEFAULT_MAX_MODEL_BYTES // io.github.shishark.faceblur/DetectorModel.Companion.DEFAULT_MAX_MODEL_BYTES|{}DEFAULT_MAX_MODEL_BYTES[0]
+            final fun <get-DEFAULT_MAX_MODEL_BYTES>(): kotlin/Long // io.github.shishark.faceblur/DetectorModel.Companion.DEFAULT_MAX_MODEL_BYTES.<get-DEFAULT_MAX_MODEL_BYTES>|<get-DEFAULT_MAX_MODEL_BYTES>(){}[0]
+
+        final fun load(io.github.shishark.faceblur/ModelSource, io.github.shishark.faceblur/DetectorProfile, kotlin/Long = ...): io.github.shishark.faceblur/DetectorModel // io.github.shishark.faceblur/DetectorModel.Companion.load|load(io.github.shishark.faceblur.ModelSource;io.github.shishark.faceblur.DetectorProfile;kotlin.Long){}[0]
+    }
+}
+
+final class io.github.shishark.faceblur/DetectorProfile { // io.github.shishark.faceblur/DetectorProfile|null[0]
+    constructor <init>(io.github.shishark.faceblur/DetectionFormat, kotlin/Int, kotlin/Int, kotlin/Float, kotlin/String, kotlin/Float = ..., kotlin/Float = ...) // io.github.shishark.faceblur/DetectorProfile.<init>|<init>(io.github.shishark.faceblur.DetectionFormat;kotlin.Int;kotlin.Int;kotlin.Float;kotlin.String;kotlin.Float;kotlin.Float){}[0]
+
+    final val expectedSha256 // io.github.shishark.faceblur/DetectorProfile.expectedSha256|{}expectedSha256[0]
+        final fun <get-expectedSha256>(): kotlin/String // io.github.shishark.faceblur/DetectorProfile.expectedSha256.<get-expectedSha256>|<get-expectedSha256>(){}[0]
+    final val format // io.github.shishark.faceblur/DetectorProfile.format|{}format[0]
+        final fun <get-format>(): io.github.shishark.faceblur/DetectionFormat // io.github.shishark.faceblur/DetectorProfile.format.<get-format>|<get-format>(){}[0]
+    final val inputHeight // io.github.shishark.faceblur/DetectorProfile.inputHeight|{}inputHeight[0]
+        final fun <get-inputHeight>(): kotlin/Int // io.github.shishark.faceblur/DetectorProfile.inputHeight.<get-inputHeight>|<get-inputHeight>(){}[0]
+    final val inputWidth // io.github.shishark.faceblur/DetectorProfile.inputWidth|{}inputWidth[0]
+        final fun <get-inputWidth>(): kotlin/Int // io.github.shishark.faceblur/DetectorProfile.inputWidth.<get-inputWidth>|<get-inputWidth>(){}[0]
+    final val minMaskExpandX // io.github.shishark.faceblur/DetectorProfile.minMaskExpandX|{}minMaskExpandX[0]
+        final fun <get-minMaskExpandX>(): kotlin/Float // io.github.shishark.faceblur/DetectorProfile.minMaskExpandX.<get-minMaskExpandX>|<get-minMaskExpandX>(){}[0]
+    final val minMaskExpandY // io.github.shishark.faceblur/DetectorProfile.minMaskExpandY|{}minMaskExpandY[0]
+        final fun <get-minMaskExpandY>(): kotlin/Float // io.github.shishark.faceblur/DetectorProfile.minMaskExpandY.<get-minMaskExpandY>|<get-minMaskExpandY>(){}[0]
+    final val scoreThreshold // io.github.shishark.faceblur/DetectorProfile.scoreThreshold|{}scoreThreshold[0]
+        final fun <get-scoreThreshold>(): kotlin/Float // io.github.shishark.faceblur/DetectorProfile.scoreThreshold.<get-scoreThreshold>|<get-scoreThreshold>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/DetectorProfile.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/DetectorProfile.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/DetectorProfile.toString|toString(){}[0]
+
+    final class Builder { // io.github.shishark.faceblur/DetectorProfile.Builder|null[0]
+        constructor <init>() // io.github.shishark.faceblur/DetectorProfile.Builder.<init>|<init>(){}[0]
+
+        final fun build(): io.github.shishark.faceblur/DetectorProfile // io.github.shishark.faceblur/DetectorProfile.Builder.build|build(){}[0]
+        final fun expectedSha256(kotlin/String): io.github.shishark.faceblur/DetectorProfile.Builder // io.github.shishark.faceblur/DetectorProfile.Builder.expectedSha256|expectedSha256(kotlin.String){}[0]
+        final fun format(io.github.shishark.faceblur/DetectionFormat): io.github.shishark.faceblur/DetectorProfile.Builder // io.github.shishark.faceblur/DetectorProfile.Builder.format|format(io.github.shishark.faceblur.DetectionFormat){}[0]
+        final fun inputSize(kotlin/Int, kotlin/Int): io.github.shishark.faceblur/DetectorProfile.Builder // io.github.shishark.faceblur/DetectorProfile.Builder.inputSize|inputSize(kotlin.Int;kotlin.Int){}[0]
+        final fun minMaskExpandX(kotlin/Float): io.github.shishark.faceblur/DetectorProfile.Builder // io.github.shishark.faceblur/DetectorProfile.Builder.minMaskExpandX|minMaskExpandX(kotlin.Float){}[0]
+        final fun minMaskExpandY(kotlin/Float): io.github.shishark.faceblur/DetectorProfile.Builder // io.github.shishark.faceblur/DetectorProfile.Builder.minMaskExpandY|minMaskExpandY(kotlin.Float){}[0]
+        final fun scoreThreshold(kotlin/Float): io.github.shishark.faceblur/DetectorProfile.Builder // io.github.shishark.faceblur/DetectorProfile.Builder.scoreThreshold|scoreThreshold(kotlin.Float){}[0]
+    }
+}
+
+final class io.github.shishark.faceblur/ExpectedFace { // io.github.shishark.faceblur/ExpectedFace|null[0]
+    constructor <init>(kotlin/Float, kotlin/Float, kotlin/Float, kotlin/Float) // io.github.shishark.faceblur/ExpectedFace.<init>|<init>(kotlin.Float;kotlin.Float;kotlin.Float;kotlin.Float){}[0]
+
+    final val bottom // io.github.shishark.faceblur/ExpectedFace.bottom|{}bottom[0]
+        final fun <get-bottom>(): kotlin/Float // io.github.shishark.faceblur/ExpectedFace.bottom.<get-bottom>|<get-bottom>(){}[0]
+    final val left // io.github.shishark.faceblur/ExpectedFace.left|{}left[0]
+        final fun <get-left>(): kotlin/Float // io.github.shishark.faceblur/ExpectedFace.left.<get-left>|<get-left>(){}[0]
+    final val right // io.github.shishark.faceblur/ExpectedFace.right|{}right[0]
+        final fun <get-right>(): kotlin/Float // io.github.shishark.faceblur/ExpectedFace.right.<get-right>|<get-right>(){}[0]
+    final val top // io.github.shishark.faceblur/ExpectedFace.top|{}top[0]
+        final fun <get-top>(): kotlin/Float // io.github.shishark.faceblur/ExpectedFace.top.<get-top>|<get-top>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/ExpectedFace.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/ExpectedFace.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/ExpectedFace.toString|toString(){}[0]
+}
+
+final class io.github.shishark.faceblur/FaceBox { // io.github.shishark.faceblur/FaceBox|null[0]
+    final val bottom // io.github.shishark.faceblur/FaceBox.bottom|{}bottom[0]
+        final fun <get-bottom>(): kotlin/Float // io.github.shishark.faceblur/FaceBox.bottom.<get-bottom>|<get-bottom>(){}[0]
+    final val height // io.github.shishark.faceblur/FaceBox.height|{}height[0]
+        final fun <get-height>(): kotlin/Float // io.github.shishark.faceblur/FaceBox.height.<get-height>|<get-height>(){}[0]
+    final val left // io.github.shishark.faceblur/FaceBox.left|{}left[0]
+        final fun <get-left>(): kotlin/Float // io.github.shishark.faceblur/FaceBox.left.<get-left>|<get-left>(){}[0]
+    final val right // io.github.shishark.faceblur/FaceBox.right|{}right[0]
+        final fun <get-right>(): kotlin/Float // io.github.shishark.faceblur/FaceBox.right.<get-right>|<get-right>(){}[0]
+    final val score // io.github.shishark.faceblur/FaceBox.score|{}score[0]
+        final fun <get-score>(): kotlin/Float // io.github.shishark.faceblur/FaceBox.score.<get-score>|<get-score>(){}[0]
+    final val top // io.github.shishark.faceblur/FaceBox.top|{}top[0]
+        final fun <get-top>(): kotlin/Float // io.github.shishark.faceblur/FaceBox.top.<get-top>|<get-top>(){}[0]
+    final val width // io.github.shishark.faceblur/FaceBox.width|{}width[0]
+        final fun <get-width>(): kotlin/Float // io.github.shishark.faceblur/FaceBox.width.<get-width>|<get-width>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/FaceBox.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/FaceBox.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/FaceBox.toString|toString(){}[0]
+}
+
+final class io.github.shishark.faceblur/FaceMasker : kotlin/AutoCloseable { // io.github.shishark.faceblur/FaceMasker|null[0]
+    constructor <init>(io.github.shishark.faceblur/DetectorModel, io.github.shishark.faceblur/FaceMaskerConfig = ...) // io.github.shishark.faceblur/FaceMasker.<init>|<init>(io.github.shishark.faceblur.DetectorModel;io.github.shishark.faceblur.FaceMaskerConfig){}[0]
+
+    final val config // io.github.shishark.faceblur/FaceMasker.config|{}config[0]
+        final fun <get-config>(): io.github.shishark.faceblur/FaceMaskerConfig // io.github.shishark.faceblur/FaceMasker.config.<get-config>|<get-config>(){}[0]
+    final val modelInfo // io.github.shishark.faceblur/FaceMasker.modelInfo|{}modelInfo[0]
+        final fun <get-modelInfo>(): io.github.shishark.faceblur/MaskerModelInfo // io.github.shishark.faceblur/FaceMasker.modelInfo.<get-modelInfo>|<get-modelInfo>(){}[0]
+
+    final fun applyMasks(io.github.shishark.faceblur/MutablePixelImage, io.github.shishark.faceblur/MaskPlan, io.github.shishark.faceblur/CancellationToken? = ...): io.github.shishark.faceblur/MaskResult // io.github.shishark.faceblur/FaceMasker.applyMasks|applyMasks(io.github.shishark.faceblur.MutablePixelImage;io.github.shishark.faceblur.MaskPlan;io.github.shishark.faceblur.CancellationToken?){}[0]
+    final fun checkProfile(io.github.shishark.faceblur/PixelImage, kotlin.collections/List<io.github.shishark.faceblur/ExpectedFace>, kotlin/Float = ..., io.github.shishark.faceblur/CancellationToken? = ...): io.github.shishark.faceblur/ProfileCheckResult // io.github.shishark.faceblur/FaceMasker.checkProfile|checkProfile(io.github.shishark.faceblur.PixelImage;kotlin.collections.List<io.github.shishark.faceblur.ExpectedFace>;kotlin.Float;io.github.shishark.faceblur.CancellationToken?){}[0]
+    final fun close() // io.github.shishark.faceblur/FaceMasker.close|close(){}[0]
+    final fun detect(io.github.shishark.faceblur/PixelImage, io.github.shishark.faceblur/CancellationToken? = ...): io.github.shishark.faceblur/Detection // io.github.shishark.faceblur/FaceMasker.detect|detect(io.github.shishark.faceblur.PixelImage;io.github.shishark.faceblur.CancellationToken?){}[0]
+    final fun detectFile(kotlin/String, io.github.shishark.faceblur/FileOptions = ..., io.github.shishark.faceblur/CancellationToken? = ...): io.github.shishark.faceblur/Detection // io.github.shishark.faceblur/FaceMasker.detectFile|detectFile(kotlin.String;io.github.shishark.faceblur.FileOptions;io.github.shishark.faceblur.CancellationToken?){}[0]
+    final fun maskFile(kotlin/String, io.github.shishark.faceblur/OutputTarget, io.github.shishark.faceblur/FileOptions = ..., io.github.shishark.faceblur/MaskPlan? = ..., io.github.shishark.faceblur/CancellationToken? = ...): io.github.shishark.faceblur/FileResult // io.github.shishark.faceblur/FaceMasker.maskFile|maskFile(kotlin.String;io.github.shishark.faceblur.OutputTarget;io.github.shishark.faceblur.FileOptions;io.github.shishark.faceblur.MaskPlan?;io.github.shishark.faceblur.CancellationToken?){}[0]
+    final fun maskInPlace(io.github.shishark.faceblur/MutablePixelImage, io.github.shishark.faceblur/CancellationToken? = ...): io.github.shishark.faceblur/MaskResult // io.github.shishark.faceblur/FaceMasker.maskInPlace|maskInPlace(io.github.shishark.faceblur.MutablePixelImage;io.github.shishark.faceblur.CancellationToken?){}[0]
+}
+
+final class io.github.shishark.faceblur/FaceMaskerConfig { // io.github.shishark.faceblur/FaceMaskerConfig|null[0]
+    constructor <init>(io.github.shishark.faceblur/MaskingConfig = ..., kotlin/Int = ...) // io.github.shishark.faceblur/FaceMaskerConfig.<init>|<init>(io.github.shishark.faceblur.MaskingConfig;kotlin.Int){}[0]
+
+    final val masking // io.github.shishark.faceblur/FaceMaskerConfig.masking|{}masking[0]
+        final fun <get-masking>(): io.github.shishark.faceblur/MaskingConfig // io.github.shishark.faceblur/FaceMaskerConfig.masking.<get-masking>|<get-masking>(){}[0]
+    final val onnxThreads // io.github.shishark.faceblur/FaceMaskerConfig.onnxThreads|{}onnxThreads[0]
+        final fun <get-onnxThreads>(): kotlin/Int // io.github.shishark.faceblur/FaceMaskerConfig.onnxThreads.<get-onnxThreads>|<get-onnxThreads>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/FaceMaskerConfig.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/FaceMaskerConfig.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/FaceMaskerConfig.toString|toString(){}[0]
+
+    final class Builder { // io.github.shishark.faceblur/FaceMaskerConfig.Builder|null[0]
+        constructor <init>() // io.github.shishark.faceblur/FaceMaskerConfig.Builder.<init>|<init>(){}[0]
+
+        final fun build(): io.github.shishark.faceblur/FaceMaskerConfig // io.github.shishark.faceblur/FaceMaskerConfig.Builder.build|build(){}[0]
+        final fun masking(io.github.shishark.faceblur/MaskingConfig): io.github.shishark.faceblur/FaceMaskerConfig.Builder // io.github.shishark.faceblur/FaceMaskerConfig.Builder.masking|masking(io.github.shishark.faceblur.MaskingConfig){}[0]
+        final fun onnxThreads(kotlin/Int): io.github.shishark.faceblur/FaceMaskerConfig.Builder // io.github.shishark.faceblur/FaceMaskerConfig.Builder.onnxThreads|onnxThreads(kotlin.Int){}[0]
+    }
+}
+
+final class io.github.shishark.faceblur/FileOptions { // io.github.shishark.faceblur/FileOptions|null[0]
+    constructor <init>(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., io.github.shishark.faceblur/OutputFormat = ..., io.github.shishark.faceblur/MetadataPolicy = ...) // io.github.shishark.faceblur/FileOptions.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Int;io.github.shishark.faceblur.OutputFormat;io.github.shishark.faceblur.MetadataPolicy){}[0]
+
+    final val format // io.github.shishark.faceblur/FileOptions.format|{}format[0]
+        final fun <get-format>(): io.github.shishark.faceblur/OutputFormat // io.github.shishark.faceblur/FileOptions.format.<get-format>|<get-format>(){}[0]
+    final val maxDecodedPixels // io.github.shishark.faceblur/FileOptions.maxDecodedPixels|{}maxDecodedPixels[0]
+        final fun <get-maxDecodedPixels>(): kotlin/Int // io.github.shishark.faceblur/FileOptions.maxDecodedPixels.<get-maxDecodedPixels>|<get-maxDecodedPixels>(){}[0]
+    final val maxLongSide // io.github.shishark.faceblur/FileOptions.maxLongSide|{}maxLongSide[0]
+        final fun <get-maxLongSide>(): kotlin/Int // io.github.shishark.faceblur/FileOptions.maxLongSide.<get-maxLongSide>|<get-maxLongSide>(){}[0]
+    final val maxOutputLongSide // io.github.shishark.faceblur/FileOptions.maxOutputLongSide|{}maxOutputLongSide[0]
+        final fun <get-maxOutputLongSide>(): kotlin/Int // io.github.shishark.faceblur/FileOptions.maxOutputLongSide.<get-maxOutputLongSide>|<get-maxOutputLongSide>(){}[0]
+    final val metadata // io.github.shishark.faceblur/FileOptions.metadata|{}metadata[0]
+        final fun <get-metadata>(): io.github.shishark.faceblur/MetadataPolicy // io.github.shishark.faceblur/FileOptions.metadata.<get-metadata>|<get-metadata>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/FileOptions.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/FileOptions.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/FileOptions.toString|toString(){}[0]
+
+    final class Builder { // io.github.shishark.faceblur/FileOptions.Builder|null[0]
+        constructor <init>() // io.github.shishark.faceblur/FileOptions.Builder.<init>|<init>(){}[0]
+
+        final fun build(): io.github.shishark.faceblur/FileOptions // io.github.shishark.faceblur/FileOptions.Builder.build|build(){}[0]
+        final fun format(io.github.shishark.faceblur/OutputFormat): io.github.shishark.faceblur/FileOptions.Builder // io.github.shishark.faceblur/FileOptions.Builder.format|format(io.github.shishark.faceblur.OutputFormat){}[0]
+        final fun maxDecodedPixels(kotlin/Int): io.github.shishark.faceblur/FileOptions.Builder // io.github.shishark.faceblur/FileOptions.Builder.maxDecodedPixels|maxDecodedPixels(kotlin.Int){}[0]
+        final fun maxLongSide(kotlin/Int): io.github.shishark.faceblur/FileOptions.Builder // io.github.shishark.faceblur/FileOptions.Builder.maxLongSide|maxLongSide(kotlin.Int){}[0]
+        final fun maxOutputLongSide(kotlin/Int): io.github.shishark.faceblur/FileOptions.Builder // io.github.shishark.faceblur/FileOptions.Builder.maxOutputLongSide|maxOutputLongSide(kotlin.Int){}[0]
+        final fun metadata(io.github.shishark.faceblur/MetadataPolicy): io.github.shishark.faceblur/FileOptions.Builder // io.github.shishark.faceblur/FileOptions.Builder.metadata|metadata(io.github.shishark.faceblur.MetadataPolicy){}[0]
+    }
+}
+
+final class io.github.shishark.faceblur/FileResult { // io.github.shishark.faceblur/FileResult|null[0]
+    final val faces // io.github.shishark.faceblur/FileResult.faces|{}faces[0]
+        final fun <get-faces>(): kotlin.collections/List<io.github.shishark.faceblur/FaceBox> // io.github.shishark.faceblur/FileResult.faces.<get-faces>|<get-faces>(){}[0]
+    final val gainMapRemoved // io.github.shishark.faceblur/FileResult.gainMapRemoved|{}gainMapRemoved[0]
+        final fun <get-gainMapRemoved>(): kotlin/Boolean // io.github.shishark.faceblur/FileResult.gainMapRemoved.<get-gainMapRemoved>|<get-gainMapRemoved>(){}[0]
+    final val height // io.github.shishark.faceblur/FileResult.height|{}height[0]
+        final fun <get-height>(): kotlin/Int // io.github.shishark.faceblur/FileResult.height.<get-height>|<get-height>(){}[0]
+    final val masks // io.github.shishark.faceblur/FileResult.masks|{}masks[0]
+        final fun <get-masks>(): kotlin.collections/List<io.github.shishark.faceblur/Mask> // io.github.shishark.faceblur/FileResult.masks.<get-masks>|<get-masks>(){}[0]
+    final val outputBytes // io.github.shishark.faceblur/FileResult.outputBytes|{}outputBytes[0]
+        final fun <get-outputBytes>(): kotlin/Long // io.github.shishark.faceblur/FileResult.outputBytes.<get-outputBytes>|<get-outputBytes>(){}[0]
+    final val outputHeight // io.github.shishark.faceblur/FileResult.outputHeight|{}outputHeight[0]
+        final fun <get-outputHeight>(): kotlin/Int // io.github.shishark.faceblur/FileResult.outputHeight.<get-outputHeight>|<get-outputHeight>(){}[0]
+    final val outputWidth // io.github.shishark.faceblur/FileResult.outputWidth|{}outputWidth[0]
+        final fun <get-outputWidth>(): kotlin/Int // io.github.shishark.faceblur/FileResult.outputWidth.<get-outputWidth>|<get-outputWidth>(){}[0]
+    final val sourceHeight // io.github.shishark.faceblur/FileResult.sourceHeight|{}sourceHeight[0]
+        final fun <get-sourceHeight>(): kotlin/Int // io.github.shishark.faceblur/FileResult.sourceHeight.<get-sourceHeight>|<get-sourceHeight>(){}[0]
+    final val sourceWidth // io.github.shishark.faceblur/FileResult.sourceWidth|{}sourceWidth[0]
+        final fun <get-sourceWidth>(): kotlin/Int // io.github.shishark.faceblur/FileResult.sourceWidth.<get-sourceWidth>|<get-sourceWidth>(){}[0]
+    final val timings // io.github.shishark.faceblur/FileResult.timings|{}timings[0]
+        final fun <get-timings>(): io.github.shishark.faceblur/Timings // io.github.shishark.faceblur/FileResult.timings.<get-timings>|<get-timings>(){}[0]
+    final val warnings // io.github.shishark.faceblur/FileResult.warnings|{}warnings[0]
+        final fun <get-warnings>(): kotlin.collections/List<kotlin/String> // io.github.shishark.faceblur/FileResult.warnings.<get-warnings>|<get-warnings>(){}[0]
+    final val width // io.github.shishark.faceblur/FileResult.width|{}width[0]
+        final fun <get-width>(): kotlin/Int // io.github.shishark.faceblur/FileResult.width.<get-width>|<get-width>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/FileResult.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/FileResult.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/FileResult.toString|toString(){}[0]
+}
+
+final class io.github.shishark.faceblur/Mask { // io.github.shishark.faceblur/Mask|null[0]
+    final val centerX // io.github.shishark.faceblur/Mask.centerX|{}centerX[0]
+        final fun <get-centerX>(): kotlin/Float // io.github.shishark.faceblur/Mask.centerX.<get-centerX>|<get-centerX>(){}[0]
+    final val centerY // io.github.shishark.faceblur/Mask.centerY|{}centerY[0]
+        final fun <get-centerY>(): kotlin/Float // io.github.shishark.faceblur/Mask.centerY.<get-centerY>|<get-centerY>(){}[0]
+    final val origin // io.github.shishark.faceblur/Mask.origin|{}origin[0]
+        final fun <get-origin>(): io.github.shishark.faceblur/MaskOrigin // io.github.shishark.faceblur/Mask.origin.<get-origin>|<get-origin>(){}[0]
+    final val radiusX // io.github.shishark.faceblur/Mask.radiusX|{}radiusX[0]
+        final fun <get-radiusX>(): kotlin/Float // io.github.shishark.faceblur/Mask.radiusX.<get-radiusX>|<get-radiusX>(){}[0]
+    final val radiusY // io.github.shishark.faceblur/Mask.radiusY|{}radiusY[0]
+        final fun <get-radiusY>(): kotlin/Float // io.github.shishark.faceblur/Mask.radiusY.<get-radiusY>|<get-radiusY>(){}[0]
+    final val shape // io.github.shishark.faceblur/Mask.shape|{}shape[0]
+        final fun <get-shape>(): io.github.shishark.faceblur/MaskShape // io.github.shishark.faceblur/Mask.shape.<get-shape>|<get-shape>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/Mask.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/Mask.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/Mask.toString|toString(){}[0]
+
+    final object Companion { // io.github.shishark.faceblur/Mask.Companion|null[0]
+        final fun exact(io.github.shishark.faceblur/MaskShape, kotlin/Float, kotlin/Float, kotlin/Float, kotlin/Float): io.github.shishark.faceblur/Mask // io.github.shishark.faceblur/Mask.Companion.exact|exact(io.github.shishark.faceblur.MaskShape;kotlin.Float;kotlin.Float;kotlin.Float;kotlin.Float){}[0]
+        final fun fromFace(io.github.shishark.faceblur/FaceBox, io.github.shishark.faceblur/MaskingConfig = ...): io.github.shishark.faceblur/Mask // io.github.shishark.faceblur/Mask.Companion.fromFace|fromFace(io.github.shishark.faceblur.FaceBox;io.github.shishark.faceblur.MaskingConfig){}[0]
+        final fun manual(kotlin/Float, kotlin/Float, kotlin/Float, kotlin/Float, io.github.shishark.faceblur/MaskingConfig = ...): io.github.shishark.faceblur/Mask // io.github.shishark.faceblur/Mask.Companion.manual|manual(kotlin.Float;kotlin.Float;kotlin.Float;kotlin.Float;io.github.shishark.faceblur.MaskingConfig){}[0]
+    }
+}
+
+final class io.github.shishark.faceblur/MaskPlan { // io.github.shishark.faceblur/MaskPlan|null[0]
+    constructor <init>(kotlin/Int, kotlin/Int, kotlin.collections/List<io.github.shishark.faceblur/Mask>) // io.github.shishark.faceblur/MaskPlan.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.collections.List<io.github.shishark.faceblur.Mask>){}[0]
+
+    final val height // io.github.shishark.faceblur/MaskPlan.height|{}height[0]
+        final fun <get-height>(): kotlin/Int // io.github.shishark.faceblur/MaskPlan.height.<get-height>|<get-height>(){}[0]
+    final val masks // io.github.shishark.faceblur/MaskPlan.masks|{}masks[0]
+        final fun <get-masks>(): kotlin.collections/List<io.github.shishark.faceblur/Mask> // io.github.shishark.faceblur/MaskPlan.masks.<get-masks>|<get-masks>(){}[0]
+    final val width // io.github.shishark.faceblur/MaskPlan.width|{}width[0]
+        final fun <get-width>(): kotlin/Int // io.github.shishark.faceblur/MaskPlan.width.<get-width>|<get-width>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/MaskPlan.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/MaskPlan.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/MaskPlan.toString|toString(){}[0]
+    final fun withMasks(kotlin.collections/List<io.github.shishark.faceblur/Mask>): io.github.shishark.faceblur/MaskPlan // io.github.shishark.faceblur/MaskPlan.withMasks|withMasks(kotlin.collections.List<io.github.shishark.faceblur.Mask>){}[0]
+}
+
+final class io.github.shishark.faceblur/MaskResult { // io.github.shishark.faceblur/MaskResult|null[0]
+    final val faces // io.github.shishark.faceblur/MaskResult.faces|{}faces[0]
+        final fun <get-faces>(): kotlin.collections/List<io.github.shishark.faceblur/FaceBox> // io.github.shishark.faceblur/MaskResult.faces.<get-faces>|<get-faces>(){}[0]
+    final val gainMapRemoved // io.github.shishark.faceblur/MaskResult.gainMapRemoved|{}gainMapRemoved[0]
+        final fun <get-gainMapRemoved>(): kotlin/Boolean // io.github.shishark.faceblur/MaskResult.gainMapRemoved.<get-gainMapRemoved>|<get-gainMapRemoved>(){}[0]
+    final val height // io.github.shishark.faceblur/MaskResult.height|{}height[0]
+        final fun <get-height>(): kotlin/Int // io.github.shishark.faceblur/MaskResult.height.<get-height>|<get-height>(){}[0]
+    final val masks // io.github.shishark.faceblur/MaskResult.masks|{}masks[0]
+        final fun <get-masks>(): kotlin.collections/List<io.github.shishark.faceblur/Mask> // io.github.shishark.faceblur/MaskResult.masks.<get-masks>|<get-masks>(){}[0]
+    final val timings // io.github.shishark.faceblur/MaskResult.timings|{}timings[0]
+        final fun <get-timings>(): io.github.shishark.faceblur/Timings // io.github.shishark.faceblur/MaskResult.timings.<get-timings>|<get-timings>(){}[0]
+    final val warnings // io.github.shishark.faceblur/MaskResult.warnings|{}warnings[0]
+        final fun <get-warnings>(): kotlin.collections/List<kotlin/String> // io.github.shishark.faceblur/MaskResult.warnings.<get-warnings>|<get-warnings>(){}[0]
+    final val width // io.github.shishark.faceblur/MaskResult.width|{}width[0]
+        final fun <get-width>(): kotlin/Int // io.github.shishark.faceblur/MaskResult.width.<get-width>|<get-width>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/MaskResult.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/MaskResult.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/MaskResult.toString|toString(){}[0]
+}
+
+final class io.github.shishark.faceblur/MaskerModelInfo { // io.github.shishark.faceblur/MaskerModelInfo|null[0]
+    final val executionProvider // io.github.shishark.faceblur/MaskerModelInfo.executionProvider|{}executionProvider[0]
+        final fun <get-executionProvider>(): kotlin/String // io.github.shishark.faceblur/MaskerModelInfo.executionProvider.<get-executionProvider>|<get-executionProvider>(){}[0]
+    final val faceBlurVersion // io.github.shishark.faceblur/MaskerModelInfo.faceBlurVersion|{}faceBlurVersion[0]
+        final fun <get-faceBlurVersion>(): kotlin/String // io.github.shishark.faceblur/MaskerModelInfo.faceBlurVersion.<get-faceBlurVersion>|<get-faceBlurVersion>(){}[0]
+    final val model // io.github.shishark.faceblur/MaskerModelInfo.model|{}model[0]
+        final fun <get-model>(): io.github.shishark.faceblur/ModelInfo // io.github.shishark.faceblur/MaskerModelInfo.model.<get-model>|<get-model>(){}[0]
+    final val runtimeVersion // io.github.shishark.faceblur/MaskerModelInfo.runtimeVersion|{}runtimeVersion[0]
+        final fun <get-runtimeVersion>(): kotlin/String // io.github.shishark.faceblur/MaskerModelInfo.runtimeVersion.<get-runtimeVersion>|<get-runtimeVersion>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/MaskerModelInfo.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/MaskerModelInfo.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/MaskerModelInfo.toString|toString(){}[0]
+}
+
+final class io.github.shishark.faceblur/MaskingConfig { // io.github.shishark.faceblur/MaskingConfig|null[0]
+    constructor <init>(io.github.shishark.faceblur/MaskStyle = ..., io.github.shishark.faceblur/MaskShape = ..., kotlin/Float = ..., kotlin/Float = ..., kotlin/Float = ..., kotlin/Int = ...) // io.github.shishark.faceblur/MaskingConfig.<init>|<init>(io.github.shishark.faceblur.MaskStyle;io.github.shishark.faceblur.MaskShape;kotlin.Float;kotlin.Float;kotlin.Float;kotlin.Int){}[0]
+
+    final val color // io.github.shishark.faceblur/MaskingConfig.color|{}color[0]
+        final fun <get-color>(): kotlin/Int // io.github.shishark.faceblur/MaskingConfig.color.<get-color>|<get-color>(){}[0]
+    final val expandX // io.github.shishark.faceblur/MaskingConfig.expandX|{}expandX[0]
+        final fun <get-expandX>(): kotlin/Float // io.github.shishark.faceblur/MaskingConfig.expandX.<get-expandX>|<get-expandX>(){}[0]
+    final val expandY // io.github.shishark.faceblur/MaskingConfig.expandY|{}expandY[0]
+        final fun <get-expandY>(): kotlin/Float // io.github.shishark.faceblur/MaskingConfig.expandY.<get-expandY>|<get-expandY>(){}[0]
+    final val feather // io.github.shishark.faceblur/MaskingConfig.feather|{}feather[0]
+        final fun <get-feather>(): kotlin/Float // io.github.shishark.faceblur/MaskingConfig.feather.<get-feather>|<get-feather>(){}[0]
+    final val shape // io.github.shishark.faceblur/MaskingConfig.shape|{}shape[0]
+        final fun <get-shape>(): io.github.shishark.faceblur/MaskShape // io.github.shishark.faceblur/MaskingConfig.shape.<get-shape>|<get-shape>(){}[0]
+    final val style // io.github.shishark.faceblur/MaskingConfig.style|{}style[0]
+        final fun <get-style>(): io.github.shishark.faceblur/MaskStyle // io.github.shishark.faceblur/MaskingConfig.style.<get-style>|<get-style>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/MaskingConfig.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/MaskingConfig.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/MaskingConfig.toString|toString(){}[0]
+
+    final class Builder { // io.github.shishark.faceblur/MaskingConfig.Builder|null[0]
+        constructor <init>() // io.github.shishark.faceblur/MaskingConfig.Builder.<init>|<init>(){}[0]
+
+        final fun build(): io.github.shishark.faceblur/MaskingConfig // io.github.shishark.faceblur/MaskingConfig.Builder.build|build(){}[0]
+        final fun color(kotlin/Int): io.github.shishark.faceblur/MaskingConfig.Builder // io.github.shishark.faceblur/MaskingConfig.Builder.color|color(kotlin.Int){}[0]
+        final fun expandX(kotlin/Float): io.github.shishark.faceblur/MaskingConfig.Builder // io.github.shishark.faceblur/MaskingConfig.Builder.expandX|expandX(kotlin.Float){}[0]
+        final fun expandY(kotlin/Float): io.github.shishark.faceblur/MaskingConfig.Builder // io.github.shishark.faceblur/MaskingConfig.Builder.expandY|expandY(kotlin.Float){}[0]
+        final fun feather(kotlin/Float): io.github.shishark.faceblur/MaskingConfig.Builder // io.github.shishark.faceblur/MaskingConfig.Builder.feather|feather(kotlin.Float){}[0]
+        final fun shape(io.github.shishark.faceblur/MaskShape): io.github.shishark.faceblur/MaskingConfig.Builder // io.github.shishark.faceblur/MaskingConfig.Builder.shape|shape(io.github.shishark.faceblur.MaskShape){}[0]
+        final fun style(io.github.shishark.faceblur/MaskStyle): io.github.shishark.faceblur/MaskingConfig.Builder // io.github.shishark.faceblur/MaskingConfig.Builder.style|style(io.github.shishark.faceblur.MaskStyle){}[0]
+    }
+}
+
+final class io.github.shishark.faceblur/ModelInfo { // io.github.shishark.faceblur/ModelInfo|null[0]
+    final val inputs // io.github.shishark.faceblur/ModelInfo.inputs|{}inputs[0]
+        final fun <get-inputs>(): kotlin.collections/List<io.github.shishark.faceblur/TensorInfo> // io.github.shishark.faceblur/ModelInfo.inputs.<get-inputs>|<get-inputs>(){}[0]
+    final val irVersion // io.github.shishark.faceblur/ModelInfo.irVersion|{}irVersion[0]
+        final fun <get-irVersion>(): kotlin/Long // io.github.shishark.faceblur/ModelInfo.irVersion.<get-irVersion>|<get-irVersion>(){}[0]
+    final val opsetImports // io.github.shishark.faceblur/ModelInfo.opsetImports|{}opsetImports[0]
+        final fun <get-opsetImports>(): kotlin.collections/Map<kotlin/String, kotlin/Long> // io.github.shishark.faceblur/ModelInfo.opsetImports.<get-opsetImports>|<get-opsetImports>(){}[0]
+    final val outputs // io.github.shishark.faceblur/ModelInfo.outputs|{}outputs[0]
+        final fun <get-outputs>(): kotlin.collections/List<io.github.shishark.faceblur/TensorInfo> // io.github.shishark.faceblur/ModelInfo.outputs.<get-outputs>|<get-outputs>(){}[0]
+    final val sha256 // io.github.shishark.faceblur/ModelInfo.sha256|{}sha256[0]
+        final fun <get-sha256>(): kotlin/String // io.github.shishark.faceblur/ModelInfo.sha256.<get-sha256>|<get-sha256>(){}[0]
+    final val sizeBytes // io.github.shishark.faceblur/ModelInfo.sizeBytes|{}sizeBytes[0]
+        final fun <get-sizeBytes>(): kotlin/Long // io.github.shishark.faceblur/ModelInfo.sizeBytes.<get-sizeBytes>|<get-sizeBytes>(){}[0]
+    final val warnings // io.github.shishark.faceblur/ModelInfo.warnings|{}warnings[0]
+        final fun <get-warnings>(): kotlin.collections/List<kotlin/String> // io.github.shishark.faceblur/ModelInfo.warnings.<get-warnings>|<get-warnings>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/ModelInfo.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/ModelInfo.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/ModelInfo.toString|toString(){}[0]
+}
+
+final class io.github.shishark.faceblur/ModelSource { // io.github.shishark.faceblur/ModelSource|null[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/ModelSource.toString|toString(){}[0]
+
+    final object Companion { // io.github.shishark.faceblur/ModelSource.Companion|null[0]
+        final fun fromBytes(kotlin/ByteArray): io.github.shishark.faceblur/ModelSource // io.github.shishark.faceblur/ModelSource.Companion.fromBytes|fromBytes(kotlin.ByteArray){}[0]
+        final fun fromFile(kotlin/String): io.github.shishark.faceblur/ModelSource // io.github.shishark.faceblur/ModelSource.Companion.fromFile|fromFile(kotlin.String){}[0]
+    }
+}
+
+final class io.github.shishark.faceblur/PixelScaling { // io.github.shishark.faceblur/PixelScaling|null[0]
+    constructor <init>(kotlin/Float, kotlin/FloatArray, kotlin/FloatArray) // io.github.shishark.faceblur/PixelScaling.<init>|<init>(kotlin.Float;kotlin.FloatArray;kotlin.FloatArray){}[0]
+
+    final val divisor // io.github.shishark.faceblur/PixelScaling.divisor|{}divisor[0]
+        final fun <get-divisor>(): kotlin/Float // io.github.shishark.faceblur/PixelScaling.divisor.<get-divisor>|<get-divisor>(){}[0]
+    final val mean // io.github.shishark.faceblur/PixelScaling.mean|{}mean[0]
+        final fun <get-mean>(): kotlin.collections/List<kotlin/Float> // io.github.shishark.faceblur/PixelScaling.mean.<get-mean>|<get-mean>(){}[0]
+    final val std // io.github.shishark.faceblur/PixelScaling.std|{}std[0]
+        final fun <get-std>(): kotlin.collections/List<kotlin/Float> // io.github.shishark.faceblur/PixelScaling.std.<get-std>|<get-std>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/PixelScaling.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/PixelScaling.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/PixelScaling.toString|toString(){}[0]
+}
+
+final class io.github.shishark.faceblur/PlanMasker { // io.github.shishark.faceblur/PlanMasker|null[0]
+    constructor <init>(io.github.shishark.faceblur/MaskingConfig = ...) // io.github.shishark.faceblur/PlanMasker.<init>|<init>(io.github.shishark.faceblur.MaskingConfig){}[0]
+
+    final val masking // io.github.shishark.faceblur/PlanMasker.masking|{}masking[0]
+        final fun <get-masking>(): io.github.shishark.faceblur/MaskingConfig // io.github.shishark.faceblur/PlanMasker.masking.<get-masking>|<get-masking>(){}[0]
+
+    final fun maskFile(kotlin/String, io.github.shishark.faceblur/OutputTarget, io.github.shishark.faceblur/MaskPlan, io.github.shishark.faceblur/FileOptions = ..., io.github.shishark.faceblur/CancellationToken? = ...): io.github.shishark.faceblur/FileResult // io.github.shishark.faceblur/PlanMasker.maskFile|maskFile(kotlin.String;io.github.shishark.faceblur.OutputTarget;io.github.shishark.faceblur.MaskPlan;io.github.shishark.faceblur.FileOptions;io.github.shishark.faceblur.CancellationToken?){}[0]
+    final fun planFile(kotlin/String, io.github.shishark.faceblur/FileOptions = ..., io.github.shishark.faceblur/CancellationToken? = ...): io.github.shishark.faceblur/MaskPlan // io.github.shishark.faceblur/PlanMasker.planFile|planFile(kotlin.String;io.github.shishark.faceblur.FileOptions;io.github.shishark.faceblur.CancellationToken?){}[0]
+}
+
+final class io.github.shishark.faceblur/ProfileCheckResult { // io.github.shishark.faceblur/ProfileCheckResult|null[0]
+    final val allFound // io.github.shishark.faceblur/ProfileCheckResult.allFound|{}allFound[0]
+        final fun <get-allFound>(): kotlin/Boolean // io.github.shishark.faceblur/ProfileCheckResult.allFound.<get-allFound>|<get-allFound>(){}[0]
+    final val bestIoU // io.github.shishark.faceblur/ProfileCheckResult.bestIoU|{}bestIoU[0]
+        final fun <get-bestIoU>(): kotlin.collections/List<kotlin/Float> // io.github.shishark.faceblur/ProfileCheckResult.bestIoU.<get-bestIoU>|<get-bestIoU>(){}[0]
+    final val detections // io.github.shishark.faceblur/ProfileCheckResult.detections|{}detections[0]
+        final fun <get-detections>(): kotlin.collections/List<io.github.shishark.faceblur/FaceBox> // io.github.shishark.faceblur/ProfileCheckResult.detections.<get-detections>|<get-detections>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/ProfileCheckResult.toString|toString(){}[0]
+}
+
+final class io.github.shishark.faceblur/TensorInfo { // io.github.shishark.faceblur/TensorInfo|null[0]
+    final val elementType // io.github.shishark.faceblur/TensorInfo.elementType|{}elementType[0]
+        final fun <get-elementType>(): kotlin/String // io.github.shishark.faceblur/TensorInfo.elementType.<get-elementType>|<get-elementType>(){}[0]
+    final val name // io.github.shishark.faceblur/TensorInfo.name|{}name[0]
+        final fun <get-name>(): kotlin/String // io.github.shishark.faceblur/TensorInfo.name.<get-name>|<get-name>(){}[0]
+    final val shape // io.github.shishark.faceblur/TensorInfo.shape|{}shape[0]
+        final fun <get-shape>(): kotlin.collections/List<kotlin/Long?> // io.github.shishark.faceblur/TensorInfo.shape.<get-shape>|<get-shape>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/TensorInfo.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/TensorInfo.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/TensorInfo.toString|toString(){}[0]
+}
+
+final class io.github.shishark.faceblur/Timings { // io.github.shishark.faceblur/Timings|null[0]
+    final val decodeMs // io.github.shishark.faceblur/Timings.decodeMs|{}decodeMs[0]
+        final fun <get-decodeMs>(): kotlin/Double? // io.github.shishark.faceblur/Timings.decodeMs.<get-decodeMs>|<get-decodeMs>(){}[0]
+    final val detectMs // io.github.shishark.faceblur/Timings.detectMs|{}detectMs[0]
+        final fun <get-detectMs>(): kotlin/Double // io.github.shishark.faceblur/Timings.detectMs.<get-detectMs>|<get-detectMs>(){}[0]
+    final val encodeMs // io.github.shishark.faceblur/Timings.encodeMs|{}encodeMs[0]
+        final fun <get-encodeMs>(): kotlin/Double? // io.github.shishark.faceblur/Timings.encodeMs.<get-encodeMs>|<get-encodeMs>(){}[0]
+    final val gcMs // io.github.shishark.faceblur/Timings.gcMs|{}gcMs[0]
+        final fun <get-gcMs>(): kotlin/Double? // io.github.shishark.faceblur/Timings.gcMs.<get-gcMs>|<get-gcMs>(){}[0]
+    final val maskMs // io.github.shishark.faceblur/Timings.maskMs|{}maskMs[0]
+        final fun <get-maskMs>(): kotlin/Double // io.github.shishark.faceblur/Timings.maskMs.<get-maskMs>|<get-maskMs>(){}[0]
+    final val orientScaleMs // io.github.shishark.faceblur/Timings.orientScaleMs|{}orientScaleMs[0]
+        final fun <get-orientScaleMs>(): kotlin/Double? // io.github.shishark.faceblur/Timings.orientScaleMs.<get-orientScaleMs>|<get-orientScaleMs>(){}[0]
+    final val passes // io.github.shishark.faceblur/Timings.passes|{}passes[0]
+        final fun <get-passes>(): kotlin/Int // io.github.shishark.faceblur/Timings.passes.<get-passes>|<get-passes>(){}[0]
+    final val totalMs // io.github.shishark.faceblur/Timings.totalMs|{}totalMs[0]
+        final fun <get-totalMs>(): kotlin/Double // io.github.shishark.faceblur/Timings.totalMs.<get-totalMs>|<get-totalMs>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/Timings.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/Timings.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/Timings.toString|toString(){}[0]
+}
+
+final class io.github.shishark.faceblur/UprightBox { // io.github.shishark.faceblur/UprightBox|null[0]
+    final val bottom // io.github.shishark.faceblur/UprightBox.bottom|{}bottom[0]
+        final fun <get-bottom>(): kotlin/Float // io.github.shishark.faceblur/UprightBox.bottom.<get-bottom>|<get-bottom>(){}[0]
+    final val imageHeight // io.github.shishark.faceblur/UprightBox.imageHeight|{}imageHeight[0]
+        final fun <get-imageHeight>(): kotlin/Int // io.github.shishark.faceblur/UprightBox.imageHeight.<get-imageHeight>|<get-imageHeight>(){}[0]
+    final val imageWidth // io.github.shishark.faceblur/UprightBox.imageWidth|{}imageWidth[0]
+        final fun <get-imageWidth>(): kotlin/Int // io.github.shishark.faceblur/UprightBox.imageWidth.<get-imageWidth>|<get-imageWidth>(){}[0]
+    final val left // io.github.shishark.faceblur/UprightBox.left|{}left[0]
+        final fun <get-left>(): kotlin/Float // io.github.shishark.faceblur/UprightBox.left.<get-left>|<get-left>(){}[0]
+    final val right // io.github.shishark.faceblur/UprightBox.right|{}right[0]
+        final fun <get-right>(): kotlin/Float // io.github.shishark.faceblur/UprightBox.right.<get-right>|<get-right>(){}[0]
+    final val top // io.github.shishark.faceblur/UprightBox.top|{}top[0]
+        final fun <get-top>(): kotlin/Float // io.github.shishark.faceblur/UprightBox.top.<get-top>|<get-top>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/UprightBox.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/UprightBox.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.shishark.faceblur/UprightBox.toString|toString(){}[0]
+
+    final object Companion { // io.github.shishark.faceblur/UprightBox.Companion|null[0]
+        final fun fromRaw(kotlin/Float, kotlin/Float, kotlin/Float, kotlin/Float, kotlin/Int, kotlin/Int, kotlin/Int): io.github.shishark.faceblur/UprightBox // io.github.shishark.faceblur/UprightBox.Companion.fromRaw|fromRaw(kotlin.Float;kotlin.Float;kotlin.Float;kotlin.Float;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    }
+}
+
+sealed class io.github.shishark.faceblur/DetectionFormat { // io.github.shishark.faceblur/DetectionFormat|null[0]
+    final class GenericDetections : io.github.shishark.faceblur/DetectionFormat { // io.github.shishark.faceblur/DetectionFormat.GenericDetections|null[0]
+        constructor <init>(kotlin/String, kotlin/Int, kotlin/String?, kotlin/Int, io.github.shishark.faceblur/RowLayout, io.github.shishark.faceblur/BoxFormat, io.github.shishark.faceblur/CoordinateSpace, io.github.shishark.faceblur/ColorOrder, io.github.shishark.faceblur/TensorLayout, io.github.shishark.faceblur/PixelScaling, kotlin/Boolean = ...) // io.github.shishark.faceblur/DetectionFormat.GenericDetections.<init>|<init>(kotlin.String;kotlin.Int;kotlin.String?;kotlin.Int;io.github.shishark.faceblur.RowLayout;io.github.shishark.faceblur.BoxFormat;io.github.shishark.faceblur.CoordinateSpace;io.github.shishark.faceblur.ColorOrder;io.github.shishark.faceblur.TensorLayout;io.github.shishark.faceblur.PixelScaling;kotlin.Boolean){}[0]
+
+        final val boxColumn // io.github.shishark.faceblur/DetectionFormat.GenericDetections.boxColumn|{}boxColumn[0]
+            final fun <get-boxColumn>(): kotlin/Int // io.github.shishark.faceblur/DetectionFormat.GenericDetections.boxColumn.<get-boxColumn>|<get-boxColumn>(){}[0]
+        final val boxFormat // io.github.shishark.faceblur/DetectionFormat.GenericDetections.boxFormat|{}boxFormat[0]
+            final fun <get-boxFormat>(): io.github.shishark.faceblur/BoxFormat // io.github.shishark.faceblur/DetectionFormat.GenericDetections.boxFormat.<get-boxFormat>|<get-boxFormat>(){}[0]
+        final val boxesOutput // io.github.shishark.faceblur/DetectionFormat.GenericDetections.boxesOutput|{}boxesOutput[0]
+            final fun <get-boxesOutput>(): kotlin/String // io.github.shishark.faceblur/DetectionFormat.GenericDetections.boxesOutput.<get-boxesOutput>|<get-boxesOutput>(){}[0]
+        final val colorOrder // io.github.shishark.faceblur/DetectionFormat.GenericDetections.colorOrder|{}colorOrder[0]
+            final fun <get-colorOrder>(): io.github.shishark.faceblur/ColorOrder // io.github.shishark.faceblur/DetectionFormat.GenericDetections.colorOrder.<get-colorOrder>|<get-colorOrder>(){}[0]
+        final val coordinates // io.github.shishark.faceblur/DetectionFormat.GenericDetections.coordinates|{}coordinates[0]
+            final fun <get-coordinates>(): io.github.shishark.faceblur/CoordinateSpace // io.github.shishark.faceblur/DetectionFormat.GenericDetections.coordinates.<get-coordinates>|<get-coordinates>(){}[0]
+        final val nmsInGraph // io.github.shishark.faceblur/DetectionFormat.GenericDetections.nmsInGraph|{}nmsInGraph[0]
+            final fun <get-nmsInGraph>(): kotlin/Boolean // io.github.shishark.faceblur/DetectionFormat.GenericDetections.nmsInGraph.<get-nmsInGraph>|<get-nmsInGraph>(){}[0]
+        final val rows // io.github.shishark.faceblur/DetectionFormat.GenericDetections.rows|{}rows[0]
+            final fun <get-rows>(): io.github.shishark.faceblur/RowLayout // io.github.shishark.faceblur/DetectionFormat.GenericDetections.rows.<get-rows>|<get-rows>(){}[0]
+        final val scaling // io.github.shishark.faceblur/DetectionFormat.GenericDetections.scaling|{}scaling[0]
+            final fun <get-scaling>(): io.github.shishark.faceblur/PixelScaling // io.github.shishark.faceblur/DetectionFormat.GenericDetections.scaling.<get-scaling>|<get-scaling>(){}[0]
+        final val scoreColumn // io.github.shishark.faceblur/DetectionFormat.GenericDetections.scoreColumn|{}scoreColumn[0]
+            final fun <get-scoreColumn>(): kotlin/Int // io.github.shishark.faceblur/DetectionFormat.GenericDetections.scoreColumn.<get-scoreColumn>|<get-scoreColumn>(){}[0]
+        final val scoresOutput // io.github.shishark.faceblur/DetectionFormat.GenericDetections.scoresOutput|{}scoresOutput[0]
+            final fun <get-scoresOutput>(): kotlin/String? // io.github.shishark.faceblur/DetectionFormat.GenericDetections.scoresOutput.<get-scoresOutput>|<get-scoresOutput>(){}[0]
+        final val tensorLayout // io.github.shishark.faceblur/DetectionFormat.GenericDetections.tensorLayout|{}tensorLayout[0]
+            final fun <get-tensorLayout>(): io.github.shishark.faceblur/TensorLayout // io.github.shishark.faceblur/DetectionFormat.GenericDetections.tensorLayout.<get-tensorLayout>|<get-tensorLayout>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/DetectionFormat.GenericDetections.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/DetectionFormat.GenericDetections.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.shishark.faceblur/DetectionFormat.GenericDetections.toString|toString(){}[0]
+    }
+
+    final class YuNetLayout : io.github.shishark.faceblur/DetectionFormat { // io.github.shishark.faceblur/DetectionFormat.YuNetLayout|null[0]
+        constructor <init>() // io.github.shishark.faceblur/DetectionFormat.YuNetLayout.<init>|<init>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/DetectionFormat.YuNetLayout.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/DetectionFormat.YuNetLayout.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.shishark.faceblur/DetectionFormat.YuNetLayout.toString|toString(){}[0]
+    }
+}
+
+sealed class io.github.shishark.faceblur/FaceMaskException : kotlin/RuntimeException { // io.github.shishark.faceblur/FaceMaskException|null[0]
+    final class Cancelled : io.github.shishark.faceblur/FaceMaskException // io.github.shishark.faceblur/FaceMaskException.Cancelled|null[0]
+
+    final class Closed : io.github.shishark.faceblur/FaceMaskException // io.github.shishark.faceblur/FaceMaskException.Closed|null[0]
+
+    final class ConcurrentUse : io.github.shishark.faceblur/FaceMaskException // io.github.shishark.faceblur/FaceMaskException.ConcurrentUse|null[0]
+
+    final class ImageTooLarge : io.github.shishark.faceblur/FaceMaskException { // io.github.shishark.faceblur/FaceMaskException.ImageTooLarge|null[0]
+        final val height // io.github.shishark.faceblur/FaceMaskException.ImageTooLarge.height|{}height[0]
+            final fun <get-height>(): kotlin/Int // io.github.shishark.faceblur/FaceMaskException.ImageTooLarge.height.<get-height>|<get-height>(){}[0]
+        final val limit // io.github.shishark.faceblur/FaceMaskException.ImageTooLarge.limit|{}limit[0]
+            final fun <get-limit>(): kotlin/Long // io.github.shishark.faceblur/FaceMaskException.ImageTooLarge.limit.<get-limit>|<get-limit>(){}[0]
+        final val width // io.github.shishark.faceblur/FaceMaskException.ImageTooLarge.width|{}width[0]
+            final fun <get-width>(): kotlin/Int // io.github.shishark.faceblur/FaceMaskException.ImageTooLarge.width.<get-width>|<get-width>(){}[0]
+    }
+
+    final class Internal : io.github.shishark.faceblur/FaceMaskException // io.github.shishark.faceblur/FaceMaskException.Internal|null[0]
+
+    final class InvalidConfiguration : io.github.shishark.faceblur/FaceMaskException { // io.github.shishark.faceblur/FaceMaskException.InvalidConfiguration|null[0]
+        final val parameter // io.github.shishark.faceblur/FaceMaskException.InvalidConfiguration.parameter|{}parameter[0]
+            final fun <get-parameter>(): kotlin/String // io.github.shishark.faceblur/FaceMaskException.InvalidConfiguration.parameter.<get-parameter>|<get-parameter>(){}[0]
+    }
+
+    final class IoFailed : io.github.shishark.faceblur/FaceMaskException // io.github.shishark.faceblur/FaceMaskException.IoFailed|null[0]
+
+    final class MaskPlanMismatch : io.github.shishark.faceblur/FaceMaskException // io.github.shishark.faceblur/FaceMaskException.MaskPlanMismatch|null[0]
+
+    final class MaskWriteFailed : io.github.shishark.faceblur/FaceMaskException // io.github.shishark.faceblur/FaceMaskException.MaskWriteFailed|null[0]
+
+    final class ModelIntegrity : io.github.shishark.faceblur/FaceMaskException // io.github.shishark.faceblur/FaceMaskException.ModelIntegrity|null[0]
+
+    final class ModelOutputInvalid : io.github.shishark.faceblur/FaceMaskException { // io.github.shishark.faceblur/FaceMaskException.ModelOutputInvalid|null[0]
+        final val findings // io.github.shishark.faceblur/FaceMaskException.ModelOutputInvalid.findings|{}findings[0]
+            final fun <get-findings>(): kotlin.collections/List<kotlin/String> // io.github.shishark.faceblur/FaceMaskException.ModelOutputInvalid.findings.<get-findings>|<get-findings>(){}[0]
+    }
+
+    final class ModelRejected : io.github.shishark.faceblur/FaceMaskException { // io.github.shishark.faceblur/FaceMaskException.ModelRejected|null[0]
+        final val findings // io.github.shishark.faceblur/FaceMaskException.ModelRejected.findings|{}findings[0]
+            final fun <get-findings>(): kotlin.collections/List<kotlin/String> // io.github.shishark.faceblur/FaceMaskException.ModelRejected.findings.<get-findings>|<get-findings>(){}[0]
+    }
+
+    final class NotEnoughMemory : io.github.shishark.faceblur/FaceMaskException // io.github.shishark.faceblur/FaceMaskException.NotEnoughMemory|null[0]
+
+    final class OutputValidationFailed : io.github.shishark.faceblur/FaceMaskException { // io.github.shishark.faceblur/FaceMaskException.OutputValidationFailed|null[0]
+        final val findings // io.github.shishark.faceblur/FaceMaskException.OutputValidationFailed.findings|{}findings[0]
+            final fun <get-findings>(): kotlin.collections/List<kotlin/String> // io.github.shishark.faceblur/FaceMaskException.OutputValidationFailed.findings.<get-findings>|<get-findings>(){}[0]
+    }
+
+    final class RuntimeUnavailable : io.github.shishark.faceblur/FaceMaskException // io.github.shishark.faceblur/FaceMaskException.RuntimeUnavailable|null[0]
+
+    final class SourceChanged : io.github.shishark.faceblur/FaceMaskException // io.github.shishark.faceblur/FaceMaskException.SourceChanged|null[0]
+
+    final class SourceTooLarge : io.github.shishark.faceblur/FaceMaskException { // io.github.shishark.faceblur/FaceMaskException.SourceTooLarge|null[0]
+        final val limitBytes // io.github.shishark.faceblur/FaceMaskException.SourceTooLarge.limitBytes|{}limitBytes[0]
+            final fun <get-limitBytes>(): kotlin/Long // io.github.shishark.faceblur/FaceMaskException.SourceTooLarge.limitBytes.<get-limitBytes>|<get-limitBytes>(){}[0]
+    }
+
+    final class UnsupportedImage : io.github.shishark.faceblur/FaceMaskException // io.github.shishark.faceblur/FaceMaskException.UnsupportedImage|null[0]
+
+    final class UnsupportedTarget : io.github.shishark.faceblur/FaceMaskException // io.github.shishark.faceblur/FaceMaskException.UnsupportedTarget|null[0]
+}
+
+sealed class io.github.shishark.faceblur/MetadataPolicy { // io.github.shishark.faceblur/MetadataPolicy|null[0]
+    final class KeepAllowlist : io.github.shishark.faceblur/MetadataPolicy { // io.github.shishark.faceblur/MetadataPolicy.KeepAllowlist|null[0]
+        constructor <init>(kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Boolean = ...) // io.github.shishark.faceblur/MetadataPolicy.KeepAllowlist.<init>|<init>(kotlin.Boolean;kotlin.Boolean;kotlin.Boolean){}[0]
+
+        final val camera // io.github.shishark.faceblur/MetadataPolicy.KeepAllowlist.camera|{}camera[0]
+            final fun <get-camera>(): kotlin/Boolean // io.github.shishark.faceblur/MetadataPolicy.KeepAllowlist.camera.<get-camera>|<get-camera>(){}[0]
+        final val dateTime // io.github.shishark.faceblur/MetadataPolicy.KeepAllowlist.dateTime|{}dateTime[0]
+            final fun <get-dateTime>(): kotlin/Boolean // io.github.shishark.faceblur/MetadataPolicy.KeepAllowlist.dateTime.<get-dateTime>|<get-dateTime>(){}[0]
+        final val gps // io.github.shishark.faceblur/MetadataPolicy.KeepAllowlist.gps|{}gps[0]
+            final fun <get-gps>(): kotlin/Boolean // io.github.shishark.faceblur/MetadataPolicy.KeepAllowlist.gps.<get-gps>|<get-gps>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/MetadataPolicy.KeepAllowlist.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/MetadataPolicy.KeepAllowlist.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.shishark.faceblur/MetadataPolicy.KeepAllowlist.toString|toString(){}[0]
+    }
+
+    final object StripAll : io.github.shishark.faceblur/MetadataPolicy { // io.github.shishark.faceblur/MetadataPolicy.StripAll|null[0]
+        final fun toString(): kotlin/String // io.github.shishark.faceblur/MetadataPolicy.StripAll.toString|toString(){}[0]
+    }
+}
+
+sealed class io.github.shishark.faceblur/OutputFormat { // io.github.shishark.faceblur/OutputFormat|null[0]
+    final class Jpeg : io.github.shishark.faceblur/OutputFormat { // io.github.shishark.faceblur/OutputFormat.Jpeg|null[0]
+        constructor <init>(kotlin/Int = ...) // io.github.shishark.faceblur/OutputFormat.Jpeg.<init>|<init>(kotlin.Int){}[0]
+
+        final val quality // io.github.shishark.faceblur/OutputFormat.Jpeg.quality|{}quality[0]
+            final fun <get-quality>(): kotlin/Int // io.github.shishark.faceblur/OutputFormat.Jpeg.quality.<get-quality>|<get-quality>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/OutputFormat.Jpeg.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/OutputFormat.Jpeg.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.shishark.faceblur/OutputFormat.Jpeg.toString|toString(){}[0]
+    }
+}
+
+sealed class io.github.shishark.faceblur/OutputTarget { // io.github.shishark.faceblur/OutputTarget|null[0]
+    final class NewFile : io.github.shishark.faceblur/OutputTarget { // io.github.shishark.faceblur/OutputTarget.NewFile|null[0]
+        constructor <init>(kotlin/String, kotlin/Boolean = ...) // io.github.shishark.faceblur/OutputTarget.NewFile.<init>|<init>(kotlin.String;kotlin.Boolean){}[0]
+
+        final val path // io.github.shishark.faceblur/OutputTarget.NewFile.path|{}path[0]
+            final fun <get-path>(): kotlin/String // io.github.shishark.faceblur/OutputTarget.NewFile.path.<get-path>|<get-path>(){}[0]
+        final val replaceExisting // io.github.shishark.faceblur/OutputTarget.NewFile.replaceExisting|{}replaceExisting[0]
+            final fun <get-replaceExisting>(): kotlin/Boolean // io.github.shishark.faceblur/OutputTarget.NewFile.replaceExisting.<get-replaceExisting>|<get-replaceExisting>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/OutputTarget.NewFile.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/OutputTarget.NewFile.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.shishark.faceblur/OutputTarget.NewFile.toString|toString(){}[0]
+    }
+
+    final class PlatformTarget : io.github.shishark.faceblur/OutputTarget { // io.github.shishark.faceblur/OutputTarget.PlatformTarget|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.shishark.faceblur/OutputTarget.PlatformTarget.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.shishark.faceblur/OutputTarget.PlatformTarget.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.shishark.faceblur/OutputTarget.PlatformTarget.toString|toString(){}[0]
+    }
+
+    final object OverwriteSource : io.github.shishark.faceblur/OutputTarget { // io.github.shishark.faceblur/OutputTarget.OverwriteSource|null[0]
+        final fun toString(): kotlin/String // io.github.shishark.faceblur/OutputTarget.OverwriteSource.toString|toString(){}[0]
+    }
+}
+
+final object io.github.shishark.faceblur.ios/FaceBlurIos { // io.github.shishark.faceblur.ios/FaceBlurIos|null[0]
+    final val libraryVersion // io.github.shishark.faceblur.ios/FaceBlurIos.libraryVersion|{}libraryVersion[0]
+        final fun <get-libraryVersion>(): kotlin/String // io.github.shishark.faceblur.ios/FaceBlurIos.libraryVersion.<get-libraryVersion>|<get-libraryVersion>(){}[0]
+
+    final fun encodeJpeg(kotlin/Long, kotlin/Int, kotlin/Int, kotlin/Int, io.github.shishark.faceblur.ios/IosPixelLayout, kotlin/Int): io.github.shishark.faceblur.ios/EncodedJpeg // io.github.shishark.faceblur.ios/FaceBlurIos.encodeJpeg|encodeJpeg(kotlin.Long;kotlin.Int;kotlin.Int;kotlin.Int;io.github.shishark.faceblur.ios.IosPixelLayout;kotlin.Int){}[0]
+    final fun modelSourceFromMemory(kotlin/Long, kotlin/Long): io.github.shishark.faceblur/ModelSource // io.github.shishark.faceblur.ios/FaceBlurIos.modelSourceFromMemory|modelSourceFromMemory(kotlin.Long;kotlin.Long){}[0]
+    final fun registerOnnxRuntime(io.github.shishark.faceblur.ios/OnnxBridgeFactory): kotlin/Boolean // io.github.shishark.faceblur.ios/FaceBlurIos.registerOnnxRuntime|registerOnnxRuntime(io.github.shishark.faceblur.ios.OnnxBridgeFactory){}[0]
+    final fun wrapRgba(kotlin/Long, kotlin/Int, kotlin/Int, kotlin/Int, io.github.shishark.faceblur.ios/IosPixelLayout): io.github.shishark.faceblur/MutablePixelImage // io.github.shishark.faceblur.ios/FaceBlurIos.wrapRgba|wrapRgba(kotlin.Long;kotlin.Int;kotlin.Int;kotlin.Int;io.github.shishark.faceblur.ios.IosPixelLayout){}[0]
+    final fun wrapRgba(kotlin/Long, kotlin/Int, kotlin/Int, kotlin/Int, io.github.shishark.faceblur.ios/IosPixelLayout, kotlin/Int): io.github.shishark.faceblur/MutablePixelImage // io.github.shishark.faceblur.ios/FaceBlurIos.wrapRgba|wrapRgba(kotlin.Long;kotlin.Int;kotlin.Int;kotlin.Int;io.github.shishark.faceblur.ios.IosPixelLayout;kotlin.Int){}[0]
+}
+
+final object io.github.shishark.faceblur/FaceBlurInfo { // io.github.shishark.faceblur/FaceBlurInfo|null[0]
+    final const val LICENSE // io.github.shishark.faceblur/FaceBlurInfo.LICENSE|{}LICENSE[0]
+        final fun <get-LICENSE>(): kotlin/String // io.github.shishark.faceblur/FaceBlurInfo.LICENSE.<get-LICENSE>|<get-LICENSE>(){}[0]
+    final const val NAME // io.github.shishark.faceblur/FaceBlurInfo.NAME|{}NAME[0]
+        final fun <get-NAME>(): kotlin/String // io.github.shishark.faceblur/FaceBlurInfo.NAME.<get-NAME>|<get-NAME>(){}[0]
+
+    final fun describe(): kotlin/String // io.github.shishark.faceblur/FaceBlurInfo.describe|describe(){}[0]
+}

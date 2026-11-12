@@ -1,0 +1,73 @@
+# SPDX-License-Identifier: Apache-2.0
+# Crash-freedom fuzzing of the ONNX pre-parse walker (ADR 0012 "Pre-parse", SEC-MA-004): mutations of the synthetic
+# test model that the project builds itself must either parse or be refused with ModelRejected; any other throwable or a
+# call that does not return fails the run. The local merge gate fuzzes the local reference fixtures as well. Two runs: a fixed seed and a random seed. Both seeds are
+# printed in the log and in the run summary; a failure prints the round and the exact replay arguments
+# (./gradlew :faceblur:fuzzOnnxPreParse -Pfaceblur.fuzz.seed=<seed> -Pfaceblur.fuzz.startRound=<round>
+# -Pfaceblur.fuzz.maxRounds=1). The in-repository unit test keeps its own fixed seed.
+# When: manual (`gh workflow run fuzz.yml --ref <branch>`) and on a push (any branch) that changes what the fuzzer
+# exercises: the walker, the exception it refuses with (and ReadOnly.kt, called while it is constructed), its unit,
+# differential and cost tests, the test-model sources the fuzz bases are built from, the harness (scripts/test-models/),
+# the version catalog (compiler, JVM target) and this workflow. Not
+# on other pushes and not on a schedule (GitHub Free plan minutes). The fuzz task wiring in faceblur/build.gradle.kts
+# is exercised by the fuzz-harness controls of the CI build job (planted crash, replay; scripts/test-model-step.sh).
+# No artifact is uploaded; the Gradle cache is read-only here. No model is downloaded or cached.
+name: fuzz
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "faceblur/src/commonMain/kotlin/io/github/shishark/faceblur/internal/model/OnnxPreParse.kt"
+      - "faceblur/src/commonMain/kotlin/io/github/shishark/faceblur/FaceMaskException.kt"
+      - "faceblur/src/commonMain/kotlin/io/github/shishark/faceblur/ReadOnly.kt"
+      - "faceblur/src/commonTest/kotlin/io/github/shishark/faceblur/internal/model/OnnxPreParseTest.kt"
+      - "faceblur/src/commonTest/kotlin/io/github/shishark/faceblur/testmodel/**"
+      - "faceblur/src/jvmTest/kotlin/io/github/shishark/faceblur/jvm/PreParse*.kt"
+      - "scripts/test-models/**"
+      - "gradle/libs.versions.toml"
+      - ".github/workflows/fuzz.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  # Superseded branch runs are cancelled; every run on main has its own group and is never cancelled.
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && format('main-{0}', github.run_id) || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  fuzz:
+    name: Fuzz the ONNX pre-parse walker (fixed + random seed)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          # MIT-licensed basic caching (the default 'enhanced' provider is a proprietary component).
+          cache-provider: basic
+          cache-read-only: true
+
+      - name: Fixed seed
+        run: |
+          set -eu
+          seed=20261103
+          echo "Fuzz fixed seed: $seed" >> "$GITHUB_STEP_SUMMARY"
+          ./gradlew --stacktrace :faceblur:fuzzOnnxPreParse -Pfaceblur.fuzz.seed="$seed" -Pfaceblur.fuzz.seconds=45
+
+      - name: Random seed (logged)
+        run: |
+          set -eu
+          seed=$(od -An -N8 -td8 /dev/urandom | tr -d ' ')
+          echo "Fuzz random seed: $seed"
+          echo "Fuzz random seed: $seed" >> "$GITHUB_STEP_SUMMARY"
+          ./gradlew --stacktrace :faceblur:fuzzOnnxPreParse -Pfaceblur.fuzz.seed="$seed" -Pfaceblur.fuzz.seconds=90

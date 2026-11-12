@@ -1,0 +1,14 @@
+# Third-party components of FaceBlur and the licence texts that go with them (see NOTICE).
+# Columns (tab-separated): component, version, licence, text files in this folder (;), Gradle modules group:artifact
+# (trailing * = prefix) or spm:<owner>/<repo> or - , artifacts that carry the texts (aar, klib, xcframework, swift).
+# Every runtime dependency of the library must match a row (scripts/check-licence-notices.py).
+Kotlin standard library	2.4.21	Apache-2.0	apache-2.0.txt	org.jetbrains.kotlin:kotlin-stdlib	aar;klib;xcframework;swift
+Kotlin standard library (time code derived from ThreeTen-Backport)	2.4.21	BSD-3-Clause	threetenbp-bsd-3-clause.txt	org.jetbrains.kotlin:kotlin-stdlib	aar;klib;xcframework;swift
+Kotlin standard library and Kotlin/Native runtime (code derived from Boost)	2.4.21	BSL-1.0	boost-bsl-1.0.txt	org.jetbrains.kotlin:kotlin-stdlib	aar;klib;xcframework;swift
+Kotlin/Native runtime (bounded queue)	2.4.21	BSD-2-Clause	mpmc-queue-bsd-2-clause.txt	-	klib;xcframework;swift
+Kotlin/Native runtime (Unicode data terms)	2.4.21	Unicode terms	unicode-terms.txt	-	klib;xcframework;swift
+kotlinx.coroutines	1.11.0	Apache-2.0	apache-2.0.txt	org.jetbrains.kotlinx:kotlinx-coroutines-*	aar;klib;xcframework;swift
+kotlinx.atomicfu	0.32.1	Apache-2.0	apache-2.0.txt	org.jetbrains.kotlinx:atomicfu*	klib;xcframework;swift
+JetBrains annotations	23.0.0	Apache-2.0	apache-2.0.txt	org.jetbrains:annotations	aar
+ONNX Runtime for Android	1.31.0	MIT	onnxruntime-mit.txt	com.microsoft.onnxruntime:onnxruntime-android	aar
+ONNX Runtime for iOS (Swift package onnxruntime-swift-package-manager)	1.20.0	MIT	onnxruntime-mit.txt;onnxruntime-swift-package-manager-mit.txt	spm:microsoft/onnxruntime-swift-package-manager	xcframework;swift

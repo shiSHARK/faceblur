@@ -1,0 +1,50 @@
+# Gradle / Kotlin build outputs
+.gradle/
+build/
+.kotlin/
+local.properties
+*.hprof
+
+# Python bytecode (tools and the data-admission guard are Python scripts)
+__pycache__/
+*.pyc
+
+# IDEs and OS files
+.idea/
+*.iml
+.fleet/
+.vscode/
+*.swp
+.DS_Store
+xcuserdata/
+DerivedData/
+*.xcworkspace/xcuserdata/
+
+# Test-model fixtures (ADR 0012): never committed. A local fixtures folder (outside the repository) is verified against
+# its manifest and copied to build/ (already ignored above). *.onnx and *.ort are a second line of defence against a
+# stray copy elsewhere in the tree; the data-admission check also rejects *.onnx in any commit.
+*.onnx
+*.ort
+
+# Secrets and signing material
+*.keystore
+*.jks
+*.p12
+*.pem
+*.gpg
+*.asc
+secring.*
+*.p8
+*.cer
+*.mobileprovision
+*.keychain
+*.keychain-db
+**/Local.xcconfig
+.env
+.env.*
+!.env.example
+
+# Logs and local outputs
+/logs/
+*.log
+/out/

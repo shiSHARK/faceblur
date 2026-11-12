@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+# Internal-data wording for scripts/check-internal-figures.py: Python regular expressions, matched case-insensitively
+# against each line; one per line, '#' starts a comment. Generic wording only: never a value, never the name of a data
+# set. A change to this list needs a review (legal-compliance advisor: wording; security engineer: coverage).
+\bmeasured\s+(?:on|with|in|over|across|from|by|at|for|during)\b
+\bmeasured\s+(?:was|were|is|are|reached|reaches|gave|gives|shows?|showed)\b
+\b(?:largest|highest|maximum|max|peak|worst|typical|median|average|mean)\s+(?:[\w-]+\s+){0,3}measured\b
+\bmeasured\s+(?:[\w-]+\s+){0,2}(?:maximum|max|maxima|peak|worst|values?|figures?|counts?|work|times?|results?|rates?)\b
+\bmeasurements?\s+(?:on|with|in|over|across|from|of\s+the\s+(?:internal|private))\b
+\binternal\s+(?:photo\s+|image\s+|test\s+|data\s+)?(?:sets?|data(?!\s+(?:class|object|interface))|measurements?|photos|images|runs?|benchmarks?|results?|evaluations?)\b
+\bprivate\s+(?:photo|image|test|data|evaluation)\s+(?:sets?|collections?)\b
+\bprivate\s+(?:data|photos|images)\b
+\bour\s+(?:own\s+)?(?:photos|images|pictures|sets?|data|photo\s+sets?|test\s+sets?|data\s*sets?|collections?)\b
+\btest[\s-]+sets?\b
+\bphoto[\s-]+sets?\b
+\bdata[\s-]?sets?\b
+\breal(?:[\s-]+world)?[\s-]+photos\b
+\bhighest\b
+\bheadroom\b
+\bbench(?:mark)?(?:'s)?(?:\s+app(?:'s)?)?\s+runs?\b

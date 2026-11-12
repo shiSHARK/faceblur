@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: Apache-2.0
+# faceblur runtime dependencies of the published Android artifact, format 1
+#
+# Every module that an app gets at run time from io.github.shishark:faceblur-android: the resolved
+# androidRuntimeClasspath of the library (direct and transitive) and the dependencies declared in the published POM and
+# Gradle module metadata. scripts/check-runtime-deps.py fails on any module or version that is not listed here, so a
+# new runtime dependency (or a version change) fails the build until it is reviewed and added. A module that names a
+# networking, telemetry, analytics or crash-reporting library can never be listed: the check refuses it even with a
+# row (the library contains no network code and no network dependencies, PRIV-014).
+# ONNX Runtime declares INTERNET and ACCESS_NETWORK_STATE and a telemetry starter in its own manifest; the library
+# removes the starter (scripts/check-publication.sh, scripts/check-consumer-manifest.sh). The two permissions still
+# reach an app's merged manifest unless the app removes them itself (the two tools:node="remove" lines of the Android
+# guide, ADR 0007). Its runtime is created with telemetry off (scripts/check-ort-telemetry.py).
+#
+# Format: the first two lines above stay exactly as they are; then comment lines (#) and one row per line, two
+# fields separated by a TAB:   <group>:<artifact>:<version>   <reason>
+com.microsoft.onnxruntime:onnxruntime-android:1.31.0	the inference runtime (MIT); telemetry starter removed, telemetry off; the app removes its network permissions
+org.jetbrains.kotlin:kotlin-stdlib:2.4.21	Kotlin standard library
+org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.11.0	version alignment of kotlinx.coroutines (no classes)
+org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0	kotlinx.coroutines core (api dependency of the common code)
+org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0	kotlinx.coroutines JVM/Android classes
+org.jetbrains:annotations:23.0.0	JetBrains annotations (compile-time nullability, pulled by the standard library)

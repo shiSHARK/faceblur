@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# Expected outputs of the JVM file-mode cross-check (scripts/crosscheck-file-mode.sh). The manifest.tsv that the
+# tests write must equal these lines exactly after sorting (comment lines excluded). Columns, tab-separated:
+# file name, checker policy, expected verdict (pass|fail), sorted finding codes for planted outputs or "-".
+# Changing a line (a removed output, a looser policy, other codes) is a reviewed change of this file.
+allowlist-all.jpg	allowlist:gps,datetime,camera	pass	-
+allowlist-datetime.jpg	allowlist:datetime	pass	-
+jfif-thumbnail-and-icc-dropped.jpg	strip-all	pass	-
+planted-trailing.jpg	strip-all	fail	SECOND_IMAGE,TRAILING_BYTES
+planted-unprocessed.jpg	strip-all	fail	COM_PRESENT,EXIF_TAG_NOT_ALLOWED,MPF_PRESENT,ORIENTATION_MISSING,SEGMENT_ORDER,XMP_PRESENT
+strip-all.jpg	strip-all	pass	-

@@ -1,0 +1,618 @@
+public final class io/github/shishark/faceblur/BoxFormat : java/lang/Enum {
+	public static final field CXCYWH Lio/github/shishark/faceblur/BoxFormat;
+	public static final field XYWH Lio/github/shishark/faceblur/BoxFormat;
+	public static final field XYXY Lio/github/shishark/faceblur/BoxFormat;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/shishark/faceblur/BoxFormat;
+	public static fun values ()[Lio/github/shishark/faceblur/BoxFormat;
+}
+
+public abstract interface class io/github/shishark/faceblur/CancellationToken {
+	public abstract fun isCancellationRequested ()Z
+}
+
+public final class io/github/shishark/faceblur/ColorOrder : java/lang/Enum {
+	public static final field BGR Lio/github/shishark/faceblur/ColorOrder;
+	public static final field RGB Lio/github/shishark/faceblur/ColorOrder;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/shishark/faceblur/ColorOrder;
+	public static fun values ()[Lio/github/shishark/faceblur/ColorOrder;
+}
+
+public final class io/github/shishark/faceblur/CoordinateSpace : java/lang/Enum {
+	public static final field INPUT_PIXELS Lio/github/shishark/faceblur/CoordinateSpace;
+	public static final field NORMALIZED Lio/github/shishark/faceblur/CoordinateSpace;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/shishark/faceblur/CoordinateSpace;
+	public static fun values ()[Lio/github/shishark/faceblur/CoordinateSpace;
+}
+
+public final class io/github/shishark/faceblur/Detection {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFaces ()Ljava/util/List;
+	public final fun getHasGainMap ()Z
+	public final fun getHeight ()I
+	public final fun getMasking ()Lio/github/shishark/faceblur/MaskingConfig;
+	public final fun getOutputHeight ()I
+	public final fun getOutputWidth ()I
+	public final fun getTimings ()Lio/github/shishark/faceblur/Timings;
+	public final fun getWarnings ()Ljava/util/List;
+	public final fun getWidth ()I
+	public fun hashCode ()I
+	public final fun toMaskPlan ()Lio/github/shishark/faceblur/MaskPlan;
+	public final fun toMaskPlan (Lio/github/shishark/faceblur/MaskingConfig;)Lio/github/shishark/faceblur/MaskPlan;
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class io/github/shishark/faceblur/DetectionFormat {
+}
+
+public final class io/github/shishark/faceblur/DetectionFormat$GenericDetections : io/github/shishark/faceblur/DetectionFormat {
+	public fun <init> (Ljava/lang/String;ILjava/lang/String;ILio/github/shishark/faceblur/RowLayout;Lio/github/shishark/faceblur/BoxFormat;Lio/github/shishark/faceblur/CoordinateSpace;Lio/github/shishark/faceblur/ColorOrder;Lio/github/shishark/faceblur/TensorLayout;Lio/github/shishark/faceblur/PixelScaling;)V
+	public fun <init> (Ljava/lang/String;ILjava/lang/String;ILio/github/shishark/faceblur/RowLayout;Lio/github/shishark/faceblur/BoxFormat;Lio/github/shishark/faceblur/CoordinateSpace;Lio/github/shishark/faceblur/ColorOrder;Lio/github/shishark/faceblur/TensorLayout;Lio/github/shishark/faceblur/PixelScaling;Z)V
+	public synthetic fun <init> (Ljava/lang/String;ILjava/lang/String;ILio/github/shishark/faceblur/RowLayout;Lio/github/shishark/faceblur/BoxFormat;Lio/github/shishark/faceblur/CoordinateSpace;Lio/github/shishark/faceblur/ColorOrder;Lio/github/shishark/faceblur/TensorLayout;Lio/github/shishark/faceblur/PixelScaling;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBoxColumn ()I
+	public final fun getBoxFormat ()Lio/github/shishark/faceblur/BoxFormat;
+	public final fun getBoxesOutput ()Ljava/lang/String;
+	public final fun getColorOrder ()Lio/github/shishark/faceblur/ColorOrder;
+	public final fun getCoordinates ()Lio/github/shishark/faceblur/CoordinateSpace;
+	public final fun getNmsInGraph ()Z
+	public final fun getRows ()Lio/github/shishark/faceblur/RowLayout;
+	public final fun getScaling ()Lio/github/shishark/faceblur/PixelScaling;
+	public final fun getScoreColumn ()I
+	public final fun getScoresOutput ()Ljava/lang/String;
+	public final fun getTensorLayout ()Lio/github/shishark/faceblur/TensorLayout;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/DetectionFormat$YuNetLayout : io/github/shishark/faceblur/DetectionFormat {
+	public fun <init> ()V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/DetectorModel {
+	public static final field Companion Lio/github/shishark/faceblur/DetectorModel$Companion;
+	public static final field DEFAULT_MAX_MODEL_BYTES J
+	public final fun getInfo ()Lio/github/shishark/faceblur/ModelInfo;
+	public final fun getProfile ()Lio/github/shishark/faceblur/DetectorProfile;
+	public static final fun load (Lio/github/shishark/faceblur/ModelSource;Lio/github/shishark/faceblur/DetectorProfile;)Lio/github/shishark/faceblur/DetectorModel;
+	public static final fun load (Lio/github/shishark/faceblur/ModelSource;Lio/github/shishark/faceblur/DetectorProfile;J)Lio/github/shishark/faceblur/DetectorModel;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/DetectorModel$Companion {
+	public final fun load (Lio/github/shishark/faceblur/ModelSource;Lio/github/shishark/faceblur/DetectorProfile;)Lio/github/shishark/faceblur/DetectorModel;
+	public final fun load (Lio/github/shishark/faceblur/ModelSource;Lio/github/shishark/faceblur/DetectorProfile;J)Lio/github/shishark/faceblur/DetectorModel;
+	public static synthetic fun load$default (Lio/github/shishark/faceblur/DetectorModel$Companion;Lio/github/shishark/faceblur/ModelSource;Lio/github/shishark/faceblur/DetectorProfile;JILjava/lang/Object;)Lio/github/shishark/faceblur/DetectorModel;
+}
+
+public final class io/github/shishark/faceblur/DetectorProfile {
+	public fun <init> (Lio/github/shishark/faceblur/DetectionFormat;IIFLjava/lang/String;)V
+	public fun <init> (Lio/github/shishark/faceblur/DetectionFormat;IIFLjava/lang/String;F)V
+	public fun <init> (Lio/github/shishark/faceblur/DetectionFormat;IIFLjava/lang/String;FF)V
+	public synthetic fun <init> (Lio/github/shishark/faceblur/DetectionFormat;IIFLjava/lang/String;FFILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExpectedSha256 ()Ljava/lang/String;
+	public final fun getFormat ()Lio/github/shishark/faceblur/DetectionFormat;
+	public final fun getInputHeight ()I
+	public final fun getInputWidth ()I
+	public final fun getMinMaskExpandX ()F
+	public final fun getMinMaskExpandY ()F
+	public final fun getScoreThreshold ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/DetectorProfile$Builder {
+	public fun <init> ()V
+	public final fun build ()Lio/github/shishark/faceblur/DetectorProfile;
+	public final fun expectedSha256 (Ljava/lang/String;)Lio/github/shishark/faceblur/DetectorProfile$Builder;
+	public final fun format (Lio/github/shishark/faceblur/DetectionFormat;)Lio/github/shishark/faceblur/DetectorProfile$Builder;
+	public final fun inputSize (II)Lio/github/shishark/faceblur/DetectorProfile$Builder;
+	public final fun minMaskExpandX (F)Lio/github/shishark/faceblur/DetectorProfile$Builder;
+	public final fun minMaskExpandY (F)Lio/github/shishark/faceblur/DetectorProfile$Builder;
+	public final fun scoreThreshold (F)Lio/github/shishark/faceblur/DetectorProfile$Builder;
+}
+
+public final class io/github/shishark/faceblur/ExpectedFace {
+	public fun <init> (FFFF)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBottom ()F
+	public final fun getLeft ()F
+	public final fun getRight ()F
+	public final fun getTop ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/FaceBlurInfo {
+	public static final field INSTANCE Lio/github/shishark/faceblur/FaceBlurInfo;
+	public static final field LICENSE Ljava/lang/String;
+	public static final field NAME Ljava/lang/String;
+	public final fun describe ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/FaceBox {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBottom ()F
+	public final fun getHeight ()F
+	public final fun getLeft ()F
+	public final fun getRight ()F
+	public final fun getScore ()F
+	public final fun getTop ()F
+	public final fun getWidth ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class io/github/shishark/faceblur/FaceMaskException : java/lang/RuntimeException {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$Cancelled : io/github/shishark/faceblur/FaceMaskException {
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$Closed : io/github/shishark/faceblur/FaceMaskException {
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$ConcurrentUse : io/github/shishark/faceblur/FaceMaskException {
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$ImageTooLarge : io/github/shishark/faceblur/FaceMaskException {
+	public final fun getHeight ()I
+	public final fun getLimit ()J
+	public final fun getWidth ()I
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$Internal : io/github/shishark/faceblur/FaceMaskException {
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$InvalidConfiguration : io/github/shishark/faceblur/FaceMaskException {
+	public final fun getParameter ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$IoFailed : io/github/shishark/faceblur/FaceMaskException {
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$MaskPlanMismatch : io/github/shishark/faceblur/FaceMaskException {
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$MaskWriteFailed : io/github/shishark/faceblur/FaceMaskException {
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$ModelIntegrity : io/github/shishark/faceblur/FaceMaskException {
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$ModelOutputInvalid : io/github/shishark/faceblur/FaceMaskException {
+	public final fun getFindings ()Ljava/util/List;
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$ModelRejected : io/github/shishark/faceblur/FaceMaskException {
+	public final fun getFindings ()Ljava/util/List;
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$NotEnoughMemory : io/github/shishark/faceblur/FaceMaskException {
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$OutputValidationFailed : io/github/shishark/faceblur/FaceMaskException {
+	public final fun getFindings ()Ljava/util/List;
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$RuntimeUnavailable : io/github/shishark/faceblur/FaceMaskException {
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$SourceChanged : io/github/shishark/faceblur/FaceMaskException {
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$SourceTooLarge : io/github/shishark/faceblur/FaceMaskException {
+	public final fun getLimitBytes ()J
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$UnsupportedImage : io/github/shishark/faceblur/FaceMaskException {
+}
+
+public final class io/github/shishark/faceblur/FaceMaskException$UnsupportedTarget : io/github/shishark/faceblur/FaceMaskException {
+}
+
+public final class io/github/shishark/faceblur/FaceMasker : java/lang/AutoCloseable {
+	public fun <init> (Lio/github/shishark/faceblur/DetectorModel;)V
+	public fun <init> (Lio/github/shishark/faceblur/DetectorModel;Lio/github/shishark/faceblur/FaceMaskerConfig;)V
+	public synthetic fun <init> (Lio/github/shishark/faceblur/DetectorModel;Lio/github/shishark/faceblur/FaceMaskerConfig;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun applyMasks (Lio/github/shishark/faceblur/MutablePixelImage;Lio/github/shishark/faceblur/MaskPlan;)Lio/github/shishark/faceblur/MaskResult;
+	public final fun applyMasks (Lio/github/shishark/faceblur/MutablePixelImage;Lio/github/shishark/faceblur/MaskPlan;Lio/github/shishark/faceblur/CancellationToken;)Lio/github/shishark/faceblur/MaskResult;
+	public static synthetic fun applyMasks$default (Lio/github/shishark/faceblur/FaceMasker;Lio/github/shishark/faceblur/MutablePixelImage;Lio/github/shishark/faceblur/MaskPlan;Lio/github/shishark/faceblur/CancellationToken;ILjava/lang/Object;)Lio/github/shishark/faceblur/MaskResult;
+	public final fun checkProfile (Lio/github/shishark/faceblur/PixelImage;Ljava/util/List;)Lio/github/shishark/faceblur/ProfileCheckResult;
+	public final fun checkProfile (Lio/github/shishark/faceblur/PixelImage;Ljava/util/List;F)Lio/github/shishark/faceblur/ProfileCheckResult;
+	public final fun checkProfile (Lio/github/shishark/faceblur/PixelImage;Ljava/util/List;FLio/github/shishark/faceblur/CancellationToken;)Lio/github/shishark/faceblur/ProfileCheckResult;
+	public static synthetic fun checkProfile$default (Lio/github/shishark/faceblur/FaceMasker;Lio/github/shishark/faceblur/PixelImage;Ljava/util/List;FLio/github/shishark/faceblur/CancellationToken;ILjava/lang/Object;)Lio/github/shishark/faceblur/ProfileCheckResult;
+	public fun close ()V
+	public final fun detect (Lio/github/shishark/faceblur/PixelImage;)Lio/github/shishark/faceblur/Detection;
+	public final fun detect (Lio/github/shishark/faceblur/PixelImage;Lio/github/shishark/faceblur/CancellationToken;)Lio/github/shishark/faceblur/Detection;
+	public static synthetic fun detect$default (Lio/github/shishark/faceblur/FaceMasker;Lio/github/shishark/faceblur/PixelImage;Lio/github/shishark/faceblur/CancellationToken;ILjava/lang/Object;)Lio/github/shishark/faceblur/Detection;
+	public final fun detectFile (Ljava/lang/String;)Lio/github/shishark/faceblur/Detection;
+	public final fun detectFile (Ljava/lang/String;Lio/github/shishark/faceblur/FileOptions;)Lio/github/shishark/faceblur/Detection;
+	public final fun detectFile (Ljava/lang/String;Lio/github/shishark/faceblur/FileOptions;Lio/github/shishark/faceblur/CancellationToken;)Lio/github/shishark/faceblur/Detection;
+	public static synthetic fun detectFile$default (Lio/github/shishark/faceblur/FaceMasker;Ljava/lang/String;Lio/github/shishark/faceblur/FileOptions;Lio/github/shishark/faceblur/CancellationToken;ILjava/lang/Object;)Lio/github/shishark/faceblur/Detection;
+	public final fun getConfig ()Lio/github/shishark/faceblur/FaceMaskerConfig;
+	public final fun getModelInfo ()Lio/github/shishark/faceblur/MaskerModelInfo;
+	public final fun maskFile (Ljava/lang/String;Lio/github/shishark/faceblur/OutputTarget;)Lio/github/shishark/faceblur/FileResult;
+	public final fun maskFile (Ljava/lang/String;Lio/github/shishark/faceblur/OutputTarget;Lio/github/shishark/faceblur/FileOptions;)Lio/github/shishark/faceblur/FileResult;
+	public final fun maskFile (Ljava/lang/String;Lio/github/shishark/faceblur/OutputTarget;Lio/github/shishark/faceblur/FileOptions;Lio/github/shishark/faceblur/MaskPlan;)Lio/github/shishark/faceblur/FileResult;
+	public final fun maskFile (Ljava/lang/String;Lio/github/shishark/faceblur/OutputTarget;Lio/github/shishark/faceblur/FileOptions;Lio/github/shishark/faceblur/MaskPlan;Lio/github/shishark/faceblur/CancellationToken;)Lio/github/shishark/faceblur/FileResult;
+	public static synthetic fun maskFile$default (Lio/github/shishark/faceblur/FaceMasker;Ljava/lang/String;Lio/github/shishark/faceblur/OutputTarget;Lio/github/shishark/faceblur/FileOptions;Lio/github/shishark/faceblur/MaskPlan;Lio/github/shishark/faceblur/CancellationToken;ILjava/lang/Object;)Lio/github/shishark/faceblur/FileResult;
+	public final fun maskInPlace (Lio/github/shishark/faceblur/MutablePixelImage;)Lio/github/shishark/faceblur/MaskResult;
+	public final fun maskInPlace (Lio/github/shishark/faceblur/MutablePixelImage;Lio/github/shishark/faceblur/CancellationToken;)Lio/github/shishark/faceblur/MaskResult;
+	public static synthetic fun maskInPlace$default (Lio/github/shishark/faceblur/FaceMasker;Lio/github/shishark/faceblur/MutablePixelImage;Lio/github/shishark/faceblur/CancellationToken;ILjava/lang/Object;)Lio/github/shishark/faceblur/MaskResult;
+}
+
+public final class io/github/shishark/faceblur/FaceMaskerConfig {
+	public fun <init> ()V
+	public fun <init> (Lio/github/shishark/faceblur/MaskingConfig;)V
+	public fun <init> (Lio/github/shishark/faceblur/MaskingConfig;I)V
+	public synthetic fun <init> (Lio/github/shishark/faceblur/MaskingConfig;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMasking ()Lio/github/shishark/faceblur/MaskingConfig;
+	public final fun getOnnxThreads ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/FaceMaskerConfig$Builder {
+	public fun <init> ()V
+	public final fun build ()Lio/github/shishark/faceblur/FaceMaskerConfig;
+	public final fun masking (Lio/github/shishark/faceblur/MaskingConfig;)Lio/github/shishark/faceblur/FaceMaskerConfig$Builder;
+	public final fun onnxThreads (I)Lio/github/shishark/faceblur/FaceMaskerConfig$Builder;
+}
+
+public final class io/github/shishark/faceblur/FileOptions {
+	public fun <init> ()V
+	public fun <init> (I)V
+	public fun <init> (II)V
+	public fun <init> (III)V
+	public fun <init> (IIILio/github/shishark/faceblur/OutputFormat;)V
+	public fun <init> (IIILio/github/shishark/faceblur/OutputFormat;Lio/github/shishark/faceblur/MetadataPolicy;)V
+	public synthetic fun <init> (IIILio/github/shishark/faceblur/OutputFormat;Lio/github/shishark/faceblur/MetadataPolicy;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFormat ()Lio/github/shishark/faceblur/OutputFormat;
+	public final fun getMaxDecodedPixels ()I
+	public final fun getMaxLongSide ()I
+	public final fun getMaxOutputLongSide ()I
+	public final fun getMetadata ()Lio/github/shishark/faceblur/MetadataPolicy;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/FileOptions$Builder {
+	public fun <init> ()V
+	public final fun build ()Lio/github/shishark/faceblur/FileOptions;
+	public final fun format (Lio/github/shishark/faceblur/OutputFormat;)Lio/github/shishark/faceblur/FileOptions$Builder;
+	public final fun maxDecodedPixels (I)Lio/github/shishark/faceblur/FileOptions$Builder;
+	public final fun maxLongSide (I)Lio/github/shishark/faceblur/FileOptions$Builder;
+	public final fun maxOutputLongSide (I)Lio/github/shishark/faceblur/FileOptions$Builder;
+	public final fun metadata (Lio/github/shishark/faceblur/MetadataPolicy;)Lio/github/shishark/faceblur/FileOptions$Builder;
+}
+
+public final class io/github/shishark/faceblur/FileResult {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFaces ()Ljava/util/List;
+	public final fun getGainMapRemoved ()Z
+	public final fun getHeight ()I
+	public final fun getMasks ()Ljava/util/List;
+	public final fun getOutputBytes ()J
+	public final fun getOutputHeight ()I
+	public final fun getOutputWidth ()I
+	public final fun getSourceHeight ()I
+	public final fun getSourceWidth ()I
+	public final fun getTimings ()Lio/github/shishark/faceblur/Timings;
+	public final fun getWarnings ()Ljava/util/List;
+	public final fun getWidth ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/Mask {
+	public static final field Companion Lio/github/shishark/faceblur/Mask$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public static final fun exact (Lio/github/shishark/faceblur/MaskShape;FFFF)Lio/github/shishark/faceblur/Mask;
+	public static final fun fromFace (Lio/github/shishark/faceblur/FaceBox;)Lio/github/shishark/faceblur/Mask;
+	public static final fun fromFace (Lio/github/shishark/faceblur/FaceBox;Lio/github/shishark/faceblur/MaskingConfig;)Lio/github/shishark/faceblur/Mask;
+	public final fun getCenterX ()F
+	public final fun getCenterY ()F
+	public final fun getOrigin ()Lio/github/shishark/faceblur/MaskOrigin;
+	public final fun getRadiusX ()F
+	public final fun getRadiusY ()F
+	public final fun getShape ()Lio/github/shishark/faceblur/MaskShape;
+	public fun hashCode ()I
+	public static final fun manual (FFFF)Lio/github/shishark/faceblur/Mask;
+	public static final fun manual (FFFFLio/github/shishark/faceblur/MaskingConfig;)Lio/github/shishark/faceblur/Mask;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/Mask$Companion {
+	public final fun exact (Lio/github/shishark/faceblur/MaskShape;FFFF)Lio/github/shishark/faceblur/Mask;
+	public final fun fromFace (Lio/github/shishark/faceblur/FaceBox;)Lio/github/shishark/faceblur/Mask;
+	public final fun fromFace (Lio/github/shishark/faceblur/FaceBox;Lio/github/shishark/faceblur/MaskingConfig;)Lio/github/shishark/faceblur/Mask;
+	public static synthetic fun fromFace$default (Lio/github/shishark/faceblur/Mask$Companion;Lio/github/shishark/faceblur/FaceBox;Lio/github/shishark/faceblur/MaskingConfig;ILjava/lang/Object;)Lio/github/shishark/faceblur/Mask;
+	public final fun manual (FFFF)Lio/github/shishark/faceblur/Mask;
+	public final fun manual (FFFFLio/github/shishark/faceblur/MaskingConfig;)Lio/github/shishark/faceblur/Mask;
+	public static synthetic fun manual$default (Lio/github/shishark/faceblur/Mask$Companion;FFFFLio/github/shishark/faceblur/MaskingConfig;ILjava/lang/Object;)Lio/github/shishark/faceblur/Mask;
+}
+
+public final class io/github/shishark/faceblur/MaskOrigin : java/lang/Enum {
+	public static final field DETECTED Lio/github/shishark/faceblur/MaskOrigin;
+	public static final field MANUAL Lio/github/shishark/faceblur/MaskOrigin;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/shishark/faceblur/MaskOrigin;
+	public static fun values ()[Lio/github/shishark/faceblur/MaskOrigin;
+}
+
+public final class io/github/shishark/faceblur/MaskPlan {
+	public fun <init> (IILjava/util/List;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHeight ()I
+	public final fun getMasks ()Ljava/util/List;
+	public final fun getWidth ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public final fun withMasks (Ljava/util/List;)Lio/github/shishark/faceblur/MaskPlan;
+}
+
+public final class io/github/shishark/faceblur/MaskResult {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFaces ()Ljava/util/List;
+	public final fun getGainMapRemoved ()Z
+	public final fun getHeight ()I
+	public final fun getMasks ()Ljava/util/List;
+	public final fun getTimings ()Lio/github/shishark/faceblur/Timings;
+	public final fun getWarnings ()Ljava/util/List;
+	public final fun getWidth ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/MaskShape : java/lang/Enum {
+	public static final field ELLIPSE Lio/github/shishark/faceblur/MaskShape;
+	public static final field RECTANGLE Lio/github/shishark/faceblur/MaskShape;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/shishark/faceblur/MaskShape;
+	public static fun values ()[Lio/github/shishark/faceblur/MaskShape;
+}
+
+public final class io/github/shishark/faceblur/MaskStyle : java/lang/Enum {
+	public static final field GRADIENT_OVAL Lio/github/shishark/faceblur/MaskStyle;
+	public static final field SMOOTH_FILL Lio/github/shishark/faceblur/MaskStyle;
+	public static final field SOLID Lio/github/shishark/faceblur/MaskStyle;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/shishark/faceblur/MaskStyle;
+	public static fun values ()[Lio/github/shishark/faceblur/MaskStyle;
+}
+
+public final class io/github/shishark/faceblur/MaskerModelInfo {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExecutionProvider ()Ljava/lang/String;
+	public final fun getFaceBlurVersion ()Ljava/lang/String;
+	public final fun getModel ()Lio/github/shishark/faceblur/ModelInfo;
+	public final fun getRuntimeVersion ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/MaskingConfig {
+	public fun <init> ()V
+	public fun <init> (Lio/github/shishark/faceblur/MaskStyle;)V
+	public fun <init> (Lio/github/shishark/faceblur/MaskStyle;Lio/github/shishark/faceblur/MaskShape;)V
+	public fun <init> (Lio/github/shishark/faceblur/MaskStyle;Lio/github/shishark/faceblur/MaskShape;F)V
+	public fun <init> (Lio/github/shishark/faceblur/MaskStyle;Lio/github/shishark/faceblur/MaskShape;FF)V
+	public fun <init> (Lio/github/shishark/faceblur/MaskStyle;Lio/github/shishark/faceblur/MaskShape;FFF)V
+	public fun <init> (Lio/github/shishark/faceblur/MaskStyle;Lio/github/shishark/faceblur/MaskShape;FFFI)V
+	public synthetic fun <init> (Lio/github/shishark/faceblur/MaskStyle;Lio/github/shishark/faceblur/MaskShape;FFFIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getColor ()I
+	public final fun getExpandX ()F
+	public final fun getExpandY ()F
+	public final fun getFeather ()F
+	public final fun getShape ()Lio/github/shishark/faceblur/MaskShape;
+	public final fun getStyle ()Lio/github/shishark/faceblur/MaskStyle;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/MaskingConfig$Builder {
+	public fun <init> ()V
+	public final fun build ()Lio/github/shishark/faceblur/MaskingConfig;
+	public final fun color (I)Lio/github/shishark/faceblur/MaskingConfig$Builder;
+	public final fun expandX (F)Lio/github/shishark/faceblur/MaskingConfig$Builder;
+	public final fun expandY (F)Lio/github/shishark/faceblur/MaskingConfig$Builder;
+	public final fun feather (F)Lio/github/shishark/faceblur/MaskingConfig$Builder;
+	public final fun shape (Lio/github/shishark/faceblur/MaskShape;)Lio/github/shishark/faceblur/MaskingConfig$Builder;
+	public final fun style (Lio/github/shishark/faceblur/MaskStyle;)Lio/github/shishark/faceblur/MaskingConfig$Builder;
+}
+
+public abstract class io/github/shishark/faceblur/MetadataPolicy {
+}
+
+public final class io/github/shishark/faceblur/MetadataPolicy$KeepAllowlist : io/github/shishark/faceblur/MetadataPolicy {
+	public fun <init> ()V
+	public fun <init> (Z)V
+	public fun <init> (ZZ)V
+	public fun <init> (ZZZ)V
+	public synthetic fun <init> (ZZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCamera ()Z
+	public final fun getDateTime ()Z
+	public final fun getGps ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/MetadataPolicy$StripAll : io/github/shishark/faceblur/MetadataPolicy {
+	public static final field INSTANCE Lio/github/shishark/faceblur/MetadataPolicy$StripAll;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/ModelInfo {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInputs ()Ljava/util/List;
+	public final fun getIrVersion ()J
+	public final fun getOpsetImports ()Ljava/util/Map;
+	public final fun getOutputs ()Ljava/util/List;
+	public final fun getSha256 ()Ljava/lang/String;
+	public final fun getSizeBytes ()J
+	public final fun getWarnings ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/ModelSource {
+	public static final field Companion Lio/github/shishark/faceblur/ModelSource$Companion;
+	public static final fun fromBytes ([B)Lio/github/shishark/faceblur/ModelSource;
+	public static final fun fromFile (Ljava/lang/String;)Lio/github/shishark/faceblur/ModelSource;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/ModelSource$Companion {
+	public final fun fromBytes ([B)Lio/github/shishark/faceblur/ModelSource;
+	public final fun fromFile (Ljava/lang/String;)Lio/github/shishark/faceblur/ModelSource;
+}
+
+public abstract interface class io/github/shishark/faceblur/MutablePixelImage : io/github/shishark/faceblur/PixelImage {
+	public abstract fun writePixels (IIII[I)V
+}
+
+public abstract class io/github/shishark/faceblur/OutputFormat {
+}
+
+public final class io/github/shishark/faceblur/OutputFormat$Jpeg : io/github/shishark/faceblur/OutputFormat {
+	public fun <init> ()V
+	public fun <init> (I)V
+	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getQuality ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class io/github/shishark/faceblur/OutputTarget {
+}
+
+public final class io/github/shishark/faceblur/OutputTarget$NewFile : io/github/shishark/faceblur/OutputTarget {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Z)V
+	public synthetic fun <init> (Ljava/lang/String;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPath ()Ljava/lang/String;
+	public final fun getReplaceExisting ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/OutputTarget$OverwriteSource : io/github/shishark/faceblur/OutputTarget {
+	public static final field INSTANCE Lio/github/shishark/faceblur/OutputTarget$OverwriteSource;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/OutputTarget$PlatformTarget : io/github/shishark/faceblur/OutputTarget {
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class io/github/shishark/faceblur/PixelImage {
+	public abstract fun getHeight ()I
+	public abstract fun getWidth ()I
+	public abstract fun readPixels (IIII[I)V
+}
+
+public final class io/github/shishark/faceblur/PixelScaling {
+	public fun <init> (F[F[F)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDivisor ()F
+	public final fun getMean ()Ljava/util/List;
+	public final fun getStd ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/PlanMasker {
+	public fun <init> ()V
+	public fun <init> (Lio/github/shishark/faceblur/MaskingConfig;)V
+	public synthetic fun <init> (Lio/github/shishark/faceblur/MaskingConfig;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getMasking ()Lio/github/shishark/faceblur/MaskingConfig;
+	public final fun maskFile (Ljava/lang/String;Lio/github/shishark/faceblur/OutputTarget;Lio/github/shishark/faceblur/MaskPlan;)Lio/github/shishark/faceblur/FileResult;
+	public final fun maskFile (Ljava/lang/String;Lio/github/shishark/faceblur/OutputTarget;Lio/github/shishark/faceblur/MaskPlan;Lio/github/shishark/faceblur/FileOptions;)Lio/github/shishark/faceblur/FileResult;
+	public final fun maskFile (Ljava/lang/String;Lio/github/shishark/faceblur/OutputTarget;Lio/github/shishark/faceblur/MaskPlan;Lio/github/shishark/faceblur/FileOptions;Lio/github/shishark/faceblur/CancellationToken;)Lio/github/shishark/faceblur/FileResult;
+	public static synthetic fun maskFile$default (Lio/github/shishark/faceblur/PlanMasker;Ljava/lang/String;Lio/github/shishark/faceblur/OutputTarget;Lio/github/shishark/faceblur/MaskPlan;Lio/github/shishark/faceblur/FileOptions;Lio/github/shishark/faceblur/CancellationToken;ILjava/lang/Object;)Lio/github/shishark/faceblur/FileResult;
+	public final fun planFile (Ljava/lang/String;)Lio/github/shishark/faceblur/MaskPlan;
+	public final fun planFile (Ljava/lang/String;Lio/github/shishark/faceblur/FileOptions;)Lio/github/shishark/faceblur/MaskPlan;
+	public final fun planFile (Ljava/lang/String;Lio/github/shishark/faceblur/FileOptions;Lio/github/shishark/faceblur/CancellationToken;)Lio/github/shishark/faceblur/MaskPlan;
+	public static synthetic fun planFile$default (Lio/github/shishark/faceblur/PlanMasker;Ljava/lang/String;Lio/github/shishark/faceblur/FileOptions;Lio/github/shishark/faceblur/CancellationToken;ILjava/lang/Object;)Lio/github/shishark/faceblur/MaskPlan;
+}
+
+public final class io/github/shishark/faceblur/ProfileCheckResult {
+	public final fun getAllFound ()Z
+	public final fun getBestIoU ()Ljava/util/List;
+	public final fun getDetections ()Ljava/util/List;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/RowLayout : java/lang/Enum {
+	public static final field COLUMNS Lio/github/shishark/faceblur/RowLayout;
+	public static final field ROWS Lio/github/shishark/faceblur/RowLayout;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/shishark/faceblur/RowLayout;
+	public static fun values ()[Lio/github/shishark/faceblur/RowLayout;
+}
+
+public final class io/github/shishark/faceblur/TensorInfo {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getElementType ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getShape ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/TensorLayout : java/lang/Enum {
+	public static final field NCHW Lio/github/shishark/faceblur/TensorLayout;
+	public static final field NHWC Lio/github/shishark/faceblur/TensorLayout;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/shishark/faceblur/TensorLayout;
+	public static fun values ()[Lio/github/shishark/faceblur/TensorLayout;
+}
+
+public final class io/github/shishark/faceblur/Timings {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDecodeMs ()Ljava/lang/Double;
+	public final fun getDetectMs ()D
+	public final fun getEncodeMs ()Ljava/lang/Double;
+	public final fun getGcMs ()Ljava/lang/Double;
+	public final fun getMaskMs ()D
+	public final fun getOrientScaleMs ()Ljava/lang/Double;
+	public final fun getPasses ()I
+	public final fun getTotalMs ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/UprightBox {
+	public static final field Companion Lio/github/shishark/faceblur/UprightBox$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public static final fun fromRaw (FFFFIII)Lio/github/shishark/faceblur/UprightBox;
+	public final fun getBottom ()F
+	public final fun getImageHeight ()I
+	public final fun getImageWidth ()I
+	public final fun getLeft ()F
+	public final fun getRight ()F
+	public final fun getTop ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/shishark/faceblur/UprightBox$Companion {
+	public final fun fromRaw (FFFFIII)Lio/github/shishark/faceblur/UprightBox;
+}
+

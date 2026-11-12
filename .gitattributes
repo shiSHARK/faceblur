@@ -1,0 +1,19 @@
+# Normalise text files to LF in the repository.
+* text=auto eol=lf
+
+# Windows scripts keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets (each must also be registered for data admission before it is committed).
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.heic binary
+*.webp binary
+*.onnx binary
+*.zip binary
+
+# ABI dumps are generated; diffs are reviewed, not merged by hand.
+api/** linguist-generated=true

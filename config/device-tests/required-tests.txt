@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: Apache-2.0
+# faceblur required phone tests, format 1
+#
+# The device tests (faceblur/src/androidDeviceTest) that a phone-test log must show as PASSED. The log checker
+# (`scripts/phone_test_log.py verify`) reads this file from the commit under test and fails the log when a name is
+# missing, failed, ignored or skipped, so a deleted or renamed test is caught. Independently of this list every test
+# of the run must pass and the run must contain exactly as many tests as there are @Test methods in the device-test
+# sources of that commit.
+#
+# CHANGES TO THIS FILE NEED THE APPROVAL OF THE QA LEAD.
+#
+# Format: the first two lines above stay exactly as they are; then comment lines (#) and one entry per line:
+#   <fully qualified test class>::<method>       (exact name, no pattern)
+# A required test must pass; the only exception is an assumption skip listed in
+# config/device-tests/expected-skips.txt on a phone below the minimum API level given there.
+
+# ONNX Runtime session calls and the environment variable read-back.
+io.github.shishark.faceblur.android.AndroidRunnerDeviceTest::telemetryIsOffAndTheSessionUsesXnnpackWithTheHandoverThreadPlan
+io.github.shishark.faceblur.android.AndroidRunnerDeviceTest::aMaskerFromTheFixturePassesTheContractRunAndReportsTheRuntime
+io.github.shishark.faceblur.android.AndroidRunnerDeviceTest::aPassOverItsLimitIsStoppedAndTheSessionStaysUsable
+io.github.shishark.faceblur.android.AndroidRunnerDeviceTest::theMaskerKeepsWorkingAfterTheModelIsDropped
+io.github.shishark.faceblur.android.AndroidRunnerDeviceTest::aModelTheRuntimeRejectsIsSessionRejected
+# End to end on the phone.
+io.github.shishark.faceblur.android.AndroidRunnerDeviceTest::fileModeMasksARegisteredJpegOnThePhone
+# Model file reader and the model buffer in shared memory.
+io.github.shishark.faceblur.android.ModelFileDeviceTest::aRegularFileIsReadExactlyUpToTheCap
+io.github.shishark.faceblur.android.ModelFileDeviceTest::linksDirectoriesAndFifosAreRefusedWithoutBlocking
+io.github.shishark.faceblur.android.ModelFileDeviceTest::aMissingFileIsIoFailedWithoutThePath
+io.github.shishark.faceblur.android.ModelFileDeviceTest::bothBufferPathsHoldExactlyTheBytesReadOnly
+io.github.shishark.faceblur.android.ModelFileDeviceTest::theModelBufferLivesOutsideTheJavaHeap
+# File mode on the phone.
+io.github.shishark.faceblur.android.AndroidFileModeTest::aJpegComesOutMaskedRebuiltAndValidatedInOneWrite
+io.github.shishark.faceblur.android.AndroidFileModeTest::theExifOrientationIsBakedIntoThePixelsAndWrittenAsOne
+io.github.shishark.faceblur.android.AndroidFileModeTest::aSmallerOutputIsScaledAfterMaskingInWorkingCoordinates
+io.github.shishark.faceblur.android.AndroidFileModeTest::a16BitSourceIsRedrawnInto8BitSrgbAndTheRedrawIsMasked
+io.github.shishark.faceblur.android.AndroidFileModeTest::aPngSourceIsAccepted
+io.github.shishark.faceblur.android.AndroidFileModeTest::anythingElseIsRefusedAndNothingIsWritten
+io.github.shishark.faceblur.android.AndroidFileModeTest::aHeaderAboveTheDecodedPixelLimitIsRefusedBeforeDecoding
+io.github.shishark.faceblur.android.AndroidFileModeTest::onlyStripAllIsAcceptedForNow
+io.github.shishark.faceblur.android.AndroidFileModeTest::aCancelledCallWritesNothing
+io.github.shishark.faceblur.android.AndroidFileModeTest::streamFailuresAreIoFailedWithoutTheirText
+io.github.shishark.faceblur.android.AndroidFileModeTest::theGainMapIsDroppedBeforeEncoding
+io.github.shishark.faceblur.android.AndroidFileModeTest::bitmapPixelsExchangeNonPremultipliedArgb
+# File mode targets and sources on the phone (they reach the Os file calls of AndroidModelFileReader.kt).
+io.github.shishark.faceblur.android.FileTargetsDeviceTest::theBindingsAreThePlatformDefaultsWithoutAnInstallCall
+io.github.shishark.faceblur.android.FileTargetsDeviceTest::pathTargetsAreWrittenNewReplacedAndTheSourceOverwrittenOnThePhone
+io.github.shishark.faceblur.android.FileTargetsDeviceTest::linkedSourcesAndTargetsAreNeverReplaced
+io.github.shishark.faceblur.android.FileTargetsDeviceTest::fifoSourcesAreRefusedWithoutBlocking
+io.github.shishark.faceblur.android.FileTargetsDeviceTest::theSameFileDecodesToTheSamePixelsAlsoInTwoParallelDecodes
+io.github.shishark.faceblur.android.FileTargetsDeviceTest::contentTargetsAreWrittenTruncatedVerifiedAndOnlyReplacedWithTheOptIn
+# PlanMasker masks without loading ONNX Runtime; the second test is the positive control for the probe (ADR 0015 d6).
+io.github.shishark.faceblur.android.PlanMaskerDeviceTest::planMaskerMasksAFileWithoutLoadingOnnxRuntime
+io.github.shishark.faceblur.android.PlanMaskerDeviceTest::theProbeSeesOnnxRuntimeInAProcessThatCreatedAFaceMasker
+# In-memory Bitmap mode on the phone: same-bitmap masking, refused bitmaps stay unchanged, 25 MP worst case.
+io.github.shishark.faceblur.android.AndroidInMemoryDeviceTest::maskInPlaceMasksTheRegisteredFaceInTheSameBitmapOnThePhone
+io.github.shishark.faceblur.android.AndroidInMemoryDeviceTest::hardwareImmutableAndOtherBitmapsAreRefusedUnchangedOnThePhone
+io.github.shishark.faceblur.android.AndroidInMemoryDeviceTest::theWorstCaseOfAWhole25MegapixelBitmapCompletesOrLeavesItUntouched
+# HEIC input in file mode on the phone's own HEVC decoder; the synthetic fixture is generated at test time (generateHeicFixture), a missing fixture fails.
+io.github.shishark.faceblur.android.HeicInputDeviceTest::aHeicInputGivesAMaskedMetadataFreeJpegAtTheUprightSize
+io.github.shishark.faceblur.android.HeicInputDeviceTest::theScanFailsOnPlantedMetadata

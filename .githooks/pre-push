@@ -1,0 +1,110 @@
+#!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# 1. Data-admission guard on every commit about to be pushed (config/data-admission/README.md). Runs first, unchanged;
+#    git passes the refs on stdin.
+# 2. The fast checks of the CI gates over the pushed range, because no CI runs on push (the per-commit hooks are skipped
+#    by `--no-verify` or by a clone without core.hooksPath). For every pushed ref (stdin as in guard.py pre-push; a
+#    deleted ref is skipped):
+#      - DCO (scripts/check-dco.sh), internal IDs and internal figures in the commit messages
+#        (scripts/check-internal-ids.py --range, scripts/check-internal-figures.py --range). An updated ref checks
+#        <remote sha>..<pushed sha>; a new ref checks every commit that is on no remote (one `<commit>^!` each).
+#      - The tree checks at the pushed tip, in a temporary worktree of that commit and not in the working tree:
+#        scripts/check-wording.sh --require, check-internal-ids.py --tree, check-internal-figures.py --tree.
+#    The scripts are the ones of the checked-out repository; the term lists and allow-lists are those of the pushed tip
+#    (as in CI). A tip that lacks a list or a script fails closed. Every check runs, any non-zero exit blocks the push.
+#    Not covered here (merge gate): the internal-ID baseline may only shrink, SPDX, API wording, SAST, dependencies.
+set -eu
+top=$(git rev-parse --show-toplevel)
+input=$(mktemp)
+tmp=$(mktemp -d)
+trees=""
+cleanup() {
+    for t in $trees; do
+        git -C "$top" worktree remove --force "$tmp/tip-$t" > /dev/null 2>&1 || true
+    done
+    git -C "$top" worktree prune > /dev/null 2>&1 || true
+    rm -rf "$tmp" "$input"
+}
+trap cleanup EXIT
+trap 'exit 1' INT TERM
+cat > "$input"
+
+# 1. Data admission (fail closed: set -e ends the hook with its exit code).
+sh "$top/config/data-admission/check.sh" pre-push < "$input"
+
+# The hook may run with repository variables of the caller; the checks must see the temporary worktree.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR
+zero=0000000000000000000000000000000000000000
+failed=0
+checked=""
+
+# check <label> <command...>: runs the command; a non-zero exit is recorded and the remaining checks still run.
+check() {
+    label=$1
+    shift
+    if "$@" < /dev/null; then
+        :
+    else
+        echo "pre-push: FAILED - $label" >&2
+        failed=1
+    fi
+}
+
+# range_checks <range>: the message checks of one range (the current directory is the tip worktree).
+range_checks() {
+    check "DCO sign-off ($1)" sh "$top/scripts/check-dco.sh" "$1"
+    check "internal IDs in commit messages ($1)" python3 -I "$top/scripts/check-internal-ids.py" --range "$1"
+    check "internal figures in commit messages ($1)" python3 -I "$top/scripts/check-internal-figures.py" --range "$1"
+}
+
+while read -r _lref lsha _rref rsha; do
+    # Same parsing as guard.py pre-push: a deleted ref (local sha all zeros) is skipped.
+    [ -n "${rsha:-}" ] || continue
+    [ "$lsha" != "$zero" ] || continue
+    tip=$(git -C "$top" rev-parse --verify --quiet "$lsha^{commit}") || {
+        echo "pre-push: FAILED - $lsha is not a commit" >&2
+        failed=1
+        continue
+    }
+    wt="$tmp/tip-$tip"
+    case " $trees " in
+        *" $tip "*) ;;
+        *)
+            if git -C "$top" -c core.hooksPath=/dev/null worktree add --detach --quiet "$wt" "$tip" > /dev/null 2>&1; then
+                trees="$trees $tip"
+            else
+                echo "pre-push: FAILED - cannot check out the pushed commit for the tree checks" >&2
+                failed=1
+                continue
+            fi ;;
+    esac
+    cd "$wt"
+    if [ "$rsha" = "$zero" ]; then
+        # New ref: every commit that is on no remote.
+        if commits=$(git rev-list "$tip" --not --remotes); then
+            for c in $commits; do
+                range_checks "$c^!"
+            done
+        else
+            echo "pre-push: FAILED - cannot list the new commits of a pushed ref" >&2
+            failed=1
+        fi
+    else
+        range_checks "$rsha..$tip"
+    fi
+    case " $checked " in
+        *" $tip "*) ;;
+        *)
+            checked="$checked $tip"
+            check "wording lint on the tree" sh "$top/scripts/check-wording.sh" --require
+            check "internal IDs in the tree" python3 -I "$top/scripts/check-internal-ids.py" --tree
+            check "internal figures in the tree" python3 -I "$top/scripts/check-internal-figures.py" --tree ;;
+    esac
+    cd "$top"
+done < "$input"
+
+if [ "$failed" -ne 0 ]; then
+    echo "pre-push: BLOCKED - fix the findings above (do not bypass with --no-verify)" >&2
+    exit 1
+fi
+echo "pre-push: PASS - data admission, DCO, internal IDs, internal figures, wording over the pushed range and tip"

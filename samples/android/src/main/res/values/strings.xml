@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<resources>
+    <string name="app_name">FaceBlur demo</string>
+    <string name="intro">Pick a photo, check the masks the library found, change them if needed and save a new JPEG. Masks are opaque. The saved file has no metadata from the original. This app has no network permission and nothing is stored except the file you save.</string>
+    <string name="limits_copy">Detection can miss faces, for example small, turned, covered or blurred ones. Check the result yourself.</string>
+
+    <!-- Model step -->
+    <string name="model_heading">Model</string>
+    <string name="model_note">The library ships no model. Choose an ONNX face-detection model file with the YuNet output layout (640 x 640 input). You are responsible for the model and its licence. The demo reads the file into memory and keeps no copy.</string>
+    <string name="choose_model_first">Choose a model first</string>
+    <string name="choose_model">Choose model file</string>
+    <string name="model_confirm_title">Check this model before you use it</string>
+    <string name="model_name">File name: %1$s</string>
+    <string name="model_size">Size: %1$s bytes</string>
+    <string name="model_hash_label">SHA-256, 4 lines of 16 characters:</string>
+    <string name="model_hash_description">SHA-256 of the chosen model file: %1$s</string>
+    <string name="use_model">Use this model</string>
+    <string name="cancel_model">Choose another file</string>
+    <string name="model_ready">Model in use: %1$s</string>
+    <string name="model_loading_cancel_hint">The model is loading. This cannot be cancelled once it has started.</string>
+
+    <!-- Photo step -->
+    <string name="photo_heading">Photo</string>
+    <string name="output_heading">Size of the saved photo</string>
+    <string name="output_same">Same size (long side up to 3,500 px)</string>
+    <string name="output_2048">Smaller: long side 2,048 px</string>
+    <string name="output_1024">Smaller: long side 1,024 px</string>
+    <string name="choose_photo">Choose photo</string>
+    <string name="cancel_run">Cancel</string>
+    <string name="try_again">Try again</string>
+    <string name="start_over">Choose another photo</string>
+
+    <!-- Status line (live region) -->
+    <string name="progress_description">Working</string>
+    <string name="status_model_reading">Reading the model file.</string>
+    <string name="status_model_confirm">Compare the SHA-256 with the one you expect, then choose Use this model.</string>
+    <string name="status_model_loading">Loading the model.</string>
+    <string name="status_model_ready">Model loaded. You can choose a photo now.</string>
+    <string name="status_detecting">Looking for faces.</string>
+    <string name="status_saving">Masking and saving the photo.</string>
+    <string name="status_detected">Done looking. %1$s</string>
+    <string name="status_removed">Mask kept unmasked. %1$s</string>
+    <string name="status_added">Mask added. %1$s</string>
+    <string name="status_undone">Last change undone. %1$s</string>
+    <string name="status_placing">Placing a new mask. Move and resize it with the buttons, then choose Place mask.</string>
+    <string name="status_placing_cancelled">Adding a mask cancelled.</string>
+    <string name="status_saved">Saved. %1$s applied.</string>
+    <string name="cancel_late_status">Too late to cancel. The masks were applied.</string>
+    <string name="cancelled_status">Cancelled. Nothing was changed.</string>
+
+    <plurals name="faces_detected">
+        <item quantity="one">%d face detected</item>
+        <item quantity="other">%d faces detected</item>
+    </plurals>
+    <plurals name="masks_count">
+        <item quantity="one">%d mask</item>
+        <item quantity="other">%d masks</item>
+    </plurals>
+    <string name="counts_line">%1$s, %2$s</string>
+    <string name="faces_scores">Scores: %1$s</string>
+    <plurals name="faces_scores_more">
+        <item quantity="one">%1$s and %2$d more face</item>
+        <item quantity="other">%1$s and %2$d more faces</item>
+    </plurals>
+
+    <!-- Review -->
+    <string name="review_heading">Review the masks</string>
+    <string name="review_note">The photo shown is a preview. Masks are applied by the library from the original file when you save, so every change here starts again from the original pixels. Solid yellow boxes are detected faces; dashed outlines are the masks that will be applied.</string>
+    <string name="preview_placeholder">Photo preview</string>
+    <string name="result_placeholder">Saved photo</string>
+    <string name="preview_description">Photo preview with box and mask outlines. %1$s. The masks are listed below.</string>
+    <string name="mask_row_detected">Mask %1$d: from a detected face</string>
+    <string name="mask_row_added">Mask %1$d: added by you</string>
+    <string name="mask_row_position">Centre %1$d%% across and %2$d%% down, %3$d%% wide, %4$d%% high</string>
+    <string name="mask_row_shape_ellipse">Shape: ellipse</string>
+    <string name="mask_row_shape_rectangle">Shape: rectangle</string>
+    <string name="keep_unmasked">Keep unmasked</string>
+    <string name="remove_mask">Remove mask</string>
+    <string name="keep_unmasked_description">Keep mask number %1$s unmasked</string>
+    <string name="remove_added_description">Remove added mask number %1$s</string>
+    <string name="add_mask">Add a mask</string>
+    <string name="undo">Undo</string>
+    <string name="apply_and_save">Apply and save</string>
+    <string name="no_masks">There are no masks. If you save now, the photo is saved without any mask.</string>
+
+    <!-- Placing a mask (no gestures needed) -->
+    <string name="placing_heading">New mask</string>
+    <string name="move_left">Move left</string>
+    <string name="move_right">Move right</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
+    <string name="smaller">Smaller</string>
+    <string name="larger">Larger</string>
+    <string name="place_mask">Place mask</string>
+    <string name="cancel_placing">Cancel</string>
+
+    <!-- Result -->
+    <string name="result_heading">Saved photo</string>
+    <string name="result_description">Saved photo. %1$s.</string>
+    <string name="result_note">The saved file is a new JPEG built from the masked pixels, without metadata from the original.</string>
+
+    <!-- In-memory pipeline (ST-023) -->
+    <string name="pipeline_home_heading">In-memory pipeline</string>
+    <string name="pipeline_home_note">For an app that does its own steps around FaceBlur: the photo is masked as a bitmap in memory and nothing is saved. Uses the model and the size choice from above.</string>
+    <string name="open_pipeline">Open the in-memory pipeline</string>
+    <string name="pipeline_title">In-memory pipeline</string>
+    <string name="pipeline_steps">Steps, in this order: 1. decode (orientation applied, long side at most 3,500 px); 2. mask the bitmap in place; 3. scale down to the size you chose, only after masking; 4. draw a watermark; 5. encode to JPEG once. The result below is read back from the encoded bytes. Nothing is saved and nothing is written to disk. No location is added.</string>
+    <string name="pipeline_watermark">FaceBlur demo</string>
+    <string name="pipeline_status_idle">Choose a photo to run the pipeline</string>
+    <string name="pipeline_status_running">Running the pipeline</string>
+    <string name="pipeline_status_done">Done. %1$s. Nothing was saved.</string>
+    <string name="pipeline_result_placeholder">Pipeline result</string>
+    <string name="pipeline_result_description">Pipeline result. %1$s.</string>
+    <string name="pipeline_result_note">This picture is shown from memory only. To keep a photo, use the main screen and save it with the system save-as screen.</string>
+
+    <!-- Errors -->
+    <string name="error_details_label">Details from the library:</string>
+    <string name="error_model_toolarge_title">This file is larger than the model size limit.</string>
+    <string name="error_model_unreadable_title">The model file could not be read.</string>
+    <string name="error_model_integrity_title">The model file changed after you checked it, or its hash does not match. It was not loaded.</string>
+    <string name="error_model_rejected_title">The library did not accept this model.</string>
+    <string name="error_toomanymasks_title">This photo would need too many masks. Nothing was saved.</string>
+    <string name="error_toomanymasks_body">The score threshold may be too low for this model. Nothing was written and the original is unchanged.</string>
+    <string name="error_toomanypairs_title">This photo needs more comparison work than the library allows. Nothing was saved.</string>
+    <string name="error_toomanypairs_body">The score threshold may be too low for this model. Nothing was written and the original is unchanged.</string>
+    <string name="error_oom_title">Not enough memory to mask this photo. It was not masked and nothing was saved.</string>
+    <string name="error_image_toolarge_title">This photo is too large to process.</string>
+    <string name="error_unsupported_image_title">This photo cannot be processed (JPEG, HEIC and PNG are supported).</string>
+    <string name="error_source_changed_title">The photo changed after it was analysed. Nothing was saved. Choose it again.</string>
+    <string name="error_target_refused_title">The chosen location could not be used. Nothing was saved. Choose a new file name.</string>
+    <string name="error_io_title">The photo could not be read or the file could not be written. Nothing was saved.</string>
+    <string name="error_other_title">Something went wrong. Nothing was saved.</string>
+    <string name="error_leftover">The file could not be removed after the failure. It is not a masked photo: delete it.</string>
+    <string name="save_file_name">masked-photo.jpg</string>
+</resources>

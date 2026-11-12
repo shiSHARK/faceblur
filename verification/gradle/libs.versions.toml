@@ -1,0 +1,13 @@
+# Own version catalog of the verification build (independent of the library build's catalog).
+# Same Kotlin and ktlint pins as the library build (checked 2026-11-01).
+[versions]
+kotlin = "2.4.21"
+ktlint-plugin = "14.2.0"
+ktlint-engine = "1.8.0"
+jvm-target = "17"
+kover = "0.9.11"
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-plugin" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

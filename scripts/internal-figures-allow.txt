@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: Apache-2.0
+# Reviewed blocks for scripts/check-internal-figures.py (internal-data wording near a number). One entry per block:
+#   <path><TAB><SHA-256 of the block><TAB>permanent|temporary<TAB><review reference>
+# Get the key of a finding with: python3 -I scripts/check-internal-figures.py --tree --print-keys
+# The hash pins the block (its lines, whitespace-trimmed): any change inside it needs a new entry and a new review.
+# An entry that excuses no block fails CI (stale rule), so remove the entry together with the text.
+# permanent: the block quotes no figure from internal data (values from public fixtures, synthetic sets, published
+#            sources, product settings or rules). New permanent entries need a security-engineer review.
+# temporary: text that is to be reworded (owner decision); the entry is removed with the rewording. A release build
+#            runs the gate with --no-temporary, which fails while any temporary entry remains.
+#
+# Temporary entries (to be removed)
+#
+# Permanent entries
+docs/adr/0002-public-api-shape.md	d8132762ab62a5fc24034be1c1706ba2de1b6a48feb801a6ac0c92f89e59e102	permanent	security review 2026-11-03
+docs/adr/0002-public-api-shape.md	2057cd24e71320923669b88bd199adcd2737ef065c5cd4ded9c645972474d391	permanent	security review 2026-11-03
+docs/adr/0003-android-in-memory-bitmaps.md	436934467911c1f07a7715708c3a5ee4ff2ca8d18ad4c69ee3c71013a42848ac	permanent	security review 2026-11-03
+docs/adr/0004-ios-in-memory-buffers.md	12afe6573c8719bca8f0c5b248ffc4c737ee9df77595127709387370896187f4	permanent	security review 2026-11-03
+docs/adr/0004-ios-in-memory-buffers.md	f5eda25ffcbe5c9d645e26706e08abcbb6f68d010374785c386f51fe3d9d7a2f	permanent	security review 2026-11-03
+docs/adr/0005-file-mode-io-and-metadata.md	555b2720a3b62e8afcb27a9e64909a55f1e94faec34c2c455a5494421ed5bdfb	permanent	security review 2026-11-03
+docs/adr/0005-file-mode-io-and-metadata.md	7b500bfe1dd4135e3bfbad3e1ba4ef8121d9f3b9003c3ebfd640d26a49bf223a	permanent	security review 2026-11-03
+docs/adr/0005-file-mode-io-and-metadata.md	ea2e7469f753969f2de831edb934591c6751f4405710c50c8987124cf1569f78	permanent	security review 2026-11-03
+docs/adr/0006-model-packaging-and-integrity.md	74bec792ffeb9aff9cc0a37f44623b3af8d2944024e595b413c0fbf08517cda7	permanent	security review 2026-11-03
+docs/adr/0009-yunet-reference-test-gate.md	949d8314579e5e6c45d852974eb5d6e767d4907e012c2128bb5760a266a80976	permanent	security review 2026-11-03
+docs/adr/0009-yunet-reference-test-gate.md	d515435b412d3c092291230be3fb4431edc01423077d8d2e496b69c666c07812	permanent	security review 2026-11-03
+docs/adr/0010-ios-onnx-runtime-bridge.md	181fe816bd2f15178895b795e3c9d63abf633bd50f9295c8a0e108ff9b413c82	permanent	security review 2026-11-03
+docs/adr/0010-ios-onnx-runtime-bridge.md	6445d499fd65f4dc73a5460671e6b6f1db9909f9758aa3b1cb7f90746f43080a	permanent	security review 2026-11-03
+docs/adr/0012-developer-supplied-model.md	e6ae52d4399f35da524925f5b78097dac6c5f76d24d45478dc35da6a58ab76cf	permanent	security review 2026-11-03
+docs/adr/0012-developer-supplied-model.md	0aaeb8edce4974bc3fdaadd5cacd2d9e07a256638b4fc5e5ce9671fc52b0caf9	permanent	security review 2026-11-03
+docs/adr/0013-bounded-mask-stage.md	9306b8e6e194f4b4fa5ed0ed8b6748c7fbb93f9cf90d70ba9eda6df41db17126	permanent	security review 2026-11-03
+docs/adr/0013-bounded-mask-stage.md	9d1f2305bf67c1c1e15737cdb636053d1f8276a845e1a91f84bac302da1a780e	permanent	security review 2026-11-03
+docs/adr/0013-bounded-mask-stage.md	05a107147ba95e13c20d8e428e66748312a8fc63941ff29ecc7a1fac0a58de7a	permanent	security review 2026-11-03
+docs/adr/0013-bounded-mask-stage.md	b49f6ea5b2d2306d96fd41049d2dd42d0be6fed66149686be93eebc4185f90e4	permanent	security review 2026-11-03
+docs/adr/0013-bounded-mask-stage.md	e601d8960123869b4fe95daa448efebda5dca2d73278fffed24b9c702bb4bbd6	permanent	security review 2026-11-03
+docs/architecture/ARCHITECTURE.md	9ea5a255ee560e394eadcca49c8687ae1a0b48dc17e536e1c82bad15781b1ddf	permanent	security review 2026-11-03
+docs/architecture/ARCHITECTURE.md	b5e6c30b39b2721e9496f7cd86d8d2b365058093684d4d78ad0c27e722d12589	permanent	security review 2026-11-03
+faceblur/src/commonTest/kotlin/io/github/shishark/faceblur/detect/MergeWorkTest.kt	1710a89488b7d4dd9598fa6e212f807081c8fe85a4a48b0a6f90f031bd2631a4	permanent	security review 2026-11-03
+verification/README.md	91c5b2af514421dd668ea1f5104a450695a953c2456ee2c77931989189d0f2a0	permanent	security review 2026-11-03
+verification/README.md	e059f81897924fba48a2430f0ce33aa44fe473ff3c6626642eac0e7412337dbe	permanent	security review 2026-11-03
+verification/pixel-oracle/src/test/kotlin/io/github/shishark/faceblur/verification/pixel/GeometryAndComparisonTest.kt	95edd60033486d65ccd0de9b6ee3b3ecf0de3953ff5476cbb10284eca2d33dea	permanent	security review 2026-11-03
+verification/pixel-oracle/src/test/kotlin/io/github/shishark/faceblur/verification/pixel/PixelOracleSelfTest.kt	bbe164a083132dcb59569a7ce8d347742b570a25f07d93287e40f0b641fad89c	permanent	security review 2026-11-03

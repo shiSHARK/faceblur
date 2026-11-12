@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: Apache-2.0
+# faceblur phone-only coverage list, format 1
+#
+# Android files whose code can only run on a phone (calls into the platform or ONNX Runtime and the exception
+# translation of those calls, nothing else). The changed-lines coverage gate (scripts/diff-coverage.py) leaves their
+# changed lines out of the 80 % rule ONLY when a valid phone-test log for the exact commit under test is supplied
+# (scripts/phone-device-tests.sh writes it, `scripts/phone_test_log.py verify` checks it). Without that log the lines
+# count as today and the gate fails if they are not covered. Every other changed line keeps the 80 % rule.
+#
+# CHANGES TO THIS LIST NEED THE APPROVAL OF THE QA LEAD AND THE CODE REVIEWER, with a written reason why the code
+# cannot run off the phone. The list is fixed and short: any `if`, loop, arithmetic, size rule or ordering decision
+# belongs in host-tested code, not in a listed file.
+#
+# Format (checked by the gate; a malformed list fails it): the first two lines above stay exactly as they are; then
+# comment lines (#) and one entry per line:
+#   <path of a Kotlin file under faceblur/src/androidMain/kotlin/><TAB><reason>
+# No duplicates, at most 8 entries.
+faceblur/src/androidMain/kotlin/io/github/shishark/faceblur/android/OrtSessions.kt	ONNX Runtime session calls with their exception translation; needs the Android natives with XNNPACK
+faceblur/src/androidMain/kotlin/io/github/shishark/faceblur/android/AndroidModelFileReader.kt	android.system.Os file and descriptor calls (open/stat/lstat/fstat/fcntl/pread/read/write/fsync/link/rename/remove/close) and the ImageDecoder source on a duplicated descriptor, one platform call each with errno translation; Os natives are stubs off the phone
+faceblur/src/androidMain/kotlin/io/github/shishark/faceblur/android/SharedModelMemory.kt	android.os.SharedMemory calls; not available off the phone
+faceblur/src/androidMain/kotlin/io/github/shishark/faceblur/android/OsEnvironment.kt	android.system.Os setenv/getenv delegation; a no-op off the phone

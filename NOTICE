@@ -1,0 +1,64 @@
+FaceBlur
+Copyright 2026 shiSHARK
+
+This product is licensed under the Apache License, Version 2.0 (see the LICENSE file).
+
+FaceBlur depends on or is used together with the third-party components listed in licenses/INDEX.txt. The full
+licence text of each is in the licenses folder. The notices that the upstream projects ask to be reproduced follow.
+
+--- Kotlin (kotlin-stdlib and the Kotlin/Native runtime), version 2.4.21 ---
+
+   =========================================================================
+   ==  NOTICE file corresponding to the section 4 d of                    ==
+   ==  the Apache License, Version 2.0,                                   ==
+   ==  in this case for the Kotlin Compiler distribution.                 ==
+   =========================================================================
+
+   Kotlin Compiler
+   Copyright 2010-2024 JetBrains s.r.o and respective authors and developers
+
+--- kotlinx.coroutines, version 1.11.0 ---
+
+=========================================================================
+==  NOTICE file corresponding to the section 4 d of                    ==
+==  the Apache License, Version 2.0,                                   ==
+==  in this case for the kotlinx.coroutines library.                   ==
+=========================================================================
+
+kotlinx.coroutines library.
+Copyright 2016-2025 JetBrains s.r.o and contributors
+
+--- kotlinx.atomicfu, version 0.32.1 ---
+
+   =========================================================================
+   ==  NOTICE file corresponding to the section 4 d of                    ==
+   ==  the Apache License, Version 2.0,                                   ==
+   ==  in this case for the kotlix.atomicfu library.                      ==
+   =========================================================================
+
+   kotlinx.atoimcfu library.
+   Copyright 2017 JetBrains s.r.o and respective authors and developers
+
+--- Apache Harmony (notice shipped with the Kotlin/Native distribution), version 2.4.21 ---
+
+Apache Harmony
+Copyright 2006, 2010 The Apache Software Foundation.
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+Portions of Apache Harmony were originally developed by
+Intel Corporation and are licensed to the Apache Software
+Foundation under the "Software Grant and Corporate Contribution
+License Agreement" and for which the following copyright notices
+apply
+         (C) Copyright 2005 Intel Corporation
+         (C) Copyright 2005-2006 Intel Corporation
+         (C) Copyright 2006 Intel Corporation
+
+--- ONNX Runtime ---
+
+ONNX Runtime is a separate dependency (Android: version 1.31.0, iOS: version 1.20.0) and is not part of this product.
+The third-party notices that its project publishes for it are at
+https://github.com/microsoft/onnxruntime/blob/v1.31.0/ThirdPartyNotices.txt (Android) and
+https://github.com/microsoft/onnxruntime/blob/v1.20.0/ThirdPartyNotices.txt (iOS).

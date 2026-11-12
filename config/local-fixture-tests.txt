@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: Apache-2.0
+# Tests that need the maintainer's local fixtures (reference test model, derived test models, local images).
+# One entry per line: `<test task> <class>` or `<test task> <class>.<method>` (see scripts/check-local-fixture-tests.py).
+# Without local fixtures (public CI) the build excludes exactly these entries by name; in the local merge gate they all
+# run, and the CI step `local-fixture-tests` fails unless every entry ran and passed.
+jvmTest io.github.shishark.faceblur.eval.EvalSweepTest.aReplayMismatchThroughAFaceMaskerStopsTheSweep
+jvmTest io.github.shishark.faceblur.eval.EvalSweepTest.eachThresholdEqualsABruteForceRerunAndTheModelRunsOncePerPass
+jvmTest io.github.shishark.faceblur.eval.FaceblurEvalCliTest
+jvmTest io.github.shishark.faceblur.jvm.GenericParityTest
+jvmTest io.github.shishark.faceblur.jvm.JvmBoundaryTest.detectOnlyFindsTwoFacesAndLeavesTheImageUnchanged
+jvmTest io.github.shishark.faceblur.jvm.JvmBoundaryTest.theOrtRunnerRefusesToStartWithoutTheTelemetryVariable
+jvmTest io.github.shishark.faceblur.jvm.JvmModelFileTest.theReportsCarryTheRealVersions
+jvmTest io.github.shishark.faceblur.jvm.MaskStageJvmTest.theLargestSmoothFillGridOnThePublicFixturesStaysBelowTheCap
+jvmTest io.github.shishark.faceblur.jvm.MaskStageJvmTest.theWorkingAreaOfTheFixturesIsReportedForTheRecord
+jvmTest io.github.shishark.faceblur.jvm.PipelineSkeletonTest.aPinnedModelIsCheckedBeforeTheParserAndTheRuntimeSeeIt
+jvmTest io.github.shishark.faceblur.jvm.PipelineSkeletonTest.aSecondCallOnTheSameInstanceFailsWhileTheFirstRunsAndTwoInstancesWork
+jvmTest io.github.shishark.faceblur.jvm.PipelineSkeletonTest.ac1DefaultPipelineFindsTheFaceAndChangesOnlyTheMaskRegion
+jvmTest io.github.shishark.faceblur.jvm.PipelineSkeletonTest.ac1TheBoxMatchesTheOpenCvReference
+jvmTest io.github.shishark.faceblur.jvm.PipelineSkeletonTest.ac2MaskedPixelsDoNotDependOnTheFaceRegion
+jvmTest io.github.shishark.faceblur.jvm.PipelineSkeletonTest.detectOnlyLeavesTheImageUnchanged
+jvmTest io.github.shishark.faceblur.jvm.PipelineSkeletonTest.manyCallsReuseOneSessionAndCallsAfterCloseFail
+jvmTest io.github.shishark.faceblur.jvm.PipelineSkeletonTest.theFixturePinEqualsTheBuildPinAndTheLoadedBytes
+jvmTest io.github.shishark.faceblur.jvm.PipelineSkeletonTest.withoutAnInstalledRuntimeTheConstructorFailsClosed
+jvmTest io.github.shishark.faceblur.jvm.ProfileCheckJvmTest
+jvmTest io.github.shishark.faceblur.jvm.SparseExternalDataTest.theWalkerRefusesSparseExternalDataAndNoSessionIsCreated
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.boxesAtThresholdAreTheSameAtFloorAndAtThreshold
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.controlADuplicatedLibraryBoxFails
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.controlALibraryScoreShiftedByMoreThanDeltaFails
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.controlALibraryWithoutItsClampFailsTheInsideAssertionOnTheEdgeFixtures
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.controlAReferenceBoxShiftedByOnePercentFails
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.controlARemovedReferenceBoxFails
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.controlSkippingTheReferenceClampFailsOnTheEdgeFixtures
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.controlTier1bFailsOnAPlantedNearThresholdPairWithLowIouOrLargeScoreDifference
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.onTheGatedBorderFixturesTheLibraryEdgeEqualsTheClampedReferenceEdgeExactly
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.theMarginSubsetIsAPureFunctionOfTheReferenceData
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.thePublicDetectCallMeetsTheGateAtTheDocumentedThreshold
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.theReferenceHeaderMatchesTheGate
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.tier1HoldsWithOneOnnxThread
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.tier1StrictOnTheMarginSubsetHasNoBandAndNoException
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.tier1bPlatformRulesOnTheWholeLosslessGroup
+jvmTest io.github.shishark.faceblur.jvm.YuNetReferenceStrictTest.tierGTheGenericRouteMeetsTheStrictGate

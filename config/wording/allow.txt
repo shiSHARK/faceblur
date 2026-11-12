@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# Exact lines (whole line, byte for byte) that may contain a term of config/wording/terms.txt. Owner: legal-compliance advisor.
+# Each entry needs legal review; when the source line changes, the entry must be updated or removed.
+
+# docs/adr/0002-public-api-shape.md (names and styles rejected for the public API)
+facade in `faceblur-swift` (ADR 0001). The code being extracted is organised for benchmarking: an `Anonymizer`
+object, `AnonymizationConfig`, `RemovalMode`, `PixelAccess`, `FaceBox` with landmarks, `@Serializable` data
+classes, and a per-detector score map. The earlier API sketch used `FaceAnonymizer` and `process`/`processJpeg`.
+  "Anonymizer" puts a claim the library cannot make into every auto-complete list, stack trace and API page.
+| Entry point | `FaceMasker` (class, `AutoCloseable`) | `FaceMasker` (actor) | not `FaceBlur` (module clash), not `FaceAnonymizer` (wording) |
+| Mask geometry and style | `MaskingConfig`, `MaskStyle`, `MaskShape` | `MaskingConfiguration`, `MaskStyle`, `MaskShape` (enums) | replaces `AnonymizationConfig`, `RemovalMode`; opaque styles only (decision 10) |
+**A. Keep the sketch names (`FaceAnonymizer`, `process`, `processJpeg`).** Pro: matches the extraction plan.
+apps with non-privacy uses get them from one library. Con: blurred and pixelated faces can be restored or
+
+# docs/adr/0005-file-mode-io-and-metadata.md (technical limit of content-URI overwrite)
+be guaranteed there. Overwriting one is therefore **never implicit**: it is an explicit opt-in on the target, and the

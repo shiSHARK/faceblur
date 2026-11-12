@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+# faceblur device-test fixtures, format 1
+#
+# Files that scripts/phone-device-tests.sh places in the test app's private storage (files/faceblur-fixtures/) before
+# the run; the test APK itself carries none of them. Only three kinds are accepted, so no photo can ever reach the phone
+# through this list:
+#   model <file name>       the reference test model, taken from build/test-models/ after its size and SHA-256 were
+#                           checked against the pins of the local fixtures (the name must equal their fileName)
+#   local <path>            a file under images/ of the maintainer's local fixtures (build/local-fixtures/), listed
+#                           with its SHA-256 in their MANIFEST.sha256; this harness runs only in the local merge gate
+#   tracked <path>          a file tracked in git under testdata/ that is registered in config/data-admission/register.tsv
+model face_detection_yunet_2023mar.onnx
+local images/face-0003542-s0625-x0000-y0000.png

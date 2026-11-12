@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: Apache-2.0
+# macOS job: iOS simulator tests + static XCFramework + SwiftPM checksum.
+# MANUAL ONLY while the repositories are private (GitHub Free plan: macOS minutes count 10x, i.e. about
+# 200 macOS minutes per month). The timeout caps one run at 20 x 10 = 200 billed minutes; a normal run is shorter.
+# Once the repositories are public (standard runners free), this job may run on every push.
+name: macos
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Superseded branch runs are cancelled; every run on main has its own group and is never cancelled.
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && format('main-{0}', github.run_id) || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  ios:
+    name: iOS tests + XCFramework
+    runs-on: macos-latest # not pinned yet: pin a macOS image + Xcode before release candidates (review MC-2)
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Toolchain versions
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # Read-only Gradle caches: this job builds the XCFramework release artifact, so it never writes cache entries
+      # that later builds could restore. Release candidates are built with --no-build-cache (RELEASING.md).
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          # MIT-licensed basic caching (the default 'enhanced' provider is a proprietary component).
+          cache-provider: basic
+          cache-read-only: true
+
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('gradle/libs.versions.toml') }}
+
+      - name: iOS simulator tests + release XCFramework
+        run: ./gradlew --stacktrace --no-build-cache iosSimulatorArm64Test assembleFaceBlurCoreReleaseXCFramework
+
+      # The iOS test task once ended successfully without result XML; never accept that.
+      - name: iOS test task produced results
+        run: python3 -I scripts/check-test-results.py faceblur/build/test-results iosSimulatorArm64Test
+
+      - name: XCFramework contains no absolute build paths
+        run: sh scripts/check-artifact-paths.sh faceblur/build/XCFrameworks/release
+
+      # LICENSE, NOTICE and licenses/ sit at the zip root next to the xcframework (ADR 0008).
+      - name: Zip XCFramework with notices + SwiftPM checksum
+        run: |
+          set -eu
+          dir=faceblur/build/XCFrameworks/release
+          checksum=$(sh scripts/package-xcframework-zip.sh "$dir" "$dir/FaceBlurCore.xcframework.zip")
+          echo "$checksum" > "$dir/FaceBlurCore.xcframework.zip.checksum"
+          echo "SwiftPM checksum: $checksum" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload XCFramework zip (not a release; consumers cannot resolve it)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: FaceBlurCore-xcframework
+          path: |
+            faceblur/build/XCFrameworks/release/FaceBlurCore.xcframework.zip
+            faceblur/build/XCFrameworks/release/FaceBlurCore.xcframework.zip.checksum
+          retention-days: 7

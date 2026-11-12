@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+# faceblur expected assumption skips, format 1
+#
+# Device tests whose subject does not exist below an Android API level: on such a phone they end with an assumption
+# that is not met (AssumptionViolatedException). scripts/phone_test_log.py accepts such a skip ONLY when ALL hold:
+# the test is listed here by its exact name, the api_level in the log header is LOWER than the minimum given here,
+# and the skip is an assumption skip (not a failure, error or ignore). A listed test that skips at or above its
+# minimum fails the log, a listed test that is absent from the log fails it, and every other skip or ignore fails it.
+# The log reports "N passed, K expected skips (names)"; passed + expected skips must equal the @Test count. A listed
+# test is NOT evidenced by the phone log: its requirement needs a passing run in the other environment named in its
+# row, for the same commit; without that run the requirement is NOT RUN. A listed test must also be in
+# config/device-tests/required-tests.txt.
+#
+# CHANGES TO THIS FILE NEED THE WRITTEN APPROVAL OF THE QA LEAD. Every row needs a reason that is an API-level gate
+# ("flaky" or "slow" are not reasons). Adding a name or lowering a minimum is a change that needs that approval.
+#
+# Format: the first two lines above stay exactly as they are; then comment lines (#) and one row per line, four
+# fields separated by a TAB:
+#   <fully qualified test class>::<method>  <minimum API level>  <other environment where it must run>  <reason>
+io.github.shishark.faceblur.android.AndroidFileModeTest::theGainMapIsDroppedBeforeEncoding	34	Android 37 emulator, device-test log of the same commit	gain maps exist from API 34 (Android 14)

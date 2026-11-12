@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!--
+  ADR 0007 (amended): FaceBlur declares no permission and no component of its own. It removes exactly one entry:
+  ONNX Runtime's own telemetry starter, a standalone provider (not an androidx.startup entry), matched by its exact
+  class name. No tools:selector: the Android Gradle Plugin's manifest merger does not apply selector-scoped removals.
+  Other providers, including androidx.startup's InitializationProvider and its initializers, are untouched.
+
+  Permissions are NOT removed here: an unscoped removal in a library depends on the dependency order and can strip
+  the permissions of other libraries. ONNX Runtime's INTERNET and ACCESS_NETWORK_STATE therefore reach the app; an
+  app that must have no network permission removes them in its own manifest (see the Android integration guide).
+  Telemetry is also switched off at run time (ORT_DISABLE_TELEMETRY=1 before the first session, setTelemetry(false)).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <provider
+            android:name="ai.onnxruntime.TelemetryInitializer"
+            android:authorities="${applicationId}.onnxruntime_telemetry_initializer"
+            tools:node="remove" />
+    </application>
+
+</manifest>

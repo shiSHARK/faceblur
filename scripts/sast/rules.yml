@@ -1,0 +1,139 @@
+# SPDX-License-Identifier: Apache-2.0
+# Project SAST rules for opengrep (ST-009 AC9/AC10; threat model: static analysis; PRIV-014, PRIV-004, PRIV-005).
+# Run through scripts/run-sast.sh, which disables inline suppressions (nosemgrep comments), requires that the scan
+# covered the source files, and applies the reviewed allow-list (scripts/sast/allowlist.txt) to the "review" rules
+# only. The network rules have no allow-list.
+#
+# Design: line-based regular expressions on every line that does not start a comment (`//`, `/*`, `*`). They are
+# deliberately broad (a mention in code of a networking, logging, process or file API fails), because type-resolved
+# analysis is not available for Kotlin Multiplatform; a false positive is fixed by rewording or by a reviewed
+# allow-list entry, a false negative is a privacy risk. Backtick-escaped name segments (`java`.`net`) are matched.
+# Static rules cannot prove the absence of networking at run time; the on-device network check stays required.
+# Known limits of line rules (code review keeps them): a comment between the tokens of a call (`Os./**/open(`), a
+# call reached by reflection through a string name, process exit calls, a helper whose inferred return type is a
+# Runtime on an allow-listed line, and a pinned line text repeated in the same file.
+# Rule content is reviewed by the security-engineer; extend, never loosen, without a review.
+#
+# Kotlin rules: library sources faceblur/src/*Main. Swift rules: Sources/ of faceblur-swift (scanned by the
+# faceblur-swift CI once Swift sources exist; tested here by scripts/test-gates.sh).
+rules:
+  # ---------------------------------------------------------------- network (PRIV-014), no allow-list
+  - id: faceblur-no-network-import
+    languages: [regex]
+    severity: ERROR
+    message: >-
+      Networking API imported in library code, or android.system.Os imported under an alias or by member, or named by a
+      typealias (that hides its calls from the line rules) (PRIV-014). No exception list exists for this rule.
+    paths:
+      include: ["/faceblur/src/*Main/**/*.kt"]
+    pattern-regex: >-
+      (?m)(^\s*(\w+\s+)*typealias\s+[^=]*=\s*(`?android`?\s*\.\s*`?system`?\s*\.\s*)?`?Os`?(?!\w)|^\s*import\s+(`?java`?\.`?net`?\b|`?javax`?\.`?net`?\b|`?java`?\.`?nio`?\.`?channels`?\.`?(Socket|ServerSocket|Datagram|AsynchronousSocket)|okhttp3\b|okio\.(Socket|.*Network)|`?io`?\.`?ktor`?\b|retrofit2\b|com\.android\.volley\b|android\.net\.(?!Uri\b)|android\.webkit\b|android\.app\.DownloadManager\b|platform\.Network\b|platform\.CFNetwork\b|platform\.WebKit\b|platform\.posix\.\*|platform\.posix\.(socket|connect|bind|listen|accept|send|sendto|sendmsg|recv|recvfrom|getaddrinfo|gethostbyname|inet_)|platform\.Foundation\.(NSURLSession|NSURLConnection|NSURLRequest|NSMutableURLRequest|NSStream|NSInputStream|NSOutputStream|NSNetService|NSHost)|platform\.darwin\.(nw_|.*[Ss]ocket)|`?android`?\.`?system`?\.`?Os`?([ \t]+as\b|[ \t]*\.)))
+  - id: faceblur-no-network-use
+    languages: [regex]
+    severity: ERROR
+    message: >-
+      Networking API used in library code (including android.system.Os socket and name-resolution calls, Os method
+      references and libcore) (PRIV-014). No exception list exists for this rule.
+    paths:
+      include: ["/faceblur/src/*Main/**/*.kt"]
+    pattern-regex: >-
+      (?m)^(?!\s*(//|/\*|\*)).*(\b`?java`?\.`?net`?\.|\bjavax\.net\.|\.toURL\s*\(|\.openConnection\s*\(|\.openStream\s*\(|\bURL\s*\(|\bURI\s*\(|HttpURLConnection|URLConnection|HttpClient|\bSocket\s*\(|SocketChannel|DatagramSocket|InetAddress|InetSocketAddress|\bNSURLSession|NSURLConnection|NSURLRequest|ContentsOfURL|dataTaskWith|\bnw_[a-z_]+\s*\(|CFSocket|CFStreamCreatePairWith|CFHost|\bposix\.(socket|connect|getaddrinfo|gethostbyname|send|sendto|recv)\b|WebView|loadUrl|DownloadManager|okhttp3\.|ktor\.client|\b`?Os`?\s*\.\s*`?(socket|socketpair|connect|bind|listen|accept|sendto|sendmsg|recvfrom|recvmsg|android_getaddrinfo|getaddrinfo|getnameinfo|inet_pton|setsockopt\w*|getsockopt\w*|getpeername|getsockname|shutdown|getifaddrs|if_nametoindex|if_indextoname)`?\s*\(|\b`?Os`?\s*::|\bLibcore\b|\blibcore\.io\b)
+  - id: faceblur-no-native-socket-call
+    languages: [regex]
+    severity: ERROR
+    message: POSIX socket or name-resolution call in Kotlin/Native library code (PRIV-014).
+    paths:
+      include: ["/faceblur/src/ios*Main/**/*.kt", "/faceblur/src/apple*Main/**/*.kt", "/faceblur/src/native*Main/**/*.kt"]
+    pattern-regex: >-
+      (?m)^(?!\s*(//|/\*|\*)).*\b(socket|connect|bind|listen|accept|send|sendto|sendmsg|recv|recvfrom|getaddrinfo|gethostbyname|gethostbyaddr|inet_pton|inet_addr)\s*\(
+  # ---------------------------------------------------------------- logging / console (PRIV-004), reviewed allow-list
+  - id: faceblur-no-logging
+    languages: [regex]
+    severity: ERROR
+    message: >-
+      Logging or console output in library code (PRIV-004: no image data, paths, coordinates or metadata in logs).
+      A line may stay only with a reviewed entry in scripts/sast/allowlist.txt.
+    paths:
+      include: ["/faceblur/src/*Main/**/*.kt"]
+    pattern-regex: >-
+      (?m)(^\s*import\s+(android\.util\.Log\b|java\.util\.logging\b|org\.slf4j\b|timber\.|kotlin\.io\.print|platform\.Foundation\.NSLog\b|platform\.darwin\.os_log|platform\.os\.)|^(?!\s*(//|/\*|\*)).*(\bprintln\s*\(|\bprint\s*\(|\bkotlin\.io\.print|\bSystem\s*\.\s*(out|err)\b|\bSystem\.getLogger|\bandroid\.util\.Log\b|\bLog\s*\.\s*(v|d|i|w|e|wtf|println)\s*\(|java\.util\.logging|org\.slf4j|\bTimber\.|\bNSLog\s*\(|\bNSLogv\s*\(|\bos_log|\bprintStackTrace\s*\(|Thread\s*\.\s*dumpStack|\bplatform\.posix\.(printf|puts|fprintf|perror)\b|\b(printf|puts|fprintf|perror)\s*\())
+  # ---------------------------------------------------------------- process / dynamic code, reviewed allow-list
+  - id: faceblur-no-process-or-dynamic-code
+    languages: [regex]
+    severity: ERROR
+    message: >-
+      Process execution, native library loading, reflection, process-environment or process-control calls
+      (android.system.Os) or a java.lang.Runtime reference (a stored or returned Runtime also reaches exec, load,
+      halt and exit, which no line rule can follow), or java.lang.Runtime / java.lang.System imported (both are
+      imported implicitly: an explicit import only aliases or member-imports them) or named by a typealias, in
+      library code. A line may stay only with a reviewed entry in
+      scripts/sast/allowlist.txt.
+    paths:
+      include: ["/faceblur/src/*Main/**/*.kt"]
+    pattern-regex: >-
+      (?m)^(?!\s*(//|/\*|\*)).*(ProcessBuilder|Runtime\s*\.\s*getRuntime|\.exec\s*\(|Class\s*\.\s*forName|\.newInstance\s*\(|System\s*\.\s*load(Library)?\s*\(|java\.lang\.reflect|kotlin\.reflect\.full|\.getDeclared(Method|Field|Constructor)|\.setAccessible\s*\(|\bdlopen\s*\(|\bdlsym\s*\(|\b(popen|execv|execvp|execve|fork|posix_spawn|system)\s*\(|NSTask\b|\b`?Os`?\s*\.\s*`?(setenv|unsetenv|kill|prctl|setsid|setpgid|setuid|setgid|seteuid|setegid|setreuid|setregid|setresuid|setresgid|capset|execv|execve|waitpid)`?\s*\(|(:|\bas\??|<|,)\s*`?(java`?\.`?lang`?\.)?`?Runtime`?\b|\bRuntime\s*::|\bimport\s+`?java`?\s*\.\s*`?lang`?\s*\.\s*`?(Runtime|System)`?(?!\w)|\btypealias\s+[^=]*=\s*(`?\w+`?\s*\.\s*)*`?(Runtime|System)`?(?!\w))
+  # ---------------------------------------------------------------- file I/O (PRIV-005 no temp files of originals), reviewed allow-list
+  - id: faceblur-file-io-review
+    languages: [regex]
+    severity: ERROR
+    message: >-
+      File-system or file-descriptor access in library code (including android.system.Os file calls,
+      ParcelFileDescriptor, shared memory, file channels and the Context storage APIs: app directories, files,
+      shared preferences and databases). Allowed only at reviewed places (ADR 0005 file mode,
+      ADR 0006 iOS model cache file, ADR 0012 model file reader): every line needs a reviewed entry in
+      scripts/sast/allowlist.txt.
+    paths:
+      include: ["/faceblur/src/*Main/**/*.kt"]
+    pattern-regex: >-
+      (?m)(^\s*import\s+(java\.io\.(File|FileOutputStream|FileInputStream|FileWriter|FileReader|RandomAccessFile)\b|java\.nio\.file\b|kotlin\.io\.path\b|okio\.(FileSystem|Path)\b|platform\.Foundation\.(NSFileManager|NSFileHandle)\b)|^(?!\s*(//|/\*|\*)).*(\bjava\.io\.File|\bFile\s*\(|FileOutputStream|FileInputStream|FileWriter|RandomAccessFile|\bFiles\s*\.|\bPaths?\s*\.\s*(get|of)\s*\(|createTempFile|createTempDirectory|\.(writeBytes|writeText|appendBytes|appendText)\s*\(|\.(outputStream|bufferedWriter|printWriter|sink|appendingSink|copyTo|copyRecursively)\s*\(|(?<!\bFileModeRun)\.writer\s*\(|openOutputStream|openInputStream|openFileDescriptor|openAssetFileDescriptor|NSFileManager|NSFileHandle|createFileAtPath|writeToFile|writeToURL|dataWithContentsOfFile|contentsAtPath|cacheDir|filesDir|getExternal\w*Dir|CacheDir|FilesDir|MediaDirs?\b|\b(get)?[dD]ataDir\b|[oO]bbDirs?\b|\bgetDir\s*\(|openFileOutput|openFileInput|getFileStreamPath|\bdeleteFile\s*\(|getSharedPreferences|PreferenceManager|openOrCreateDatabase|getDatabasePath|\bdeleteDatabase\s*\(|\bSQLiteDatabase\b|AutoClose(Input|Output)Stream|\bposix\.(fopen|open|creat|mkstemp|rename|unlink|fsync|ftruncate)\b|\b`?Os`?\s*\.\s*`?(open|creat|read|pread|readv|write|pwrite|writev|close|dup|dup2|lseek|fstat|stat|lstat|fstatvfs|statvfs|fcntlInt|fcntlVoid|fcntlFlock|ioctlInt|fsync|fdatasync|ftruncate|posix_fallocate|sendfile|mkdir|mkfifo|remove|rename|rmdir|symlink|link|readlink|realpath|unlink|chmod|fchmod|chown|fchown|lchown|access|mmap|munmap|msync|mlock|munlock|mincore|memfd_create|pipe|pipe2|getxattr|setxattr|removexattr|listxattr|umask|chdir|fchdir)`?\s*\(|\bParcelFileDescriptor\s*\.\s*(open|dup|fromFd|adoptFd|fromSocket|fromDatagramSocket|createPipe|createReliablePipe|createSocketPair|createReliableSocketPair|wrap)\b|\bSharedMemory\s*\.\s*create\b|\bMemoryFile\s*\(|\bFileChannel\b|\bMappedByteBuffer\b))
+  - id: faceblur-native-file-io-review
+    languages: [regex]
+    severity: ERROR
+    message: >-
+      POSIX or Darwin file-system call, or an ImageIO / CoreGraphics / CoreFoundation call that reads or writes a
+      file by URL or name, in Kotlin/Native library code (ADR 0005 file mode: the iOS path writer and the ImageIO
+      read of a checked path source are the reviewed cases): every line needs a reviewed entry in
+      scripts/sast/allowlist.txt.
+    paths:
+      include: ["/faceblur/src/ios*Main/**/*.kt", "/faceblur/src/apple*Main/**/*.kt", "/faceblur/src/native*Main/**/*.kt"]
+    pattern-regex: >-
+      (?m)^(?!\s*(//|/\*|\*)).*\b(fopen|fdopen|fwrite|fread|open|openat|creat|mkstemp|mkdtemp|rename|renameat|renamex_np|renameatx_np|unlink|unlinkat|remove|fsync|ftruncate|truncate|write|pwrite|writev|mkdir|rmdir|link|linkat|symlink|symlinkat|clonefile|clonefileat|fclonefileat|copyfile|fcopyfile|exchangedata|chmod|fchmod|chown|fchown|fdatasync|mkfifo|setxattr|fsetxattr|removexattr|fremovexattr|CGImageSourceCreateWithURL|CGImageDestinationCreateWithURL|CGDataProviderCreateWithURL|CGDataProviderCreateWithFilename|CGDataConsumerCreateWithURL|CFReadStreamCreateWithFile|CFWriteStreamCreateWithFile|CFURLCreateDataAndPropertiesFromResource|CFURLWriteDataAndPropertiesToResource|CFURLDestroyResource)\s*\(
+  # ================================================================ Swift (faceblur-swift Sources/)
+  - id: faceblur-swift-no-network
+    languages: [regex]
+    severity: ERROR
+    message: Networking API in the Swift package sources (PRIV-014). No exception list exists for this rule.
+    paths:
+      include: ["/Sources/**/*.swift"]
+    pattern-regex: >-
+      (?m)(^\s*(@testable\s+)?import\s+(Network|CFNetwork|WebKit|FoundationNetworking)\b|^(?!\s*(//|/\*|\*)).*(\bURLSession|\bURLRequest|NSURLConnection|\bNWConnection|\bNWListener|\bNWBrowser|\bNWPathMonitor|CFSocket|CFStreamCreatePairWith|\bWKWebView|\bInputStream\s*\(\s*url|\bcontentsOf\s*:\s*URL\s*\(\s*string|\bgetaddrinfo\s*\(|\bsocket\s*\(|\bconnect\s*\())
+  - id: faceblur-swift-no-logging
+    languages: [regex]
+    severity: ERROR
+    message: >-
+      Logging or console output in the Swift package sources (PRIV-004). A line may stay only with a reviewed entry
+      in scripts/sast/allowlist.txt.
+    paths:
+      include: ["/Sources/**/*.swift"]
+    pattern-regex: >-
+      (?m)(^\s*import\s+(os|OSLog|os\.log|Logging)\b|^(?!\s*(//|/\*|\*)).*(\bprint\s*\(|\bdebugPrint\s*\(|\bdump\s*\(|\bNSLog\s*\(|\bos_log\s*\(|\bLogger\s*\(|\bOSLog\b|\bFileHandle\.standard(Error|Output)|\b(printf|puts|fputs|fprintf|perror)\s*\())
+  - id: faceblur-swift-process-or-dynamic-code
+    languages: [regex]
+    severity: ERROR
+    message: >-
+      Process execution or dynamic loading in the Swift package sources. A line may stay only with a reviewed entry
+      in scripts/sast/allowlist.txt.
+    paths:
+      include: ["/Sources/**/*.swift"]
+    pattern-regex: >-
+      (?m)^(?!\s*(//|/\*|\*)).*(\bProcess\s*\(|\bNSTask\b|\bdlopen\s*\(|\bdlsym\s*\(|NSClassFromString|\bperform\s*\(\s*NSSelectorFromString|\b(popen|execv|execvp|fork|posix_spawn|system)\s*\()
+  - id: faceblur-swift-file-io-review
+    languages: [regex]
+    severity: ERROR
+    message: >-
+      File-system access in the Swift package sources (PRIV-005). Every line needs a reviewed entry in
+      scripts/sast/allowlist.txt.
+    paths:
+      include: ["/Sources/**/*.swift"]
+    pattern-regex: >-
+      (?m)^(?!\s*(//|/\*|\*)).*(\bFileManager\b|\bFileHandle\b|\.write\s*\(\s*to\s*:|\bcreateFile\s*\(|\bcontentsOf\s*:|NSTemporaryDirectory|temporaryDirectory|\bfopen\s*\(|\bmkstemp\s*\(|\bopen\s*\(|\bunlink\s*\(|\brename\s*\()

@@ -1,0 +1,6 @@
+# Allowed commit identities (e-mail addresses only). Format: <role> <e-mail>
+# role: author+committer | author | committer
+# The repository's only author identity is the GitHub no-reply address of the maintainer account.
+author+committer 3919856+shiSHARK@users.noreply.github.com
+# Commits created by GitHub itself (web merges) carry this committer address.
+committer noreply@github.com

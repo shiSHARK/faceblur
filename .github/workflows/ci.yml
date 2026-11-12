@@ -1,0 +1,435 @@
+# SPDX-License-Identifier: Apache-2.0
+# Linux CI (GitHub Free plan: private repositories get $12 of included Actions compute per month, Linux 2-core about
+# $0.006/min). No pull_request trigger: merges are local and a PR would run everything twice; add it back, with `push`
+# limited to main, when PRs are used. Every check of these jobs also runs locally, in the same order and from the same
+# step definitions (scripts/ci-steps.sh), with scripts/ci-local.sh (the local merge gate). When the jobs run:
+#   push to a branch other than main  - gates. The build and verification jobs run too when the branch changes CI or
+#                                       build configuration (scripts/ci-changes.sh: ci_config); otherwise only when
+#                                       started by hand: `gh workflow run ci.yml --ref <branch>`
+#                                       (docs/ops/BUILDING.md, "Continuous integration").
+#   workflow_dispatch (any ref)       - every job. Input gradle-cache=disabled builds without any Gradle User Home cache
+#                                       (clean-build check, cache-effect measurement).
+#   push to main                      - gates always; build and verification each skipped only when the same job already
+#                                       succeeded on the SAME TREE (`git rev-parse HEAD^{tree}`, never the commit ID)
+#                                       within 24 hours (scripts/ci-reuse.py; any doubt or lookup error runs the job).
+#   push of a tag                     - every job.
+# Jobs:
+#   gates  - data admission + secret scan, DCO sign-off, SPDX headers, API wording, wording lint, internal-ID gate
+#            (tracked files, commit messages of the push incl. merges, shrink-only baseline), SAST,
+#            dependency-verification switch check, OSV report of build tooling, planted-violation self-tests,
+#            ONNX Runtime telemetry check, ONNX Runtime locked-options gate, path filters. Always runs.
+#   build  - JVM + Android host tests (the tests that need the maintainer's local fixtures are excluded by name and
+#            reported as NOT RUN; the local merge gate runs them), ABI check, Android lint, ktlint, coverage gates (module + changed lines), independent
+#            privacy checker on the file-mode test outputs, iOS klib compile (cross-compiled, no linking), API docs,
+#            local publication (no jvm variant, AAR manifest), merged manifest of a consumer app, OSV gate on runtime classpaths and published POMs, fuzz-harness
+#            controls, artifact path checks. Also skipped
+#            when every file changed on a branch (vs its merge base with main) is documentation; never for that reason
+#            on main.
+# This workflow downloads, caches and uploads no model and no face image: the tests that need them run only in the
+# maintainer's local merge gate. The tests of a public run use test models the project builds itself.
+#   verification - the separate verification build (`./gradlew -p verification check`). Runs only when
+#            verification/ exists and verification/, library or build files changed (scripts/ci-changes.sh), with the
+#            same branch-push and tree-hash rules as the build job.
+# Artifacts are uploaded only when the gates job succeeded.
+name: ci
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      gradle-cache:
+        description: "Gradle User Home caches (dependencies + build cache): enabled, or disabled for a clean build"
+        type: choice
+        options:
+          - enabled
+          - disabled
+        default: enabled
+
+permissions:
+  contents: read
+
+concurrency:
+  # One group per workflow + ref: a newer push or dispatch on a branch cancels the older run. Every run on main has
+  # its own group (run id), so a main run is never cancelled, not even while it waits (a shared group would drop a
+  # pending main run and with it the checks of that push's commits).
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && format('main-{0}', github.run_id) || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  GITLEAKS_VERSION: "8.30.1"
+  # SHA-256 of gitleaks_8.30.1_linux_x64.tar.gz (GitHub release asset digest, checked 2026-11-01).
+  GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+  OPENGREP_VERSION: "1.33.1"
+  # SHA-256 of opengrep_manylinux_x86 v1.33.1 (GitHub release asset digest, checked 2026-11-01; same version as
+  # the workspace scanner of the security-engineer).
+  OPENGREP_SHA256: "46e8133cc490f9f50518061590ce2f6be5a08afaeda034471c0ceda4b3899808"
+  OSV_SCANNER_VERSION: "2.7.0"
+  # SHA-256 of osv-scanner_linux_amd64 v2.7.0 (GitHub release asset digest, checked 2026-11-01; same version as
+  # the workspace scanner).
+  OSV_SCANNER_SHA256: "160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b"
+
+jobs:
+  gates:
+    name: Data admission, secret scan, script gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read # tree-hash reuse lookup on main (lists runs and jobs of this workflow; read-only)
+    outputs:
+      code: ${{ steps.changes.outputs.code }}
+      verification: ${{ steps.changes.outputs.verification }}
+      ci_config: ${{ steps.changes.outputs.ci_config }}
+      reuse-build: ${{ steps.reuse.outputs.reuse-build }}
+      reuse-verification: ${{ steps.reuse.outputs.reuse-verification }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # every commit in the history is checked; path filters need the merge base
+          persist-credentials: false
+
+      - name: Path filters (docs-only branches, verification build)
+        id: changes
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+        run: sh scripts/ci-changes.sh "$EVENT" "$REF" HEAD >> "$GITHUB_OUTPUT"
+
+      - name: Branch push without CI/build changes - build and verification only on manual dispatch
+        if: >-
+          github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') && github.ref != 'refs/heads/main'
+          && steps.changes.outputs.ci_config != 'true'
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          {
+            echo "Branch push: only this gates job runs. Start the build and verification jobs with"
+            echo "\`gh workflow run ci.yml --ref $BRANCH\`, or run the local merge gate (scripts/ci-local.sh)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Main only: skip the build/verification job if it already succeeded on the same tree (any ref, last 24 hours).
+      # The token is passed to this step only. Any doubt prints false (the job runs); see scripts/ci-reuse.py.
+      - name: Tree-hash reuse on main (same tree already passed; fail-safe)
+        id: reuse
+        # Never on a re-run (attempt 2+): its own earlier failure would not be visible to the lookup.
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.run_attempt == 1
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -eu
+          tree=$(git rev-parse 'HEAD^{tree}')
+          python3 -I scripts/ci-reuse.py --repo "$REPO" --workflow-path .github/workflows/ci.yml --tree "$tree" \
+            --exclude-run "$RUN_ID" --run-attempt "$RUN_ATTEMPT" --max-age-hours 24 \
+            --job "build=Model, JVM + Android checks, iOS compile, docs" \
+            --job "verification=Verification build (privacy checker and consumer checks)" >> "$GITHUB_OUTPUT"
+
+      - name: Install gitleaks (pinned, checksum verified)
+        run: |
+          set -eu
+          dir="$RUNNER_TEMP/gitleaks"
+          mkdir -p "$dir"
+          curl -sSfL -o "$dir/gitleaks.tar.gz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $dir/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf "$dir/gitleaks.tar.gz" -C "$dir" gitleaks
+          echo "FACEBLUR_GITLEAKS=$dir/gitleaks" >> "$GITHUB_ENV"
+
+      - name: Install opengrep and osv-scanner (pinned, checksum verified)
+        run: |
+          set -eu
+          dir="$RUNNER_TEMP/scanners"
+          mkdir -p "$dir"
+          curl -sSfL -o "$dir/opengrep" \
+            "https://github.com/opengrep/opengrep/releases/download/v${OPENGREP_VERSION}/opengrep_manylinux_x86"
+          echo "${OPENGREP_SHA256}  $dir/opengrep" | sha256sum -c -
+          curl -sSfL -o "$dir/osv-scanner" \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          echo "${OSV_SCANNER_SHA256}  $dir/osv-scanner" | sha256sum -c -
+          chmod +x "$dir/opengrep" "$dir/osv-scanner"
+          echo "OPENGREP=$dir/opengrep" >> "$GITHUB_ENV"
+          echo "OSV_SCANNER=$dir/osv-scanner" >> "$GITHUB_ENV"
+
+      - name: Data admission (tree + full history; config/data-admission/README.md)
+        run: sh scripts/ci-steps.sh data-admission
+
+      - name: DCO sign-off on every commit (LIC-006)
+        run: sh scripts/ci-steps.sh dco
+
+      - name: SPDX header on every source file (LIC-001)
+        run: sh scripts/ci-steps.sh spdx
+
+      - name: Licence index - texts present, none unused, LICENSE and NOTICE in place (ADR 0008)
+        run: sh scripts/ci-steps.sh licence-index
+
+      - name: No "anonymi[sz]e" in the public ABI (DX-009)
+        run: sh scripts/ci-steps.sh api-wording
+
+      # The term list is required: a missing or empty list fails (DOC-008).
+      - name: Wording lint (DOC-008)
+        run: sh scripts/ci-steps.sh wording
+
+      # Public files and commit messages carry no internal process IDs or workspace paths; the baseline of lines
+      # still to be cleaned by their owners may only shrink.
+      - name: No internal IDs in files or commit messages
+        env:
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+        run: sh scripts/ci-steps.sh internal-ids
+
+      # Results from internal data stay out of public files and commit messages: internal-data wording near a number
+      # fails unless the block has a reviewed allow-list entry; stale entries fail. Output never shows the text.
+      - name: No figures from internal data in files or commit messages
+        env:
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+        run: sh scripts/ci-steps.sh internal-figures
+
+      - name: SAST - networking, logging, process, file I/O in library code (PRIV-014, PRIV-004)
+        run: sh scripts/ci-steps.sh sast
+
+      # The library writes nothing but the masked output (and its temporary file next to the target).
+      - name: File-I/O write sites only for the masked output (PRIV-005)
+        run: sh scripts/ci-steps.sh write-sites
+
+      - name: Dependency verification cannot be switched off
+        run: sh scripts/ci-steps.sh dependency-verification
+
+      # Build-tool advisories are reported (and fixed by version floors in gradle/advisory-floors.properties
+      # where a patched version exists); runtime and published dependencies are gated in the build job.
+      - name: OSV report of build tooling (report only)
+        run: sh scripts/ci-steps.sh osv-build-tooling
+
+      - name: Planted-violation self-tests of the gates (ST-009)
+        run: sh scripts/ci-steps.sh gate-self-tests
+
+      - name: ONNX Runtime telemetry switched off in code, not only by the test environment
+        run: sh scripts/ci-steps.sh ort-telemetry
+
+      # Allow-listed configuration keys with their required values, and none of the "never" calls (ADR 0012).
+      - name: ONNX Runtime locked session options (SEC-MA-001)
+        run: sh scripts/ci-steps.sh ort-options
+
+      # Every check of this workflow is a step of scripts/ci-steps.sh that the local merge gate runs too.
+      - name: CI and the local merge gate run the same steps
+        run: sh scripts/ci-steps.sh ci-step-list
+
+  build:
+    name: Model, JVM + Android checks, iOS compile, docs
+    needs: gates
+    # Skipped on a push to a branch other than main unless CI/build configuration changed (manual dispatch runs it),
+    # for a docs-only branch, and on main when this job already passed on the same tree. The job name is the reuse key in the gates job: keep both equal.
+    # An empty output (gates job failed early) still builds; uploads below then stay off.
+    if: >-
+      ${{ !cancelled()
+      && (!(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') && github.ref != 'refs/heads/main')
+          || needs.gates.outputs.ci_config == 'true')
+      && needs.gates.outputs.code != 'false'
+      && needs.gates.outputs.reuse-build != 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the changed-lines coverage gate diffs against the merge base with main
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # Also validates the Gradle wrapper jar against the official checksums. Caches: read-only on branches, written on
+      # main (action default); none at all for a dispatch with gradle-cache=disabled.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          # MIT-licensed basic caching (the default 'enhanced' provider is a proprietary component).
+          cache-provider: basic
+          cache-disabled: ${{ inputs.gradle-cache == 'disabled' }}
+
+      # Kotlin/Native toolchain dependencies under ~/.konan are downloaded by the K/N compiler outside Gradle's
+      # dependency verification (a recorded residual risk); the cache is keyed by the version catalog (K/N version).
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+
+      - name: Tests, ABI, lint, coverage gate, iOS klibs, API docs
+        run: sh scripts/ci-steps.sh build-main
+
+      - name: Local publication (no jvm variant, ADR 0002)
+        run: sh scripts/ci-steps.sh publish-local
+
+      - name: Publication contents (no jvm variant, no model file, AAR manifest declares nothing of its own)
+        run: sh scripts/ci-steps.sh publication-contents
+
+      # A minimal app built against the local publication: in the merged manifest and in the APK, ONNX Runtime's
+      # telemetry starter is gone, other androidx.startup initializers stay, permissions as expected; the planted
+      # control (ONNX Runtime without FaceBlur) must fail the same check.
+      - name: Merged manifest of a consumer app (starter removed, other initializers kept)
+        run: sh scripts/ci-steps.sh consumer-manifest
+
+      # Every file of docs/guides/snippets/android/ compiled as an app would (Kotlin and Java, against the local
+      # publication), the guide's no-network manifest merged (neither INTERNET nor ACCESS_NETWORK_STATE; the plain
+      # control keeps both), and the cancellation tests of the Java example (Android host tests) ran and passed.
+      - name: Guide snippets compile as an Android consumer (no-network manifest, Java cancellation tests)
+        run: sh scripts/ci-steps.sh guide-snippets
+
+      - name: Install osv-scanner (pinned, checksum verified)
+        run: |
+          set -eu
+          dir="$RUNNER_TEMP/osv"
+          mkdir -p "$dir"
+          curl -sSfL -o "$dir/osv-scanner" \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          echo "${OSV_SCANNER_SHA256}  $dir/osv-scanner" | sha256sum -c -
+          chmod +x "$dir/osv-scanner"
+          echo "OSV_SCANNER=$dir/osv-scanner" >> "$GITHUB_ENV"
+
+      # Any advisory in a runtime classpath of the library or in a published POM fails the build;
+      # build-only tooling is reported in the gates job.
+      - name: OSV gate on runtime classpaths and published dependencies
+        run: sh scripts/ci-steps.sh osv-runtime-gate
+
+      # Runtime dependencies against licenses/INDEX.txt (same versions), published files carry the notices (ADR 0008).
+      - name: Licence notices of the runtime dependencies and of the published artifacts
+        run: sh scripts/ci-steps.sh licence-notices
+
+      # No new runtime dependency without review; no networking or telemetry library at all.
+      - name: Runtime dependencies of the Android artifact against the allow-list (PRIV-014)
+        run: sh scripts/ci-steps.sh runtime-deps
+
+      # jvmLargeHeapTest and jvmRealHeapTest finalize jvmTest (own JVMs with fixed heaps); missing results fail here.
+      - name: Test tasks produced results (no silent empty runs)
+        run: sh scripts/ci-steps.sh test-results
+
+      # The tests that need the local fixtures: reported as NOT RUN here, required to have run and passed in the local gate.
+      - name: Tests that need the local fixtures (NOT RUN in public CI)
+        run: sh scripts/ci-steps.sh local-fixture-tests
+
+      # The local skip switch of the own-heap test tasks is refused under CI; the tasks finalize jvmTest.
+      - name: Own-heap test tasks cannot be skipped in CI
+        run: sh scripts/ci-steps.sh large-heap-switch
+
+      # faceblur-eval is not part of the build; this smoke run only proves its Gradle task starts and sets
+      # ORT_DISABLE_TELEMETRY=1 itself. It needs the local fixtures: reported as NOT RUN here, run in full by the local gate.
+      - name: faceblur-eval task smoke run (local fixtures only)
+        run: sh scripts/ci-steps.sh eval-smoke
+
+      # The independent privacy checker (verification build, never linked into the library) checks every JPEG output
+      # that the JVM file-mode tests produced with the real JDK encoder pipeline, against the tests' manifest: the
+      # file set must match exactly, outputs marked pass must be accepted, planted outputs must be rejected with
+      # exactly their expected finding codes; then the controls of the step itself run.
+      - name: Independent privacy checker on the library's file-mode outputs (PRIV-021)
+        run: sh scripts/ci-steps.sh privacy-crosscheck
+
+      - name: Coverage of changed lines >= 80 % (NFR-QUAL-001; iosMain NOT MEASURED)
+        env:
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+        run: sh scripts/ci-steps.sh changed-lines-coverage
+
+      - name: Fuzz-harness controls (F1-F2; the model-fixture controls N1-N9 run in the local gate only)
+        run: sh scripts/ci-steps.sh test-model-controls
+
+      - name: Published artifacts and API docs contain no absolute build paths
+        run: sh scripts/ci-steps.sh artifact-paths
+
+      # SEC-MA-003: no published artifact contains a test-model fixture (windows raw/base64/hex, SHA-256, .onnx/.ort
+      # names; archives unpacked to any depth). It needs the local fixtures as signals: NOT RUN here, run in the local gate.
+      - name: Model-leak check over every published artifact and the API docs (SEC-MA-003; local gate only)
+        run: sh scripts/ci-steps.sh model-leak
+
+      - name: Upload API docs
+        if: needs.gates.result == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: api-docs
+          path: faceblur/build/dokka/html
+          retention-days: 7
+
+      # Reports are uploaded only if they pass the same path check and the gates job succeeded (fail closed: no
+      # upload otherwise; the job log still shows test and lint failures).
+      - name: Reports contain no absolute build paths
+        id: reports-check
+        if: always()
+        run: sh scripts/ci-steps.sh reports-paths
+
+      - name: Upload test, lint and coverage reports
+        if: always() && steps.reports-check.outcome == 'success' && needs.gates.result == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reports
+          path: |
+            faceblur/build/reports/
+            faceblur/build/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  verification:
+    name: Verification build (privacy checker and consumer checks)
+    needs: gates
+    # Same branch-push, configuration and tree-hash rules as the build job (job name = reuse key in the gates job).
+    # An empty output (gates job failed early) still runs; the first step then checks that the build exists.
+    if: >-
+      ${{ !cancelled()
+      && (!(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') && github.ref != 'refs/heads/main')
+          || needs.gates.outputs.ci_config == 'true')
+      && needs.gates.outputs.verification != 'false'
+      && needs.gates.outputs.reuse-verification != 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verification build present
+        id: present
+        run: |
+          if [ -f verification/settings.gradle.kts ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "verification/ does not exist in this revision: nothing to run"
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        if: steps.present.outputs.present == 'true'
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        if: steps.present.outputs.present == 'true'
+        with:
+          # MIT-licensed basic caching (the default 'enhanced' provider is a proprietary component).
+          cache-provider: basic
+          cache-disabled: ${{ inputs.gradle-cache == 'disabled' }}
+
+      - name: Verification checks
+        if: steps.present.outputs.present == 'true'
+        run: sh scripts/ci-steps.sh verification-check
+
+      - name: Test tasks produced results (no silent empty runs)
+        if: steps.present.outputs.present == 'true'
+        run: sh scripts/ci-steps.sh verification-results
+
+      - name: Reports contain no absolute build paths
+        id: reports-check
+        if: always() && steps.present.outputs.present == 'true'
+        run: sh scripts/ci-steps.sh verification-reports-paths
+
+      - name: Upload verification reports
+        if: always() && steps.reports-check.outcome == 'success' && needs.gates.result == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: verification-reports
+          path: |
+            verification/*/build/reports/
+            verification/*/build/test-results/
+          retention-days: 7
+          if-no-files-found: ignore

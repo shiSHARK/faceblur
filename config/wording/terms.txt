@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: Apache-2.0
+# Wording lint term list (DOC-008), read by scripts/check-wording.sh.
+# One POSIX extended regular expression per line, matched case-insensitively. Owner: legal-compliance advisor.
+# Exact lines that may contain a term: config/wording/allow.txt.
+
+# Anonymisation
+anonymi[szt]
+de-?identif
+(^|[^[:alnum:]_])anonymous (photo|image|picture|output|result|file|data|people|person|face|subject)s?([^[:alnum:]_]|$)
+(make|makes|making|made|become|becomes|became|render|renders|rendered|stay|stays|remain|remains|are|is) (fully |completely |truly )?anonymous([^[:alnum:]_]|$)
+unidentifiab
+(cannot|can't|can not|no longer) be (re-?)?identified
+impossible to (re-?)?(identify|recogni[sz]e)
+
+# Compliance and certification
+(gdpr|ccpa|cpra|bipa|hipaa|dsgvo)[- ]?(compliant|compliance|ready|certified|approved|proof)
+compliant with (the )?(gdpr|ccpa|cpra|bipa|hipaa|dsgvo|data protection|privacy)
+(privacy|gdpr|iso|soc ?2)[- ]certified
+
+# Absolute claims
+guaranteed
+(^|[^[:alnum:]_])guarantees([^[:alnum:]_]|$)
+(^|[^[:alnum:]_])(we|faceblur) guarantee([^[:alnum:]_]|$)
+100 ?% (of )?(faces|private|privacy|anonymous|safe|secure|protected|protection|detection|accurate|accuracy|reliable)
+(mask|masks|masked|masking|cover|covers|covered|covering|detect|detects|detected|detecting|find|finds|found|finding|remove|removes|removed|removing|hide|hides|hidden|hiding|catch|catches|caught|blur|blurs) (all|every) (the )?faces?([^[:alnum:]_]|$)
+(never|won't|will not|does not|doesn't) miss(es)? (a|any) face
+no face (is |will be )?(ever )?missed
+
+# Safety and privacy
+safe to (upload|share|publish|post)
+private by default
+privacy-(safe|proof|guaranteed|compliant)
+privacy safe
+(is|are|be|fully|completely|totally|perfectly) secure([^[:alnum:]_]|$)
+(^|[^[:alnum:]_])secure (and private|photo|image|picture|masking|processing|solution|library|sdk)
+(^|[^[:alnum:]_])securely (mask|process|protect|remov|anonym|hid)
+(stay|stays|stayed|remain|remains|remained) ([[:alnum:]_'-]+ ){0,2}secure([^[:alnum:]_]|$)
+
+# Blur or pixelation as the method
+(^|[^[:alnum:]_])(blurs|blurring|pixelates|pixelating)([^[:alnum:]_]|$)
+(^|[^[:alnum:]_])(blur|pixelate) (the |all |every |detected )?faces?([^[:alnum:]_]|$)
+face[- ]blurring
+(is|are|be|been|being|get|gets|got|getting|stay|stays|appear|appears) (automatically |fully |always |then )?(blurred|pixelated)([^[:alnum:]_]|$)
+(^|[^[:alnum:]_])(blurred|pixelated) (out )?(faces?|people|persons?|photos?|images?|outputs?)([^[:alnum:]_]|$)
+
+# Deletion and model licence
+permanently (deletes|erases|removes) (the )?original
+free for commercial use
+ethically sourced
