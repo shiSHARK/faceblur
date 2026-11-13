@@ -11,14 +11,14 @@
 #
 # The consumer build verifies its dependencies (verification/android-consumer/gradle/verification-metadata.xml), and the
 # artifacts of a release version are rebuilt on every run, so no checksum of them can be committed. Like the merge gate
-# and scripts/ci-steps.sh (own_trust_run), this script therefore needs FACEBLUR_OWN_PUBLICATION_TRUST (the helper
-# own_publication_trust.py of the maintainer's tooling). For the consumer build and the dependency listing only, it adds
+# and scripts/ci-steps.sh (own_trust_run), this script therefore runs the helper scripts/own_publication_trust.py of this
+# repository (FACEBLUR_OWN_PUBLICATION_TRUST may name another copy). For the consumer build and the dependency listing only, it adds
 # exact per-file SHA-256 entries of the io.github.shishark artifacts at the strict X.Y.Z VERSION_NAME just published to
 # build/local-maven to a throw-away change of that metadata file (no group trust, no other group or version, nothing
 # committed), prints every coordinate and hash, restores the file on every exit and FAILs if the file differs from its
-# state before the run or a throw-away copy is left. Without the variable the script refuses to run (exit 2).
+# state before the run or a throw-away copy is left. A missing helper file makes the script refuse to run (exit 2).
 #
-# Usage:  FACEBLUR_OWN_PUBLICATION_TRUST=<helper> FACEBLUR_CONSUMER_SERIAL=<serial> sh scripts/consumer-device-test.sh <log>
+# Usage:  FACEBLUR_CONSUMER_SERIAL=<serial> sh scripts/consumer-device-test.sh <log>
 #   The serial is given by the caller (a physical test phone the caller holds the device lock for, or emulator-NNNN).
 #   <log> must not exist yet.
 # Environment (optional): ANDROID_HOME / ANDROID_SDK_ROOT for adb when it is not on PATH.
@@ -34,7 +34,7 @@ cd "$root" || exit 2
 say() { echo "consumer-device-test: $*"; }
 
 dry=${FACEBLUR_CONSUMER_DRY_RUN:-0}
-[ $# -eq 1 ] || { say "usage: FACEBLUR_OWN_PUBLICATION_TRUST=... FACEBLUR_CONSUMER_SERIAL=... sh scripts/consumer-device-test.sh <log>" >&2; exit 2; }
+[ $# -eq 1 ] || { say "usage: FACEBLUR_CONSUMER_SERIAL=... sh scripts/consumer-device-test.sh <log>" >&2; exit 2; }
 log=$1
 [ ! -e "$log" ] || { say "ERROR - the log file exists already (evidence is never overwritten)" >&2; exit 2; }
 serial=${FACEBLUR_CONSUMER_SERIAL:-}
@@ -43,9 +43,9 @@ if [ "$dry" != 1 ]; then
         "" | *[!A-Za-z0-9-]*) say "ERROR - FACEBLUR_CONSUMER_SERIAL must name the device" >&2; exit 2 ;;
     esac
 fi
-trust=${FACEBLUR_OWN_PUBLICATION_TRUST:-}
-[ -n "$trust" ] && [ -f "$trust" ] ||
-    { say "ERROR - FACEBLUR_OWN_PUBLICATION_TRUST must name the own-publication trust helper (the consumer build cannot verify the library's own publication without it)" >&2; exit 2; }
+trust=${FACEBLUR_OWN_PUBLICATION_TRUST:-$here/own_publication_trust.py}
+[ -f "$trust" ] ||
+    { say "ERROR - the own-publication trust helper is missing (scripts/own_publication_trust.py, or the file FACEBLUR_OWN_PUBLICATION_TRUST names); the consumer build cannot verify the library's own publication without it" >&2; exit 2; }
 
 if [ "$dry" != 1 ]; then
     adb_bin=$(command -v adb 2>/dev/null || true)

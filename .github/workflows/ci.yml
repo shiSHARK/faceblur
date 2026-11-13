@@ -270,12 +270,16 @@ jobs:
       # telemetry starter is gone, other androidx.startup initializers stay, permissions as expected; the planted
       # control (ONNX Runtime without FaceBlur) must fail the same check.
       - name: Merged manifest of a consumer app (starter removed, other initializers kept)
+        env:
+          FACEBLUR_OWN_PUBLICATION_TRUST: ${{ github.workspace }}/scripts/own_publication_trust.py
         run: sh scripts/ci-steps.sh consumer-manifest
 
       # Every file of docs/guides/snippets/android/ compiled as an app would (Kotlin and Java, against the local
       # publication), the guide's no-network manifest merged (neither INTERNET nor ACCESS_NETWORK_STATE; the plain
       # control keeps both), and the cancellation tests of the Java example (Android host tests) ran and passed.
       - name: Guide snippets compile as an Android consumer (no-network manifest, Java cancellation tests)
+        env:
+          FACEBLUR_OWN_PUBLICATION_TRUST: ${{ github.workspace }}/scripts/own_publication_trust.py
         run: sh scripts/ci-steps.sh guide-snippets
 
       - name: Install osv-scanner (pinned, checksum verified)

@@ -70,7 +70,8 @@ paths_of_existing() { # paths_of_existing <dir...>: prints the directories that 
 }
 
 # own_trust_run <consumer dir> <command...>: runs the command. If FACEBLUR_OWN_PUBLICATION_TRUST names a helper script
-# (the maintainer's merge gate, or a CI job that opts in), the consumer build's dependency-verification metadata gets,
+# (scripts/own_publication_trust.py: set by .github/workflows/ci.yml for these two steps and by the maintainer's merge
+# gate), the consumer build's dependency-verification metadata gets,
 # for this run only, exact SHA-256 entries for the artifacts of the library's own local publication that the previous
 # step just built (group io.github.shishark, the current VERSION_NAME only, no group trust), and the committed file is
 # restored afterwards. The helper prints every coordinate and hash. Without the variable nothing changes and the
