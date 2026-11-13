@@ -72,4 +72,4 @@ These rules apply to code, tests and documents, and are checked by the repositor
 - Describe FaceBlur as data minimisation. Do not claim legal compliance, security or certification, and do not claim
   that all faces are found.
 
-To build and test the repository, see [docs/ops/BUILDING.md](docs/ops/BUILDING.md).
+To build and test the repository, see [docs/ops/BUILDING.md](docs/ops/BUILDING.md). Builds are checked on macOS and Linux; Windows is not tested.

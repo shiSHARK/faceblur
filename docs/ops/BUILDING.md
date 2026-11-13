@@ -121,10 +121,12 @@ rm gradle/verification-metadata.xml
   koverXmlReport koverHtmlReport :faceblur:writeRuntimeLockfile
 ```
 
-Host-specific artifacts that only Linux CI resolves (the Kotlin/Native `linux-x86_64` prebuilt distribution) are
-not written on macOS: add their SHA-256 by hand after downloading the artifact from Maven Central and checking it
-against the published `.sha1`, and record the origin in the entry. Only the devops-engineer edits build files and
-this file (one writer per path). CI fails if any build, workflow or script switches verification to lenient or off,
+Host-specific artifacts that other hosts resolve (the `linux` and `windows` aapt2 jars from Google Maven, the Kotlin/Native
+`linux-x86_64` and `windows-x86_64` prebuilt distributions from Maven Central) are not written on macOS: add their
+SHA-256 by hand, keep the entries when you regenerate the file, and record the origin in each entry. Confirm each value
+two ways that must agree: the file downloaded over HTTPS from the official repository (compare its SHA-1 and MD5 with the
+published `.sha1` and `.md5`), and Gradle's own resolver in a fresh scratch project with `--write-verification-metadata sha256`.
+Only the devops-engineer edits build files and this file (one writer per path). CI fails if any build, workflow or script switches verification to lenient or off,
 or if a Gradle build in the repository has no metadata file.
 
 Not covered by Gradle's verification (residual risk, tracked internally): the toolchain dependencies that the
