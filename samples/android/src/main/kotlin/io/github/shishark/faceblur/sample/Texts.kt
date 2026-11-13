@@ -3,7 +3,6 @@ package io.github.shishark.faceblur.sample
 
 import android.content.res.Resources
 import java.util.Locale
-import kotlin.math.roundToInt
 
 /** Maps the controller's state to the strings of the screen. Kept apart from the activity so it can be tested. */
 class Texts(private val res: Resources) {
@@ -26,12 +25,23 @@ class Texts(private val res: Resources) {
         is Status.Added -> res.getString(R.string.status_added, masks(status.masks))
         is Status.Undone -> res.getString(R.string.status_undone, masks(status.masks))
         Status.Placing -> res.getString(R.string.status_placing)
+        is Status.PlacingChanged -> placingChanged(status)
         Status.PlacingCancelled -> res.getString(R.string.status_placing_cancelled)
         Status.Saving -> res.getString(R.string.status_saving)
         is Status.Saved -> res.getString(R.string.status_saved, masks(status.masks))
         Status.TooLateToCancel -> res.getString(R.string.cancel_late_status)
         Status.CancelledNothingChanged -> res.getString(R.string.cancelled_status)
         is Status.Failed -> failureTitle(status.failure)
+    }
+
+    private fun placingChanged(status: Status.PlacingChanged): String {
+        val id = when (status.change) {
+            PlacingChange.MOVED -> R.string.status_placing_moved
+            PlacingChange.RESIZED -> R.string.status_placing_resized
+            PlacingChange.AT_MOVE_LIMIT -> R.string.status_placing_move_limit
+            PlacingChange.AT_SIZE_LIMIT -> R.string.status_placing_size_limit
+        }
+        return res.getString(id, place(status.place))
     }
 
     fun masks(n: Int): String = res.getQuantityString(R.plurals.masks_count, n, n)
@@ -79,15 +89,24 @@ class Texts(private val res: Resources) {
         val shape = res.getString(
             if (item.form == MaskForm.RECTANGLE) R.string.mask_row_shape_rectangle else R.string.mask_row_shape_ellipse,
         )
-        val position = res.getString(
-            R.string.mask_row_position,
-            percent(item.centerX, imageWidth),
-            percent(item.centerY, imageHeight),
-            percent(item.radiusX * 2, imageWidth),
-            percent(item.radiusY * 2, imageHeight),
+        val box = Box(
+            item.centerX - item.radiusX,
+            item.centerY - item.radiusY,
+            item.centerX + item.radiusX,
+            item.centerY + item.radiusY,
         )
-        return "$position. $shape"
+        val position = place(Place.of(box, imageWidth, imageHeight))
+        val beyond = if (Place.extendsBeyond(box, imageWidth, imageHeight)) {
+            ". " + res.getString(R.string.mask_row_beyond)
+        } else {
+            ""
+        }
+        return "$position$beyond. $shape"
     }
+
+    /** "Centre 52% across and 48% down, 32% wide, 32% high". */
+    fun place(place: Place): String =
+        res.getString(R.string.mask_row_position, place.centerX, place.centerY, place.width, place.height)
 
     fun scores(faces: List<FaceView>): String? {
         if (faces.isEmpty()) return null
@@ -102,10 +121,7 @@ class Texts(private val res: Resources) {
         return res.getString(R.string.faces_scores, text)
     }
 
-    private fun percent(value: Float, total: Int): Int = (value / total * HUNDRED).roundToInt()
-
     private companion object {
         const val MAX_SCORES = 20
-        const val HUNDRED = 100f
     }
 }

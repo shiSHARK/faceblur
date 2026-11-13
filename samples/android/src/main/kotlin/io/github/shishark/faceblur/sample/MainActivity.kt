@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowManager
+import android.view.accessibility.AccessibilityEvent
 import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.ImageView
@@ -28,8 +29,7 @@ class MainActivity : Activity() {
     private lateinit var texts: Texts
     private lateinit var header: View
     private lateinit var adapter: MaskAdapter
-
-    private enum class Screen { HOME, REVIEW, RESULT }
+    private var lastFocus: FocusSnapshot? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -162,8 +162,30 @@ class MainActivity : Activity() {
         // While a photo is on the screen, Android must not keep a snapshot of it (recent apps, screenshots, casting).
         setPhotoShown(screen != Screen.HOME)
         findViewById<View>(R.id.home).visibility = visible(screen == Screen.HOME)
-        findViewById<View>(R.id.review_list).visibility = visible(screen == Screen.REVIEW)
+        findViewById<View>(R.id.review_screen).visibility = visible(screen == Screen.REVIEW)
         findViewById<View>(R.id.result).visibility = visible(screen == Screen.RESULT)
+        moveFocus(state, screen)
+    }
+
+    /** Puts the screen reader's focus where [FocusPlan] says, once the new screen is laid out. */
+    private fun moveFocus(state: UiState, screen: Screen) {
+        val review = (state.photo as? PhotoState.Reviewing)?.review ?: (state.photo as? PhotoState.Saving)?.review
+        val now = FocusSnapshot(screen, review?.placing != null, state.status, review?.undo.isNullOrEmpty())
+        val target = FocusPlan.after(lastFocus, now)
+        lastFocus = now
+        val id = when (target) {
+            null -> return
+            FocusTarget.START_HEADING -> R.id.title
+            FocusTarget.REVIEW_HEADING -> R.id.review_heading
+            FocusTarget.RESULT_HEADING -> R.id.result_heading
+            FocusTarget.PLACING_HEADING -> R.id.placing_heading
+            FocusTarget.ADD_MASK -> R.id.add_mask
+            FocusTarget.COUNTS -> R.id.counts
+            FocusTarget.STATUS -> R.id.status
+            FocusTarget.CANCEL -> R.id.cancel_run
+        }
+        val view = header.findViewById<View>(id) ?: findViewById(id)
+        view.post { view.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_FOCUSED) }
     }
 
     private fun renderError(state: UiState) {
@@ -175,7 +197,7 @@ class MainActivity : Activity() {
         val block = findViewById<View>(R.id.error_block)
         block.visibility = visible(failure != null)
         if (failure == null) return
-        findViewById<TextView>(R.id.error_title).text = texts.failureTitle(failure)
+        // The status line above already says the title (a live region); showing it twice made a screen reader read it twice.
         val body = texts.failureBody(failure)
         findViewById<TextView>(R.id.error_body).apply {
             text = body
@@ -201,9 +223,18 @@ class MainActivity : Activity() {
             findViewById<TextView>(R.id.model_name).text = getString(R.string.model_name, candidate.name)
             findViewById<TextView>(R.id.model_size).text =
                 getString(R.string.model_size, candidate.sizeBytes.toString())
-            findViewById<TextView>(R.id.model_hash).apply {
-                text = candidate.sha256Lines.joinToString("\n")
-                contentDescription = getString(R.string.model_hash_description, candidate.sha256Lines.joinToString(" "))
+            // One view per line, so a screen-reader user can step through the hash line by line; each line is read
+            // character by character.
+            HASH_LINES.forEachIndexed { i, id ->
+                val line = candidate.sha256Lines.getOrElse(i) { "" }
+                findViewById<TextView>(id).apply {
+                    text = line
+                    contentDescription = getString(
+                        R.string.model_hash_line_description,
+                        i + 1,
+                        line.toCharArray().joinToString(" "),
+                    )
+                }
             }
         }
         findViewById<Button>(R.id.choose_model).apply {
@@ -229,11 +260,20 @@ class MainActivity : Activity() {
         val saving = state.photo is PhotoState.Saving
         val a = review.analysis
         val counts = texts.counts(a.faces.size, review.masks.size)
-        header.findViewById<ImageView>(R.id.preview).apply {
+        val placingBox = review.placing
+        findViewById<ImageView>(R.id.preview).apply {
             setImageBitmap(a.preview as? Bitmap)
-            contentDescription = getString(R.string.preview_description, counts)
+            contentDescription = if (placingBox == null) {
+                getString(R.string.preview_description, counts)
+            } else {
+                getString(
+                    R.string.preview_description_placing,
+                    counts,
+                    texts.place(Place.of(placingBox, a.width, a.height)),
+                )
+            }
         }
-        header.findViewById<OverlayView>(R.id.overlay).scene =
+        findViewById<OverlayView>(R.id.overlay).scene =
             OverlayScene(a.width, a.height, a.faces, review.masks, review.placing)
         header.findViewById<TextView>(R.id.counts).text = counts
         val scores = texts.scores(a.faces)
@@ -316,6 +356,7 @@ class MainActivity : Activity() {
     }
 
     private companion object {
+        val HASH_LINES = listOf(R.id.model_hash_1, R.id.model_hash_2, R.id.model_hash_3, R.id.model_hash_4)
         const val REQUEST_MODEL = 1
         const val REQUEST_PHOTO = 2
         const val REQUEST_SAVE = 3

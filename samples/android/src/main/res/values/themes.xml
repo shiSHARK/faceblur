@@ -4,6 +4,15 @@
     <style name="Theme.FaceBlurDemo" parent="android:Theme.DeviceDefault.DayNight">
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
+        <!-- Dark system-bar icons on the light page; values-night turns this off. -->
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <!-- Body text in the primary text colour, not the secondary grey of the default TextView. -->
+        <item name="android:textViewStyle">@style/Body</item>
+    </style>
+
+    <style name="Body" parent="android:Widget.DeviceDefault.TextView">
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
     </style>
 
     <style name="Heading" parent="android:TextAppearance.DeviceDefault.Large">

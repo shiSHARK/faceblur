@@ -14,7 +14,7 @@
     <string name="model_name">File name: %1$s</string>
     <string name="model_size">Size: %1$s bytes</string>
     <string name="model_hash_label">SHA-256, 4 lines of 16 characters:</string>
-    <string name="model_hash_description">SHA-256 of the chosen model file: %1$s</string>
+    <string name="model_hash_line_description">SHA-256 line %1$d of 4: %2$s</string>
     <string name="use_model">Use this model</string>
     <string name="cancel_model">Choose another file</string>
     <string name="model_ready">Model in use: %1$s</string>
@@ -31,6 +31,11 @@
     <string name="try_again">Try again</string>
     <string name="start_over">Choose another photo</string>
 
+    <!-- Screen names announced when the screen changes (accessibility pane titles) -->
+    <string name="pane_home">Start screen</string>
+    <string name="pane_review">Review screen</string>
+    <string name="pane_result">Result screen</string>
+
     <!-- Status line (live region) -->
     <string name="progress_description">Working</string>
     <string name="status_model_reading">Reading the model file.</string>
@@ -44,6 +49,10 @@
     <string name="status_added">Mask added. %1$s</string>
     <string name="status_undone">Last change undone. %1$s</string>
     <string name="status_placing">Placing a new mask. Move and resize it with the buttons, then choose Place mask.</string>
+    <string name="status_placing_moved">Mask moved. %1$s</string>
+    <string name="status_placing_resized">Mask size changed. %1$s</string>
+    <string name="status_placing_move_limit">The mask cannot move further that way. %1$s</string>
+    <string name="status_placing_size_limit">The mask cannot be resized further. %1$s</string>
     <string name="status_placing_cancelled">Adding a mask cancelled.</string>
     <string name="status_saved">Saved. %1$s applied.</string>
     <string name="cancel_late_status">Too late to cancel. The masks were applied.</string>
@@ -70,9 +79,11 @@
     <string name="preview_placeholder">Photo preview</string>
     <string name="result_placeholder">Saved photo</string>
     <string name="preview_description">Photo preview with box and mask outlines. %1$s. The masks are listed below.</string>
+    <string name="preview_description_placing">Photo preview with box and mask outlines. %1$s. A new mask is being placed. %2$s. The masks are listed below.</string>
     <string name="mask_row_detected">Mask %1$d: from a detected face</string>
     <string name="mask_row_added">Mask %1$d: added by you</string>
     <string name="mask_row_position">Centre %1$d%% across and %2$d%% down, %3$d%% wide, %4$d%% high</string>
+    <string name="mask_row_beyond">Extends beyond the photo</string>
     <string name="mask_row_shape_ellipse">Shape: ellipse</string>
     <string name="mask_row_shape_rectangle">Shape: rectangle</string>
     <string name="keep_unmasked">Keep unmasked</string>

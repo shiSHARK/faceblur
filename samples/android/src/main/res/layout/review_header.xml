@@ -6,31 +6,6 @@
     android:orientation="vertical">
 
     <TextView
-        style="@style/Heading"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:accessibilityHeading="true"
-        android:text="@string/review_heading" />
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="300dp">
-
-        <ImageView
-            android:id="@+id/preview"
-            android:contentDescription="@string/preview_placeholder"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="fitCenter" />
-
-        <io.github.shishark.faceblur.sample.OverlayView
-            android:id="@+id/overlay"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:importantForAccessibility="no" />
-    </FrameLayout>
-
-    <TextView
         android:id="@+id/counts"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -92,6 +67,7 @@
         android:visibility="gone">
 
         <TextView
+            android:id="@+id/placing_heading"
             style="@style/Heading"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

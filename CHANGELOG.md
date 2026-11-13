@@ -15,6 +15,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Build scripts: a helper in `scripts/` (`own_publication_trust.py`) lets a local or CI run of the consumer checks
   trust the library's own just-built publication for the duration of that run only and then restores the metadata
   file; the CI workflow and the consumer device-test script use it.
+- Android demo: accessibility pass. Body text uses the primary text colour and the system-bar icons are dark on the
+  light background (the dark theme keeps light icons); the photo preview stays in view while a mask is placed
+  (landscape: beside the controls); title and status no longer take a third of the screen at 200 % font; Move and
+  Resize announce the new position and size; focus moves to the new screen, the placing panel and the control that
+  replaces a vanished one; errors and the model hash are read once, line by line; a mask larger than the photo reads at
+  most 100 %.
 
 ## [0.1.0] - Unreleased
 

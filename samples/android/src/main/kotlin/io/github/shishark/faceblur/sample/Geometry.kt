@@ -3,6 +3,7 @@ package io.github.shishark.faceblur.sample
 
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /** A rectangle in pixels of the working image (the photo upright, as the library reports it) or of a view. */
 data class Box(val left: Float, val top: Float, val right: Float, val bottom: Float) {
@@ -10,6 +11,29 @@ data class Box(val left: Float, val top: Float, val right: Float, val bottom: Fl
     val height: Float get() = bottom - top
     val centerX: Float get() = (left + right) / 2f
     val centerY: Float get() = (top + bottom) / 2f
+}
+
+/**
+ * Where a box is and how big, in whole percent of the image, for the people who cannot see the overlay. Every value is
+ * clamped to 0..100, so a mask that reaches past the photo never reads as "113% wide" (see [extendsBeyond]).
+ */
+data class Place(val centerX: Int, val centerY: Int, val width: Int, val height: Int) {
+    companion object {
+        private const val HUNDRED = 100f
+
+        fun of(box: Box, imageWidth: Int, imageHeight: Int) = Place(
+            percent(box.centerX, imageWidth),
+            percent(box.centerY, imageHeight),
+            percent(box.width, imageWidth),
+            percent(box.height, imageHeight),
+        )
+
+        /** True when any side of the box lies outside the image. */
+        fun extendsBeyond(box: Box, imageWidth: Int, imageHeight: Int): Boolean =
+            box.left < 0f || box.top < 0f || box.right > imageWidth || box.bottom > imageHeight
+
+        private fun percent(value: Float, total: Int): Int = (value / total * HUNDRED).roundToInt().coerceIn(0, 100)
+    }
 }
 
 /**

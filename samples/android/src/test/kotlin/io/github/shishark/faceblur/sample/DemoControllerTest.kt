@@ -176,6 +176,27 @@ class DemoControllerTest {
     }
 
     @Test
+    fun `a move or resize says what changed and where the new mask is, and the limit is told too`() {
+        ready()
+        controller.choosePhoto("photo")
+        controller.beginAdd()
+        controller.movePlacing(1, 0)
+        val moved = controller.state.status as Status.PlacingChanged
+        assertEquals(PlacingChange.MOVED, moved.change)
+        assertEquals(52, moved.place.centerX)
+        assertEquals(50, moved.place.centerY)
+        controller.resizePlacing(larger = true)
+        assertEquals(PlacingChange.RESIZED, (controller.state.status as Status.PlacingChanged).change)
+        repeat(60) { controller.movePlacing(-1, 0) }
+        val limit = controller.state.status as Status.PlacingChanged
+        assertEquals(PlacingChange.AT_MOVE_LIMIT, limit.change)
+        assertTrue(limit.place.centerX < 20)
+        repeat(60) { controller.resizePlacing(larger = true) }
+        assertEquals(PlacingChange.AT_SIZE_LIMIT, (controller.state.status as Status.PlacingChanged).change)
+        assertEquals(100, (controller.state.status as Status.PlacingChanged).place.height)
+    }
+
+    @Test
     fun `adding a mask can be cancelled and then nothing was added`() {
         ready()
         controller.choosePhoto("photo")

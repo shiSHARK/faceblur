@@ -132,4 +132,18 @@ class PipelineActivityTest {
         controller.pause().stop().destroy()
         assertTrue(pipeline.state is PipelineState.Idle)
     }
+
+    @Test
+    fun `focus goes to the result when it appears and to the heading when the screen starts over`() {
+        val idle = PipelineState.Idle
+        val done = PipelineState.Done(PipelineOutcome(1, 1, null))
+        val failed = PipelineState.Failed(DemoFailure(FailureKind.IO))
+        assertEquals(null, PipelineActivity.focusAfter(null, idle))
+        assertEquals(null, PipelineActivity.focusAfter(idle, PipelineState.Running))
+        assertEquals(R.id.pipeline_image, PipelineActivity.focusAfter(PipelineState.Running, done))
+        assertEquals(null, PipelineActivity.focusAfter(done, done))
+        assertEquals(R.id.pipeline_title, PipelineActivity.focusAfter(done, idle))
+        assertEquals(R.id.pipeline_title, PipelineActivity.focusAfter(failed, idle))
+        assertEquals(null, PipelineActivity.focusAfter(idle, idle))
+    }
 }

@@ -8,6 +8,7 @@ import android.net.Uri
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.accessibility.AccessibilityEvent
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.ListView
@@ -91,8 +92,14 @@ class MainActivityTest {
         controller.chooseModel(Uri.parse("content://m/model"))
         assertEquals(View.VISIBLE, find<View>(R.id.model_confirm).visibility)
         assertEquals("File name: model.onnx", find<TextView>(R.id.model_name).text.toString())
-        val lines = find<TextView>(R.id.model_hash).text.toString().split("\n")
+        val hashViews = listOf(R.id.model_hash_1, R.id.model_hash_2, R.id.model_hash_3, R.id.model_hash_4)
+            .map { find<TextView>(it) }
+        val lines = hashViews.map { it.text.toString() }
         assertEquals(4, lines.size)
+        assertEquals(
+            "SHA-256 line 2 of 4: " + lines[1].toCharArray().joinToString(" "),
+            hashViews[1].contentDescription,
+        )
         assertTrue(lines.all { it.length == 16 })
         assertFalse(find<Button>(R.id.choose_photo).isEnabled)
         find<Button>(R.id.use_model).performClick()
@@ -111,12 +118,12 @@ class MainActivityTest {
     @Test
     fun `a detected photo shows counts, the list of masks and the limits copy`() {
         toReview()
-        assertEquals(View.VISIBLE, find<View>(R.id.review_list).visibility)
+        assertEquals(View.VISIBLE, find<View>(R.id.review_screen).visibility)
         assertEquals(View.GONE, find<View>(R.id.home).visibility)
         val list = find<ListView>(R.id.review_list)
         assertEquals(1, list.count - list.headerViewsCount - list.footerViewsCount)
         assertEquals("1 face detected, 1 mask", header().findViewById<TextView>(R.id.counts).text.toString())
-        assertTrue(header().findViewById<ImageView>(R.id.preview).contentDescription.toString().contains("1 face"))
+        assertTrue(find<ImageView>(R.id.preview).contentDescription.toString().contains("1 face"))
         assertTrue(
             allViews(find(R.id.root)).filterIsInstance<TextView>().any {
                 it.text.startsWith("Detection can miss faces")
@@ -190,7 +197,7 @@ class MainActivityTest {
         assertEquals(View.GONE, find<View>(R.id.error_details).visibility)
         engine.analyseFailure = null
         find<Button>(R.id.retry).performClick()
-        assertEquals(View.VISIBLE, find<View>(R.id.review_list).visibility)
+        assertEquals(View.VISIBLE, find<View>(R.id.review_screen).visibility)
         assertEquals(View.GONE, find<View>(R.id.error_block).visibility)
     }
 
@@ -211,7 +218,7 @@ class MainActivityTest {
         controller.choosePhoto(Uri.parse("content://p/photo"))
         assertFalse(secure(), "detecting: no photo on the screen yet")
         queue.removeFirst().run()
-        assertTrue(find<View>(R.id.review_list).visibility == View.VISIBLE)
+        assertTrue(find<View>(R.id.review_screen).visibility == View.VISIBLE)
         assertTrue(secure(), "reviewing")
         controller.save(Uri.parse("content://t/target"))
         assertTrue(secure(), "saving")
@@ -267,8 +274,158 @@ class MainActivityTest {
         assertEquals(View.ACCESSIBILITY_LIVE_REGION_POLITE, find<TextView>(R.id.status).accessibilityLiveRegion)
         assertEquals(
             View.IMPORTANT_FOR_ACCESSIBILITY_NO,
-            header().findViewById<View>(R.id.overlay).importantForAccessibility,
+            find<View>(R.id.overlay).importantForAccessibility,
         )
+    }
+
+    @Test
+    fun `body text uses the primary text colour and the three screens carry pane titles`() {
+        val primary = activity.obtainStyledAttributes(intArrayOf(android.R.attr.textColorPrimary)).use {
+            it.getColorStateList(0)?.defaultColor
+        }
+        assertEquals(primary, find<TextView>(R.id.limits_copy).textColors.defaultColor)
+        assertEquals(primary, find<TextView>(R.id.model_note).textColors.defaultColor)
+        assertEquals("Start screen", find<View>(R.id.home).accessibilityPaneTitle)
+        assertEquals("Review screen", find<View>(R.id.review_screen).accessibilityPaneTitle)
+        assertEquals("Result screen", find<View>(R.id.result).accessibilityPaneTitle)
+    }
+
+    @Test
+    fun `the preview stays outside the scrolling list so it is on screen while a mask is placed`() {
+        toReview()
+        val list = find<ListView>(R.id.review_list)
+        val preview = find<View>(R.id.preview)
+        var parent = preview.parent
+        while (parent != null && parent !== list) parent = parent.parent
+        assertEquals(null, parent, "the preview must not scroll with the list")
+        // The Move and Resize buttons are in the list header: the preview and they share the screen.
+        assertEquals(R.id.review_screen, (list.parent as View).id)
+        assertEquals(R.id.review_screen, (preview.parent.parent.parent as View).id)
+    }
+
+    @Test
+    fun `moving and resizing say what changed and where the mask is, and the preview description follows`() {
+        toReview()
+        val h = header()
+        h.findViewById<Button>(R.id.add_mask).performClick()
+        assertTrue(find<ImageView>(R.id.preview).contentDescription.toString().contains("A new mask is being placed"))
+        val before = find<TextView>(R.id.status).text.toString()
+        h.findViewById<Button>(R.id.move_right).performClick()
+        val moved = find<TextView>(R.id.status).text.toString()
+        assertTrue(moved.startsWith("Mask moved. Centre 52% across and 50% down"), moved)
+        assertTrue(before != moved)
+        h.findViewById<Button>(R.id.larger).performClick()
+        assertTrue(find<TextView>(R.id.status).text.startsWith("Mask size changed. Centre 52% across"))
+        repeat(60) { h.findViewById<Button>(R.id.move_up).performClick() }
+        assertTrue(find<TextView>(R.id.status).text.startsWith("The mask cannot move further that way. Centre"))
+        repeat(60) { h.findViewById<Button>(R.id.smaller).performClick() }
+        assertTrue(find<TextView>(R.id.status).text.startsWith("The mask cannot be resized further."))
+        assertTrue(find<ImageView>(R.id.preview).contentDescription.toString().contains("Centre"))
+    }
+
+    /**
+     * Records the TYPE_VIEW_FOCUSED events these views receive (what moves a screen reader's focus). The framework
+     * itself sends one more when a button first becomes visible and takes the input focus, so [distinctRuns] drops
+     * immediate repeats.
+     */
+    private fun trackFocus(vararg ids: Int): MutableList<Int> {
+        val got = mutableListOf<Int>()
+        val h = header()
+        for (id in ids) {
+            val view = h.findViewById<View>(id) ?: find(id)
+            view.accessibilityDelegate = object : View.AccessibilityDelegate() {
+                override fun sendAccessibilityEvent(host: View, eventType: Int) {
+                    if (eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED) got += host.id
+                }
+            }
+        }
+        return got
+    }
+
+    private fun List<Int>.distinctRuns(): List<Int> = fold(emptyList()) { acc, id ->
+        if (acc.lastOrNull() ==
+            id
+        ) {
+            acc
+        } else {
+            acc + id
+        }
+    }
+
+    private fun idle() = org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+
+    @Test
+    fun `focus follows the screen, the placing panel and the controls that disappear`() {
+        val focused = trackFocus(
+            R.id.title,
+            R.id.review_heading,
+            R.id.result_heading,
+            R.id.placing_heading,
+            R.id.add_mask,
+            R.id.counts,
+            R.id.cancel_run,
+            R.id.status,
+        )
+        idle()
+        assertTrue(focused.isEmpty(), "nothing moves on the first state")
+        toReview()
+        idle()
+        assertEquals(listOf(R.id.cancel_run, R.id.review_heading), focused.distinctRuns())
+        focused.clear()
+
+        val h = header()
+        h.findViewById<Button>(R.id.add_mask).performClick()
+        idle()
+        assertEquals(listOf(R.id.placing_heading), focused.distinctRuns())
+        focused.clear()
+        h.findViewById<Button>(R.id.move_left).performClick()
+        idle()
+        // A move is announced by the status line and the focus stays on the button. (The framework may send its own
+        // event for the disabled "Add a mask" button; the screen sends none.)
+        assertTrue(focused.all { it == R.id.add_mask }, "a move must not move the focus: $focused")
+        h.findViewById<Button>(R.id.place_mask).performClick()
+        idle()
+        assertEquals(listOf(R.id.add_mask), focused.distinctRuns())
+        focused.clear()
+
+        val list = laidOutList()
+        list.getChildAt(list.headerViewsCount).findViewById<Button>(R.id.row_remove).performClick()
+        idle()
+        // The framework may add its own event for the re-enabled "Add a mask" button; the screen's is the last one.
+        assertEquals(R.id.counts, focused.last())
+        focused.clear()
+
+        controller.save(Uri.parse("content://t/target"))
+        idle()
+        assertEquals(listOf(R.id.cancel_run, R.id.result_heading), focused.distinctRuns())
+        focused.clear()
+        find<Button>(R.id.result_again).performClick()
+        idle()
+        assertEquals(listOf(R.id.title), focused.distinctRuns())
+    }
+
+    @Test
+    fun `after a failed detection the focus goes to the status line that says why`() {
+        val focused = trackFocus(R.id.status, R.id.cancel_run)
+        engine.analyseFailure = DemoFailure(FailureKind.IO)
+        controller.chooseModel(Uri.parse("content://m/model"))
+        controller.useModel()
+        controller.choosePhoto(Uri.parse("content://p/photo"))
+        idle()
+        assertEquals(listOf(R.id.cancel_run, R.id.status), focused.distinctRuns())
+        assertEquals(View.VISIBLE, find<View>(R.id.error_block).visibility)
+    }
+
+    @Test
+    fun `an error is said once by the status line and not a second time by the error block`() {
+        engine.analyseFailure = DemoFailure(FailureKind.TOO_MANY_MASKS, "details")
+        controller.chooseModel(Uri.parse("content://m/model"))
+        controller.useModel()
+        controller.choosePhoto(Uri.parse("content://p/photo"))
+        val sentence = find<TextView>(R.id.status).text.toString()
+        val sentences = allViews(find(R.id.root)).filterIsInstance<TextView>()
+            .filter { it.visibility == View.VISIBLE && it.text.toString() == sentence }
+        assertEquals(1, sentences.count())
     }
 
     @Test

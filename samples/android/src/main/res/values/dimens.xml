@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<resources>
+    <!-- Height of the pinned photo preview on the review screen (portrait). -->
+    <dimen name="review_preview_height">220dp</dimen>
+</resources>

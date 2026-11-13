@@ -7,14 +7,6 @@
     android:orientation="vertical">
 
     <TextView
-        android:id="@+id/title"
-        style="@style/Heading"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:accessibilityHeading="true"
-        android:text="@string/app_name" />
-
-    <TextView
         android:id="@+id/status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -61,13 +53,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
+        android:paddingBottom="12dp"
         android:visibility="gone">
-
-        <TextView
-            android:id="@+id/error_title"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/error_body"
@@ -97,6 +84,7 @@
 
     <ScrollView
         android:id="@+id/home"
+        android:accessibilityPaneTitle="@string/pane_home"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
@@ -105,6 +93,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/title"
+                style="@style/Heading"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:accessibilityHeading="true"
+                android:text="@string/app_name" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -154,7 +150,28 @@
                     android:text="@string/model_hash_label" />
 
                 <TextView
-                    android:id="@+id/model_hash"
+                    android:id="@+id/model_hash_1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:textIsSelectable="true" />
+
+                <TextView
+                    android:id="@+id/model_hash_2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:textIsSelectable="true" />
+
+                <TextView
+                    android:id="@+id/model_hash_3"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:textIsSelectable="true" />
+
+                <TextView
+                    android:id="@+id/model_hash_4"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:fontFamily="monospace"
@@ -260,17 +277,11 @@
         </LinearLayout>
     </ScrollView>
 
-    <ListView
-        android:id="@+id/review_list"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:divider="@null"
-        android:visibility="gone" />
+    <include layout="@layout/review_screen" />
 
     <ScrollView
         android:id="@+id/result"
+        android:accessibilityPaneTitle="@string/pane_result"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -282,6 +293,7 @@
             android:orientation="vertical">
 
             <TextView
+                android:id="@+id/result_heading"
                 style="@style/Heading"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

@@ -93,4 +93,20 @@ class GeometryTest {
         assertEquals(0f, larger.top, delta)
         assertEquals(200f, larger.width, delta)
     }
+
+    @Test
+    fun `a place is in whole percent of the image and never above 100 or below 0`() {
+        assertEquals(Place(50, 50, 20, 25), Place.of(Box(400f, 300f, 600f, 500f), 1_000, 800))
+        assertEquals(Place(50, 50, 100, 100), Place.of(Box(-130f, -128f, 1_130f, 928f), 1_000, 800))
+        assertEquals(Place(0, 100, 10, 10), Place.of(Box(-50f, 760f, 50f, 840f), 1_000, 800))
+    }
+
+    @Test
+    fun `a box extends beyond the image when any side is outside`() {
+        assertTrue(Place.extendsBeyond(Box(-1f, 0f, 10f, 10f), 100, 100))
+        assertTrue(Place.extendsBeyond(Box(0f, -1f, 10f, 10f), 100, 100))
+        assertTrue(Place.extendsBeyond(Box(0f, 0f, 101f, 10f), 100, 100))
+        assertTrue(Place.extendsBeyond(Box(0f, 0f, 10f, 101f), 100, 100))
+        assertEquals(false, Place.extendsBeyond(Box(0f, 0f, 100f, 100f), 100, 100))
+    }
 }

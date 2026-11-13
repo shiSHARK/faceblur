@@ -33,6 +33,8 @@ sealed interface PhotoState {
     class Failed(val failure: DemoFailure) : PhotoState
 }
 
+enum class PlacingChange { MOVED, RESIZED, AT_MOVE_LIMIT, AT_SIZE_LIMIT }
+
 /** What the status line says. The activity maps these to strings; nothing here is user data. */
 sealed interface Status {
     data object ChooseModelFirst : Status
@@ -47,6 +49,9 @@ sealed interface Status {
     class Added(val masks: Int) : Status
     class Undone(val masks: Int) : Status
     data object Placing : Status
+
+    /** A Move or Resize press while placing: what happened and where the new mask is now (screen readers need it). */
+    class PlacingChanged(val change: PlacingChange, val place: Place) : Status
     data object PlacingCancelled : Status
     data object Saving : Status
     class Saved(val faces: Int, val masks: Int) : Status
@@ -228,27 +233,25 @@ class DemoController<U>(
         update(state.copy(status = Status.Placing))
     }
 
-    fun movePlacing(stepsX: Int, stepsY: Int) = changePlacing { box, a ->
-        Placement.move(box, stepsX, stepsY, a.width, a.height)
-    }
+    fun movePlacing(stepsX: Int, stepsY: Int) =
+        changePlacing(PlacingChange.MOVED, PlacingChange.AT_MOVE_LIMIT) { box, a ->
+            Placement.move(box, stepsX, stepsY, a.width, a.height)
+        }
 
-    fun resizePlacing(larger: Boolean) = changePlacing { box, a ->
+    fun resizePlacing(larger: Boolean) = changePlacing(PlacingChange.RESIZED, PlacingChange.AT_SIZE_LIMIT) { box, a ->
         val factor = if (larger) Placement.SIZE_FACTOR else 1f / Placement.SIZE_FACTOR
         Placement.resize(box, factor, a.width, a.height)
     }
 
-    private fun changePlacing(change: (Box, Analysis) -> Box) {
+    /** Applies [change] to the box being placed and says what happened, or that the box could not go further. */
+    private fun changePlacing(done: PlacingChange, limit: PlacingChange, change: (Box, Analysis) -> Box) {
         val review = reviewing() ?: return
         val box = review.placing ?: return
-        setReview(
-            Review(
-                review.analysis,
-                review.masks,
-                review.undo,
-                change(box, review.analysis),
-                review.nextId,
-            ),
-        )
+        val a = review.analysis
+        val changed = change(box, a)
+        setReview(Review(a, review.masks, review.undo, changed, review.nextId))
+        val kind = if (changed == box) limit else done
+        update(state.copy(status = Status.PlacingChanged(kind, Place.of(changed, a.width, a.height))))
     }
 
     fun confirmAdd() {

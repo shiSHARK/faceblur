@@ -33,7 +33,11 @@ class TextsTest {
         val statuses = listOf(
             Status.ChooseModelFirst, Status.ModelReading, Status.ModelConfirm, Status.ModelLoading, Status.ModelReady,
             Status.ModelFailed(failure), Status.Detecting, Status.Detected(1, 1), Status.Removed(0), Status.Added(2),
-            Status.Undone(1), Status.Placing, Status.PlacingCancelled, Status.Saving, Status.Saved(1, 1),
+            Status.Undone(1), Status.Placing, Status.PlacingCancelled,
+            *PlacingChange.entries.map {
+                Status.PlacingChanged(it, Place(50, 50, 20, 20))
+            }.toTypedArray(),
+            Status.Saving, Status.Saved(1, 1),
             Status.TooLateToCancel, Status.CancelledNothingChanged, Status.Failed(failure),
         )
         for (s in statuses) assertTrue(texts.status(s).isNotBlank(), s.toString())
@@ -67,6 +71,46 @@ class TextsTest {
         val face = MaskItem(0, Origin.DETECTED, MaskForm.ELLIPSE, 500f, 400f, 100f, 80f, Any())
         assertEquals("Mask 1: from a detected face", texts.maskTitle(1, face))
         assertTrue(texts.maskDetail(face, 1_000, 800).endsWith("Shape: ellipse"))
+    }
+
+    @Test
+    fun `a mask larger than the photo reads at most 100 percent and says that it extends beyond the photo`() {
+        val big = MaskItem(0, Origin.DETECTED, MaskForm.ELLIPSE, 500f, 400f, 565f, 628f, Any())
+        assertEquals(
+            "Centre 50% across and 50% down, 100% wide, 100% high. Extends beyond the photo. Shape: ellipse",
+            texts.maskDetail(big, 1_000, 800),
+        )
+        val edge = MaskItem(1, Origin.DETECTED, MaskForm.RECTANGLE, 50f, 400f, 100f, 80f, Any())
+        assertTrue(texts.maskDetail(edge, 1_000, 800).contains("Centre 5% across"))
+        assertTrue(texts.maskDetail(edge, 1_000, 800).contains("Extends beyond the photo"))
+        assertFalse(
+            texts.maskDetail(
+                MaskItem(2, Origin.ADDED, MaskForm.RECTANGLE, 500f, 400f, 100f, 80f, Any()),
+                1_000,
+                800,
+            ).contains("beyond"),
+        )
+    }
+
+    @Test
+    fun `placing statuses say what happened and where the mask is`() {
+        val place = Place(52, 48, 32, 30)
+        assertEquals(
+            "Mask moved. Centre 52% across and 48% down, 32% wide, 30% high",
+            texts.status(Status.PlacingChanged(PlacingChange.MOVED, place)),
+        )
+        assertEquals(
+            "Mask size changed. Centre 52% across and 48% down, 32% wide, 30% high",
+            texts.status(Status.PlacingChanged(PlacingChange.RESIZED, place)),
+        )
+        assertTrue(
+            texts.status(Status.PlacingChanged(PlacingChange.AT_MOVE_LIMIT, place)).startsWith("The mask cannot move"),
+        )
+        assertTrue(
+            texts.status(
+                Status.PlacingChanged(PlacingChange.AT_SIZE_LIMIT, place),
+            ).startsWith("The mask cannot be resized"),
+        )
     }
 
     @Test

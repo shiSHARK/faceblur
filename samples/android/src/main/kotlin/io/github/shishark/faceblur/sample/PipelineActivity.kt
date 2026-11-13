@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowManager
+import android.view.accessibility.AccessibilityEvent
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
@@ -21,6 +22,7 @@ import android.widget.TextView
 class PipelineActivity : Activity() {
     private lateinit var pipeline: PipelineController<android.net.Uri>
     private lateinit var texts: Texts
+    private var lastState: PipelineState? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,6 +68,8 @@ class PipelineActivity : Activity() {
     }
 
     private fun render(state: PipelineState) {
+        val focus = focusAfter(lastState, state)
+        lastState = state
         val running = state is PipelineState.Running
         val done = state as? PipelineState.Done
         val failed = state as? PipelineState.Failed
@@ -103,11 +107,25 @@ class PipelineActivity : Activity() {
             visibility = visible(body != null)
         }
         findViewById<Button>(R.id.pipeline_again).visibility = visible(done != null || failed != null)
+        if (focus != null) {
+            // The control that had the focus is gone ("Choose photo" after a result, "Choose another photo" after a
+            // reset): the screen reader goes to the result, or back to the heading.
+            val view = findViewById<View>(focus)
+            view.post { view.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_FOCUSED) }
+        }
     }
 
     private fun visible(show: Boolean) = if (show) View.VISIBLE else View.GONE
 
     companion object {
+        /** The view that should get the screen reader's focus after a state change, or null (WCAG 2.4.3). */
+        internal fun focusAfter(before: PipelineState?, now: PipelineState): Int? {
+            if (before == null) return null
+            if (now is PipelineState.Done && before !is PipelineState.Done) return R.id.pipeline_image
+            val over = before is PipelineState.Done || before is PipelineState.Failed
+            return if (now is PipelineState.Idle && over) R.id.pipeline_title else null
+        }
+
         /** The name of the size choice (an `OutputOption`) that the main screen hands over. */
         const val EXTRA_OUTPUT = "output"
         private const val REQUEST_PHOTO = 1
