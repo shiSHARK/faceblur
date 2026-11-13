@@ -6,6 +6,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The project follows
 [Semantic Versioning](https://semver.org/); the API is not stable before 1.0, and breaking changes are listed here.
 
+## Repository updates after 0.1.0 (no new artifacts)
+
+- Build verification: the dependency-verification files of the root build and of the two consumer builds now list the
+  Android aapt2 packages for Linux and Windows hosts, the Kotlin/Native toolchain archive for Windows hosts, and the
+  module files that a build on Linux needs. Every entry is an exact SHA-256 value with its origin; verification stays
+  strict.
+- Build scripts: a helper in `scripts/` (`own_publication_trust.py`) lets a local or CI run of the consumer checks
+  trust the library's own just-built publication for the duration of that run only and then restores the metadata
+  file; the CI workflow and the consumer device-test script use it.
+
 ## [0.1.0] - Unreleased
 
 First release, for Android and iOS. One version number covers the Maven artifact `io.github.shishark:faceblur`, the
