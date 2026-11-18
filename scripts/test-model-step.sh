@@ -106,7 +106,7 @@ expect_failure N2 "size 1000 bytes" :faceblur:fetchYunetModel "-Pfaceblur.yunet.
 expect_failure N3 "source missing" :faceblur:fetchYunetModel "-Pfaceblur.yunet.localFile=$work/does-not-exist.onnx"
 [ ! -e "$model_dir/$name" ] || failed N1-N3 "a rejected source left a model in $model_dir"
 
-if $G :faceblur:deriveTestModels "$local_ok" > "$log" 2>&1 && [ -s "$model_dir/$name" ] \
+if $G :faceblur:deriveTestModels ${local_ok:+"$local_ok"} > "$log" 2>&1 && [ -s "$model_dir/$name" ] \
     && grep -q "test-model-tool: PASS - source and 4 derived models match their pins" "$log"; then
     pass P1 "verified local copy accepted, 4 derived models built and matching their pins"
     mkdir -p "$work/genuine"
@@ -116,19 +116,19 @@ else
 fi
 
 flip_byte "$model_dir/$name"
-expect_failure N4a "SHA-256 mismatch" :faceblur:fetchYunetModel "$local_ok"
+expect_failure N4a "SHA-256 mismatch" :faceblur:fetchYunetModel ${local_ok:+"$local_ok"}
 expect_failure N4b "theFixturePinEqualsTheBuildPinAndTheLoadedBytes.*FAILED" :faceblur:jvmTest \
-    --tests "*PipelineSkeletonTest.theFixturePinEqualsTheBuildPinAndTheLoadedBytes" -x :faceblur:fetchYunetModel "$local_ok"
+    --tests "*PipelineSkeletonTest.theFixturePinEqualsTheBuildPinAndTheLoadedBytes" -x :faceblur:fetchYunetModel ${local_ok:+"$local_ok"}
 if grep -q "Task :faceblur:fetchYunetModel" "$log"; then failed N4b "the fetch task ran although excluded"; fi
 # N9: the derive tool checks its source against the pin itself, also when the fetch step is skipped.
-expect_failure N9 "reference fixture $name: SHA-256 mismatch" :faceblur:deriveTestModels -x :faceblur:fetchYunetModel "$local_ok"
+expect_failure N9 "reference fixture $name: SHA-256 mismatch" :faceblur:deriveTestModels -x :faceblur:fetchYunetModel ${local_ok:+"$local_ok"}
 rm -rf "$model_dir"
-$G :faceblur:deriveTestModels "$local_ok" > "$log" 2>&1 || failed restore "could not restore the fixtures"
+$G :faceblur:deriveTestModels ${local_ok:+"$local_ok"} > "$log" 2>&1 || failed restore "could not restore the fixtures"
 
 # N5: an edited derived model and a stray file are replaced by the genuine set in the next run.
 flip_byte "$derived_dir/G2.onnx"
 printf 'stray' > "$derived_dir/stray.onnx"
-if $G :faceblur:deriveTestModels "$local_ok" > "$log" 2>&1 && [ ! -e "$derived_dir/stray.onnx" ] \
+if $G :faceblur:deriveTestModels ${local_ok:+"$local_ok"} > "$log" 2>&1 && [ ! -e "$derived_dir/stray.onnx" ] \
     && cmp -s "$derived_dir/G2.onnx" "$work/genuine/G2.onnx"; then
     pass N5 "edited derived model replaced by the genuine file, stray file removed"
 else
@@ -141,7 +141,7 @@ settingsEvaluated { s -> s.buildCache { local { directory = new File("$work/cach
 EOF
 ok6=1
 for _ in 1 2; do
-    if ! $G --build-cache -I "$work/cache.init.gradle" :faceblur:deriveTestModels "$local_ok" > "$log" 2>&1; then
+    if ! $G --build-cache -I "$work/cache.init.gradle" :faceblur:deriveTestModels ${local_ok:+"$local_ok"} > "$log" 2>&1; then
         ok6=0
     fi
     if grep -q -E "(fetchYunetModel|deriveTestModels) (FROM-CACHE|UP-TO-DATE)" "$log"; then ok6=0; fi
@@ -294,18 +294,18 @@ leak_g1 N7g-g1-sha256-hex-needs-the-g1-fixture 0 - "$fixtures_no_g1" "$p/g1-sha"
 wrong_g0=$(sed -n 's/^derived.G0.sha256=//p' "$props" | tr '0123456789abcdef' '123456789abcdef0')
 sed -E "s/^derived.G0.sha256=.*/derived.G0.sha256=$wrong_g0/" "$work/props.orig" > "$props"
 remanifest
-expect_failure N8-changed-pin "derived model G0: SHA-256 mismatch" :faceblur:deriveTestModels "$local_ok"
+expect_failure N8-changed-pin "derived model G0: SHA-256 mismatch" :faceblur:deriveTestModels ${local_ok:+"$local_ok"}
 restore
 wrong_g1=$(sed -n 's/^derived.G1.sha256=//p' "$props" | tr '0123456789abcdef' '123456789abcdef0')
 sed -E "s/^derived.G1.sha256=.*/derived.G1.sha256=$wrong_g1/" "$work/props.orig" > "$props"
 remanifest
-expect_failure N8-changed-g1-pin "derived model G1: SHA-256 mismatch" :faceblur:deriveTestModels "$local_ok"
+expect_failure N8-changed-g1-pin "derived model G1: SHA-256 mismatch" :faceblur:deriveTestModels ${local_ok:+"$local_ok"}
 restore
-expect_failure N8-builder-grid-offset "builder mutant GRID_OFFSET" :faceblur:deriveTestModels "$local_ok" \
+expect_failure N8-builder-grid-offset "builder mutant GRID_OFFSET" :faceblur:deriveTestModels ${local_ok:+"$local_ok"} \
     -Pfaceblur.testModels.builderMutant=GRID_OFFSET
-expect_failure N8-builder-swapped-columns "builder mutant SWAPPED_COLUMNS" :faceblur:deriveTestModels "$local_ok" \
+expect_failure N8-builder-swapped-columns "builder mutant SWAPPED_COLUMNS" :faceblur:deriveTestModels ${local_ok:+"$local_ok"} \
     -Pfaceblur.testModels.builderMutant=SWAPPED_COLUMNS
-if $G :faceblur:deriveTestModels "$local_ok" > "$log" 2>&1 \
+if $G :faceblur:deriveTestModels ${local_ok:+"$local_ok"} > "$log" 2>&1 \
     && grep -q "test-model-tool: PASS - source and 4 derived models match their pins" "$log"; then
     pass N8-right "the genuine builder matches every pin"
 else
@@ -319,12 +319,12 @@ fi
 
 # --- F: fuzz harness ------------------------------------------------------------------------------------------------
 expect_failure F1-planted-crash-reported "seed 7 round 5 .*PlantedCrash.*replay: --seed 7 --start-round 5 --max-rounds 1" \
-    :faceblur:fuzzOnnxPreParse "$local_ok" -Pfaceblur.fuzz.seed=7 -Pfaceblur.fuzz.seconds=30 \
+    :faceblur:fuzzOnnxPreParse ${local_ok:+"$local_ok"} -Pfaceblur.fuzz.seed=7 -Pfaceblur.fuzz.seconds=30 \
     -Pfaceblur.fuzz.plantCrashRound=5
 r1=""
 r2=""
 for i in 1 2; do
-    if $G :faceblur:fuzzOnnxPreParse "$local_ok" -Pfaceblur.fuzz.seed=7 -Pfaceblur.fuzz.seconds=60 \
+    if $G :faceblur:fuzzOnnxPreParse ${local_ok:+"$local_ok"} -Pfaceblur.fuzz.seed=7 -Pfaceblur.fuzz.seconds=60 \
         -Pfaceblur.fuzz.maxRounds=3000 > "$log" 2>&1; then
         line=$(grep -m1 "test-model-tool: PASS - fuzz seed 7: 3000 rounds" "$log")
         if [ "$i" -eq 1 ]; then r1=$line; else r2=$line; fi
@@ -337,7 +337,7 @@ else
 fi
 
 if [ "$mode" = local ]; then
-    $G :faceblur:deriveTestModels "$local_ok" > "$log" 2>&1 || failed restore "final regeneration failed"
+    $G :faceblur:deriveTestModels ${local_ok:+"$local_ok"} > "$log" 2>&1 || failed restore "final regeneration failed"
 fi
 
 if [ "$fail" -ne 0 ]; then
