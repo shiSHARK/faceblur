@@ -97,6 +97,54 @@ Related guides: [Android](android.md), [Providing your model](providing-your-mod
 6. **Call FaceBlur from common code, off the main thread.** The common code below loads the model, creates the masker
    and masks one photo in each API mode. Every call blocks until it is done, so never call it on the main thread.
 
+## Known issue: App Store validation reports `onnxruntime.framework`
+
+**Symptom.** Validating or uploading an app that uses the `FaceBlurOrtShim` product (it pulls in the same ONNX Runtime package) in App Store Connect can report ITMS-90360 and
+ITMS-90530 for `Frameworks/onnxruntime.framework` (the Info.plist has no `MinimumOSVersion`).
+
+**Cause.** The ONNX Runtime 1.20.0 Swift package ships `onnxruntime.framework` as a static framework without
+`MinimumOSVersion`. Xcode links it into your app binary but still embeds a code-less stub framework with that
+Info.plist. Nothing loads the stub.
+
+**Workaround (remove the stub).** In your app target:
+
+1. Add a Run Script build phase as the LAST phase of the target. Shell `/bin/sh`, leave "Based on dependency analysis"
+   unchecked, no input or output files:
+
+   ```sh
+   rm -rf "${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/onnxruntime.framework"
+   ```
+
+2. Set `ENABLE_USER_SCRIPT_SANDBOXING = NO` for the app target (Build Settings > Build Options > User Script
+   Sandboxing = No). Projects created with Xcode 15 or later default to YES, and the sandbox denies the delete (the
+   archive fails).
+
+The script needs no plist edit and no re-signing; Xcode signs the app after the phase. ONNX Runtime stays linked in
+the app binary.
+
+**Check.** Archive the app, then list `<App>.xcarchive/Products/Applications/<App>.app/Frameworks/`.
+`onnxruntime.framework` must not be listed. The script ordering was observed with Xcode 27.0 only; if your Xcode
+embeds after the script, the framework stays and this check shows it. This describes what the phase does; it is not a
+statement about the outcome of an App Store review.
+
+**Fallback (only if the stub must stay).** Use the same phase and the same `ENABLE_USER_SCRIPT_SANDBOXING = NO`, with
+this script. It adds `MinimumOSVersion` to the embedded framework and re-signs that one framework before the app is
+sealed (a plain plist edit invalidates the framework's signature):
+
+```sh
+FW="${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/onnxruntime.framework"
+if [ -f "$FW/Info.plist" ]; then
+  /usr/libexec/PlistBuddy -c "Delete :MinimumOSVersion" "$FW/Info.plist" 2>/dev/null || true
+  /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${IPHONEOS_DEPLOYMENT_TARGET}" "$FW/Info.plist"
+  if [ "${CODE_SIGNING_ALLOWED}" = "YES" ] && [ -n "${EXPANDED_CODE_SIGN_IDENTITY}" ]; then
+    /usr/bin/codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY}" --preserve-metadata=identifier,flags "$FW"
+  fi
+fi
+```
+
+Verify nested frameworks one by one with `codesign --verify --strict` on each `.framework`; `--deep` on the app can
+print "valid" while a nested framework is not.
+
 ## The common code
 
 The file [`snippets/kmp/CommonMasking.kt`](snippets/kmp/CommonMasking.kt), in full:

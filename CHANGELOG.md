@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Repository updates after 0.1.0 (no new artifacts)
 
+- Documentation: the Swift and Kotlin Multiplatform iOS guides gain a "Known issue" section on the App Store validation messages ITMS-90360 / ITMS-90530 for `onnxruntime.framework`, with a build-phase workaround.
 - Build verification: the dependency-verification files of the root build and of the two consumer builds now list the
   Android aapt2 packages for Linux and Windows hosts, the Kotlin/Native toolchain archive for Windows hosts, and the
   module files that a build on Linux needs. Every entry is an exact SHA-256 value with its origin; verification stays
