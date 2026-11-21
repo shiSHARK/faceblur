@@ -5,6 +5,7 @@ import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SourcesJar
 import org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFrameworkTask
 import java.io.ByteArrayOutputStream
@@ -366,6 +367,12 @@ kotlin {
             freeCompilerArgs += "-Xdebug-prefix-map=$repoRoot=."
             xcFramework.add(this)
         }
+    }
+    // The simulator tests run the RELEASE (optimised) test executable: the same tests, compiled and linked, run in a
+    // fraction of the time of the unoptimised debug executable, and the shipped framework is a release build too.
+    iosSimulatorArm64().apply {
+        binaries.test(listOf(NativeBuildType.RELEASE))
+        testRuns.getByName("test").setExecutionSourceFrom(binaries.getTest(NativeBuildType.RELEASE))
     }
 
     sourceSets {
