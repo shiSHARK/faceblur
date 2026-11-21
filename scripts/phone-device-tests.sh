@@ -26,9 +26,17 @@
 #   The serial and the model are given by the caller (the local merge gate); this repository names no device.
 #   Emulators are refused (serial emulator-*, qemu properties). <log> must not exist yet.
 # Environment (optional): ANDROID_HOME / ANDROID_SDK_ROOT for adb when it is not on PATH.
+# Foreground keep-alive: some phones' app freezers freeze the instrumentation process of a run that has no visible
+# activity, and a frozen process stops without any output. Every device test therefore runs while an empty
+# activity of the test APK is resumed during every test (ForegroundKeepAlive in androidDeviceTest), and the test side
+# writes one marker line per test (files/keepalive-marker.txt in the test app's private storage, test names and the
+# words ok/lost only). After the run this script reads the marker: no marker, or a test that ran without the
+# keep-alive in effect before or after it, ends the step BLOCKED (exit 3, no log): such a run does not measure the
+# library whatever its result. A run that finished OK with fewer marker lines than started tests FAILS (a test class
+# does not extend TimeLimitedDeviceTest).
 # Exit codes: 0 PASS (log valid), 1 FAIL (build, install, a test or the log check failed), 2 usage/environment,
-#             3 BLOCKED (the test phone is not connected or not authorised), 4 NOT APPLICABLE (no device tests in
-#             this revision).
+#             3 BLOCKED (the test phone is not connected or not authorised, or the foreground keep-alive was not in
+#             effect), 4 NOT APPLICABLE (no device tests in this revision).
 set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -236,14 +244,31 @@ if [ "$heic_got" != "$heic_sha" ]; then say "FAIL - the HEIC fixture was not pla
 phone shell rm -rf "$remote" > /dev/null 2>&1 || true
 
 say "running the device tests on the test phone (API $api)"
+phone shell run-as "$pkg" rm -f files/keepalive-marker.txt > /dev/null 2>&1 || true
+# The keep-alive activity can only be resumed with the screen on (nothing of any photo is shown: it is an empty
+# activity, and no screenshot is taken).
+phone shell input keyevent KEYCODE_WAKEUP > /dev/null 2>&1 || true
+phone shell wm dismiss-keyguard > /dev/null 2>&1 || true
 phone shell am instrument -r -w "$pkg/$runner" > "$work/raw.txt" 2>&1
 instrument_exit=$?
+# The foreground keep-alive marker (see the header): read before the uninstall deletes the test app's storage.
+phone shell run-as "$pkg" cat files/keepalive-marker.txt 2> /dev/null | tr -d '\r' > "$work/keepalive.txt" || true
 # The stored section ends with a newline (the checker hashes exactly the bytes between the two markers).
 if [ -s "$work/raw.txt" ] && [ "$(tail -c 1 "$work/raw.txt" | od -An -c | tr -d ' ')" != '\n' ]; then
     printf '\n' >> "$work/raw.txt"
 fi
 raw_sha=$(shasum -a 256 "$work/raw.txt" | cut -d' ' -f1)
 phone uninstall "$pkg" > /dev/null 2>&1 && installed=0
+tests_started=$(grep -c '^INSTRUMENTATION_STATUS_CODE: 1$' "$work/raw.txt")
+marks_got=$(grep -c '^test=[A-Za-z0-9_.$#]* before=[a-z]* after=[a-z]*$' "$work/keepalive.txt")
+if [ "$marks_got" -eq 0 ] || grep -qv '^test=[A-Za-z0-9_.$#]* before=ok after=ok$' "$work/keepalive.txt"; then
+    say "BLOCKED - the foreground keep-alive was not in effect for every test ($marks_got marker lines, none or some not ok); the run is not a valid measurement"
+    exit 3
+fi
+if [ "$marks_got" -ne "$tests_started" ] && grep -q '^OK (' "$work/raw.txt"; then
+    say "FAIL - $marks_got of $tests_started tests recorded the foreground keep-alive (a test class does not extend TimeLimitedDeviceTest)"
+    exit 1
+fi
 
 # Second part: the demo app on the phone. Fixtures: the files of config/device-tests/sample-fixtures.txt (the pinned
 # reference model and registered public photographs under testdata/, nothing else), in the test app's private storage.
@@ -320,6 +345,7 @@ end=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     echo "generate_command=$generate_cmd"
     echo "source_test_methods=$methods"
     echo "raw_sha256=$raw_sha"
+    echo "foreground_keepalive=ok tests=$marks_got"
     echo "--- instrumentation output (unmodified) ---"
     cat "$work/raw.txt"
     echo "--- end of instrumentation output ---"

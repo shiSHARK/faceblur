@@ -9,6 +9,8 @@
   content-URI tests of file mode; the device tests never read or write the phone's shared storage.
   PlanMaskerProcessProvider and OrtControlProcessProvider: private providers in processes of their own, so that
   PlanMaskerDeviceTest can check which ONNX Runtime classes and libraries a process has loaded.
+  KeepAliveActivity: an empty activity that keeps the test process in the foreground during the run (see
+  ForegroundKeepAlive); not exported, no intent filter.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
@@ -17,6 +19,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
 
     <application>
+        <activity
+            android:name="io.github.shishark.faceblur.android.KeepAliveActivity"
+            android:exported="false" />
         <provider
             android:name="io.github.shishark.faceblur.android.DeviceTestFilesProvider"
             android:authorities="io.github.shishark.faceblur.test.files"
