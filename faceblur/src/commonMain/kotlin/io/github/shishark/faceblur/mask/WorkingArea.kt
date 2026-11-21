@@ -83,6 +83,15 @@ internal class AreaLayout(
         /** Run buffers: one array per length 1..[MaskStageLimits.MAX_RUN], twice (read/stage and read-back). */
         val RUN_BUFFER_BYTES: Long = 2L * runSetBytes()
 
+        /**
+         * Block buffers: one whole 64 × 64 tile staged and read back in one call each (two arrays). Reserved only when
+         * the plan touches a full-size tile; otherwise the two arrays are empty (they still count their header).
+         */
+        fun blockBufferBytes(fullSlots: Long): Long {
+            val tile = MaskStageLimits.TILE.toLong()
+            return checkedMul(2L, array(if (fullSlots > 0L) tile * tile else 0L, 4L))
+        }
+
         private fun runSetBytes(): Long {
             var b = ARRAY_HEADER + REFERENCE * (MaskStageLimits.MAX_RUN + 1)
             for (len in 1..MaskStageLimits.MAX_RUN) b += ARRAY_HEADER + 4L * len
@@ -126,6 +135,7 @@ internal class AreaLayout(
             // The coverage map.
             b = checkedAdd(b, array(checkedMul(coverageSlots, tile), 8L))
             b = checkedAdd(b, RUN_BUFFER_BYTES)
+            b = checkedAdd(b, blockBufferBytes(slots.full))
             return checkedAdd(b, scratch)
         }
 
@@ -150,7 +160,9 @@ internal class AreaLayout(
             b = checkedAdd(b, checkedMul(4L, array(cells, 4L)))
             b = checkedAdd(b, array(base, 4L))
             b = checkedAdd(b, array(base, 1L))
-            return checkedAdd(b, checkedMul(3L, array(if (sf) MAX_PYRAMID_LEVELS.toLong() else 0L, 4L)))
+            b = checkedAdd(b, checkedMul(3L, array(if (sf) MAX_PYRAMID_LEVELS.toLong() else 0L, 4L)))
+            // The per-column interpolation of one tile's columns (two int arrays and one float array).
+            return checkedAdd(b, checkedMul(3L, array(if (sf) MaskStageLimits.TILE.toLong() else 0L, 4L)))
         }
     }
 }
@@ -187,6 +199,10 @@ internal class WorkingArea(val layout: AreaLayout, tables: TileTables) {
     lateinit var runRead: Array<IntArray?>
     lateinit var runBack: Array<IntArray?>
 
+    /** A whole 64 × 64 tile staged for one write and read back after it (empty when no full-size tile is touched). */
+    lateinit var blockStage: IntArray
+    lateinit var blockBack: IntArray
+
     // GRADIENT_OVAL scratch.
     lateinit var hist: IntArray
     lateinit var count: IntArray
@@ -215,6 +231,11 @@ internal class WorkingArea(val layout: AreaLayout, tables: TileTables) {
     lateinit var levelWidth: IntArray
     lateinit var levelHeight: IntArray
     lateinit var levelOffset: IntArray
+
+    /** SMOOTH_FILL: per column of the tile part being composited, the two grid columns and the weight between them. */
+    lateinit var columnX0: IntArray
+    lateinit var columnX1: IntArray
+    lateinit var columnT: FloatArray
 
     /** First slot of each tile size class in [shadowTiles]: full, last column, last row, corner, end. */
     val classStart0: Int get() = 0
@@ -245,6 +266,9 @@ internal class WorkingArea(val layout: AreaLayout, tables: TileTables) {
         coverage = a.longs(l.coverageSlots * tile)
         runRead = runSet(a)
         runBack = runSet(a)
+        val block = if (l.fullSlots > 0) tile * tile else 0
+        blockStage = a.ints(block)
+        blockBack = a.ints(block)
         val go = l.style == MaskStyle.GRADIENT_OVAL
         val bins = if (go) l.maxBins else 0
         hist = a.ints(bins * AreaLayout.HIST)
@@ -276,6 +300,10 @@ internal class WorkingArea(val layout: AreaLayout, tables: TileTables) {
         levelWidth = a.ints(levels)
         levelHeight = a.ints(levels)
         levelOffset = a.ints(levels)
+        val columns = if (sf) tile else 0
+        columnX0 = a.ints(columns)
+        columnX1 = a.ints(columns)
+        columnT = a.floats(columns)
         touchAll()
     }
 
@@ -302,6 +330,8 @@ internal class WorkingArea(val layout: AreaLayout, tables: TileTables) {
             runRead[len]?.let { touch(it) }
             runBack[len]?.let { touch(it) }
         }
+        touch(blockStage)
+        touch(blockBack)
         touch(hist)
         touch(count)
         touch(deviation)
@@ -327,6 +357,9 @@ internal class WorkingArea(val layout: AreaLayout, tables: TileTables) {
         touch(levelWidth)
         touch(levelHeight)
         touch(levelOffset)
+        touch(columnX0)
+        touch(columnX1)
+        touch(columnT)
     }
 
     private fun touch(a: IntArray) = touchInts(a)

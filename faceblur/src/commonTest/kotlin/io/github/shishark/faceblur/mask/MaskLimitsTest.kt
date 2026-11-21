@@ -183,7 +183,7 @@ class MaskLimitsTest {
         assertEquals(64L * 1024 * 1024, MaskStageLimits.AVAILABLE_MEMORY_MARGIN)
         assertEquals(4.3, MaskStageLimits.WORST_CASE_BYTES_PER_PIXEL)
         assertEquals(32L * 1024 * 1024, MaskStageLimits.WORST_CASE_FIXED_BYTES)
-        assertEquals(listOf(1_710_239L, 5_020_519L, 16_338_075L), MaskStageLimits.TYPICAL_BYTES)
+        assertEquals(listOf(1_743_087L, 5_053_367L, 16_370_923L), MaskStageLimits.TYPICAL_BYTES)
         assertEquals(
             "at most 65,536 masks, and a summed mask working area of at most 32 times max(image pixels, 1,048,576)",
             MASK_LIMITS,

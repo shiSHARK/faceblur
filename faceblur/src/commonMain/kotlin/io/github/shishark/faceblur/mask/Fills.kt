@@ -602,6 +602,12 @@ internal class SmoothFill(private val c: FillContext) {
     private var h0 = 1
     private var invK = 1f
 
+    // The interpolation set-up of the current row and tile part ([prepareRow], [prepareColumns]).
+    private var rowY0 = 0
+    private var rowY1 = 0
+    private var rowT = 0f
+    private var columnStart = 0
+
     /** Solves mask [i]'s grid from the original pixels of its read rectangle. */
     fun prepare(i: Int) {
         val a = c.area
@@ -687,19 +693,48 @@ internal class SmoothFill(private val c: FillContext) {
         for (l in levels - 2 downTo 0) push(l, l + 1, if (l == 0 && k == 1) 3 else 5)
     }
 
-    /** The fill colour of pixel ([x], [y]) of the write rectangle (opaque ARGB). */
-    fun value(x: Int, y: Int): Int {
+    /**
+     * Sets up the column part of the interpolation for the columns [xa]..[xb) of one tile part (at most 64): per
+     * column the two grid columns and the weight between them, in the working area. With [prepareRow], [value] then
+     * does per pixel only the weighting; the same float operations in the same order as one computation per pixel.
+     */
+    fun prepareColumns(xa: Int, xb: Int) {
+        if (flat) return
+        val a = c.area
+        columnStart = xa
+        for (x in xa until xb) {
+            val fx = ((x - readLeft) + 0.5f) * invK - 0.5f
+            val x0 = floor(fx).toInt().coerceIn(0, w0 - 1)
+            a.columnX0[x - xa] = x0
+            a.columnX1[x - xa] = min(x0 + 1, w0 - 1)
+            a.columnT[x - xa] = (fx - x0).coerceIn(0f, 1f)
+        }
+    }
+
+    /** Sets up the row part of the interpolation for row [y] (see [prepareColumns]). */
+    fun prepareRow(y: Int) {
+        if (flat) return
+        val fy = ((y - readTop) + 0.5f) * invK - 0.5f
+        rowY0 = floor(fy).toInt().coerceIn(0, h0 - 1)
+        rowY1 = min(rowY0 + 1, h0 - 1)
+        rowT = (fy - rowY0).coerceIn(0f, 1f)
+    }
+
+    /**
+     * The fill colour (opaque ARGB) of pixel ([x], y) of the write rectangle, for the row of the last [prepareRow] and
+     * a column of the last [prepareColumns].
+     */
+    fun value(x: Int): Int {
         if (flat) return flatColour
         c.work.add(1)
         val a = c.area
-        val fy = ((y - readTop) + 0.5f) * invK - 0.5f
-        val y0 = floor(fy).toInt().coerceIn(0, h0 - 1)
-        val y1 = min(y0 + 1, h0 - 1)
-        val ty = (fy - y0).coerceIn(0f, 1f)
-        val fx = ((x - readLeft) + 0.5f) * invK - 0.5f
-        val x0 = floor(fx).toInt().coerceIn(0, w0 - 1)
-        val x1 = min(x0 + 1, w0 - 1)
-        val tx = (fx - x0).coerceIn(0f, 1f)
+        val k = x - columnStart
+        val x0 = a.columnX0[k]
+        val x1 = a.columnX1[k]
+        val tx = a.columnT[k]
+        val y0 = rowY0
+        val y1 = rowY1
+        val ty = rowT
         val ia = y0 * w0 + x0
         val ib = y0 * w0 + x1
         val ic = y1 * w0 + x0

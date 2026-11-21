@@ -19,7 +19,11 @@ internal interface DetectionImage {
      */
     fun cropScaled(x: Int, y: Int, w: Int, h: Int, targetMaxSide: Int): DetectionImage
 
-    /** All pixels as non-premultiplied ARGB, row-major. Only call on small images (≤ ~1 MP), e.g. a 640 px tile. */
+    /**
+     * All pixels as non-premultiplied ARGB, row-major. Only call on small images (≤ ~1 MP), e.g. a 640 px tile. The
+     * array may be the image's own storage (a crop made by the library returns it without a copy): the caller only
+     * reads it, never writes it, and does not use it after [release].
+     */
     fun readArgb(): IntArray
 
     /** Free native memory now (idempotent). The full-resolution source image owns its own lifetime. */

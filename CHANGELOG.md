@@ -6,6 +6,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The project follows
 [Semantic Versioning](https://semver.org/); the API is not stable before 1.0, and breaking changes are listed here.
 
+## [Unreleased]
+
+### Changed
+
+- Detection input and mask writing do less work; output unchanged.
+
 ## Repository updates after 0.1.0 (no new artifacts)
 
 - Documentation: the Swift and Kotlin Multiplatform iOS guides gain a "Known issue" section on the App Store validation messages ITMS-90360 / ITMS-90530 for `onnxruntime.framework`, with a build-phase workaround.

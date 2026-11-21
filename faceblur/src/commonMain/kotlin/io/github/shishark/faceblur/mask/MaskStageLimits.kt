@@ -64,5 +64,5 @@ internal object MaskStageLimits {
     val TYPICAL_FACE_SIDES: List<Float> = listOf(150f, 300f, 600f)
 
     /** Working-area bytes for each of [TYPICAL_FACE_SIDES], in that order. */
-    val TYPICAL_BYTES: List<Long> = listOf(1_710_239L, 5_020_519L, 16_338_075L)
+    val TYPICAL_BYTES: List<Long> = listOf(1_743_087L, 5_053_367L, 16_370_923L)
 }

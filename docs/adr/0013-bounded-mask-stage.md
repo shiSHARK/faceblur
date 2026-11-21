@@ -217,6 +217,10 @@ with straight (non-premultiplied) alpha; two exceptions are noted under Conseque
      union of the write rectangles), as row runs of 1 to 64 pixels. Each run is staged in the reserved run buffer of
      exactly its length, written, read back into the second reserved buffer of that length, and compared as in
      ADR 0002 decision 9.
+   - Amended for 0.1.1: a full-size 64 × 64 tile whose pixels are all marked is written as one 64 × 64 block instead
+     of 64 runs: staged in a reserved block buffer, written, read back into a second reserved block buffer, and every
+     pixel written with alpha 255 compared with the shadow tile. The two block buffers are part of the working area
+     (reserved only when the plan touches a full-size tile). The pixels written are the same.
    - Every array passed to `readPixels` or `writePixels` therefore has exactly `w × h` elements. The public pixel
      contract is unchanged.
    - This step only copies finished pixels: it creates no object except the exception it may throw, and runs no fill

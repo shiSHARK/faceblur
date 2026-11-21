@@ -104,7 +104,8 @@ internal class StageSeams private constructor(
  * Every check, every allocation and all fill computation happen before the first write, so a failure in steps 1-2
  * leaves the caller's image untouched. Fills never sample a pixel inside any mask (coverage map); the masks are
  * composited in plan order into a shadow of 64 × 64 tiles loaded from the original image; step 3 writes exactly the
- * pixels inside some write rectangle, in runs of at most 64 pixels, and reads each run back.
+ * pixels inside some write rectangle, a whole 64 × 64 tile at once when all its pixels are written and otherwise in
+ * row runs of at most 64 pixels, and reads each block or run back.
  */
 internal object MaskEngine {
     /** Runs the stage; synthetic on the JVM and Android ([HiddenFromJava]), as it takes the [StageSeams]. */
@@ -503,10 +504,15 @@ private class MaskStage private constructor(
                 val ya = max(wt, y0)
                 val yb = min(wb, y0 + tileHeight(ty))
                 markRows(slot, xa - x0, xb - x0, ya - y0, yb - y0)
-                if (config.style == MaskStyle.GRADIENT_OVAL) oval.prepareTile(xa, ya, xb, yb)
+                when (config.style) {
+                    MaskStyle.SOLID -> Unit
+                    MaskStyle.GRADIENT_OVAL -> oval.prepareTile(xa, ya, xb, yb)
+                    MaskStyle.SMOOTH_FILL -> smooth.prepareColumns(xa, xb)
+                }
                 for (y in ya until yb) {
                     val dy = (y + 0.5f - cy) / ry
                     val row = (y - y0) * tw - x0
+                    if (config.style == MaskStyle.SMOOTH_FILL) smooth.prepareRow(y)
                     for (x in xa until xb) {
                         work.add(1)
                         val dx = (x + 0.5f - cx) / rx
@@ -515,7 +521,7 @@ private class MaskStage private constructor(
                         val e = when (config.style) {
                             MaskStyle.SOLID -> solid
                             MaskStyle.GRADIENT_OVAL -> oval.value(x, y)
-                            MaskStyle.SMOOTH_FILL -> smooth.value(x, y)
+                            MaskStyle.SMOOTH_FILL -> smooth.value(x)
                         }
                         val p = row + x
                         if (r <= 1f) {
@@ -577,10 +583,12 @@ private class MaskStage private constructor(
     // ---- Step 3: copy ----------------------------------------------------------------------------------------------
 
     /**
-     * Writes exactly the marked pixels of every touched tile, in row order of the tiles, as row runs of 1 to 64
-     * pixels, each staged in the reserved buffer of its length, written, read back into the second buffer of that
-     * length and compared (every pixel written with alpha 255 must read back unchanged). Creates no object except the
-     * exception it may throw; reads no cancellation.
+     * Writes exactly the marked pixels of every touched tile, in row order of the tiles. A full-size tile whose 64
+     * rows are all marked is written as one 64 × 64 block from the reserved block buffer and read back into the
+     * second one; every other tile as row runs of 1 to 64 pixels, each staged in the reserved buffer of its length,
+     * written and read back into the second buffer of that length. Every pixel written with alpha 255 must read back
+     * unchanged. Every array handed to the image has exactly `w × h` elements. Creates no object except the exception
+     * it may throw; reads no cancellation.
      */
     private fun copy() {
         sortTouched()
@@ -592,6 +600,12 @@ private class MaskStage private constructor(
             val ty = t / tilesX
             val tw = tileWidth(tx)
             val th = tileHeight(ty)
+            if (tw == TILE && th == TILE && fullyMarked(slot)) {
+                // One unit per row, as the row loop below counts them.
+                work.count(TILE)
+                writeBlock(tile, tx * TILE, ty * TILE)
+                continue
+            }
             for (row in 0 until th) {
                 work.count(1)
                 var bits = area.marks[slot * TILE + row]
@@ -604,6 +618,37 @@ private class MaskStage private constructor(
                 }
             }
         }
+    }
+
+    /** True when all 64 rows of the full-size shadow tile in [slot] are marked in all 64 columns. */
+    private fun fullyMarked(slot: Int): Boolean {
+        val base = slot * TILE
+        for (row in 0 until TILE) if (area.marks[base + row] != -1L) return false
+        return true
+    }
+
+    /**
+     * Writes the whole full-size shadow [tile] at ([x], [y]) as one 64 × 64 block, reads it back and compares every
+     * pixel written with alpha 255 with the shadow tile itself (the library's copy, never handed to the image).
+     */
+    private fun writeBlock(tile: IntArray, x: Int, y: Int) {
+        val stage = area.blockStage
+        val back = area.blockBack
+        if (stage.size != TILE * TILE || back.size != TILE * TILE) throw CoreFailure.InvalidMask("no block buffer")
+        tile.copyInto(stage, 0, 0, TILE * TILE)
+        try {
+            image.writePixels(x, y, TILE, TILE, stage)
+            image.readPixels(x, y, TILE, TILE, back)
+        } catch (e: Throwable) {
+            // The image itself failed during the copy: it may be partly written and must be discarded.
+            if (isFatal(e)) throw e
+            throw CoreFailure.WriteInterrupted(e)
+        }
+        for (j in 0 until TILE * TILE) {
+            val p = tile[j]
+            if (p ushr 24 == 0xFF && back[j] != p) throw CoreFailure.WriteNotApplied()
+        }
+        work.count(TILE * TILE)
     }
 
     private fun writeRun(tile: IntArray, from: Int, x: Int, y: Int, len: Int) {

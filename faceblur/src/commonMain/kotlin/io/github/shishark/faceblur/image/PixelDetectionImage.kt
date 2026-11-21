@@ -8,8 +8,18 @@ import io.github.shishark.faceblur.detect.DetectionImage
  * [DetectionImage] over any [PixelImage] (the generic path of in-memory mode). Crops are read through
  * [PixelImage.readPixels] and downscaled with [AreaResampler]; the caller's image is never written. Platform adapters
  * may provide faster implementations of [DetectionImage] with the same contract.
+ *
+ * A crop holds its pixels in one array made by the library ([pixels]); [readArgb] of a crop returns that array itself,
+ * so a detection pass copies the pixels of its crop once (the resampling) and the tensor is filled from that copy.
  */
-internal class PixelDetectionImage(private val source: PixelImage) : DetectionImage {
+internal class PixelDetectionImage private constructor(
+    private val source: PixelImage,
+    /** The crop's own pixels ([width] × [height], row-major); null for an image over the caller's pixels. */
+    private val pixels: IntArray?,
+) : DetectionImage {
+    /** An image over the caller's [source]; [readArgb] copies its pixels. */
+    constructor(source: PixelImage) : this(source, null)
+
     override val width: Int get() = source.width
     override val height: Int get() = source.height
 
@@ -19,10 +29,13 @@ internal class PixelDetectionImage(private val source: PixelImage) : DetectionIm
         val cw = w.coerceAtMost(width - cx).coerceAtLeast(1)
         val ch = h.coerceAtMost(height - cy).coerceAtLeast(1)
         val (ow, oh) = AreaResampler.fitSize(cw, ch, targetMaxSide)
-        return PixelDetectionImage(ArgbPixels(ow, oh, AreaResampler.resample(source, cx, cy, cw, ch, ow, oh)))
+        val data = AreaResampler.resample(source, cx, cy, cw, ch, ow, oh)
+        return PixelDetectionImage(ArgbPixels(ow, oh, data), data)
     }
 
-    override fun readArgb(): IntArray = IntArray(width * height).also { source.readPixels(0, 0, width, height, it) }
+    /** A crop's own array (no copy); for an image over the caller's pixels, a new copy of them. */
+    override fun readArgb(): IntArray =
+        pixels ?: IntArray(width * height).also { source.readPixels(0, 0, width, height, it) }
 
     /** Nothing to free: crops are plain arrays, and the caller owns the source image. */
     override fun release() = Unit

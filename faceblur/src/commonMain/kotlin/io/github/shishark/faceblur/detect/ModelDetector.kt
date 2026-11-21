@@ -109,7 +109,7 @@ internal class ModelDetector(
                 throw IllegalStateException("scaled image does not fit the model input")
             }
             val input = takeInput(inputWidth * inputHeight * 3)
-            timed(stageClock, "model.tensor") { fillInput(argb, src.width, src.height, input) }
+            timed(stageClock, "model.tensor") { fillTensor(argb, src.width, src.height, input) }
             val outputs = timed(stageClock, "model.inference") { runPass(input) }
             spareInput = input
             val inputBoxes = timed(stageClock, "model.decode") { decode(outputs, minScore, checkCancelled) }
@@ -125,7 +125,7 @@ internal class ModelDetector(
     fun runUniformGrey(): Map<String, PassOutput> {
         val grey = IntArray(inputWidth * inputHeight) { GREY }
         val input = FloatArray(inputWidth * inputHeight * 3)
-        fillInput(grey, inputWidth, inputHeight, input)
+        fillTensor(grey, inputWidth, inputHeight, input)
         return runPass(input)
     }
 
@@ -164,6 +164,14 @@ internal class ModelDetector(
     }
 
     /**
+     * The model input of [argb] ([w] × [h], fits the input) in [dst]: [fillYuNet] for the YuNet layout, [fillInput]
+     * for a generic layout. Both give the tensor that [fillInput] defines.
+     */
+    fun fillTensor(argb: IntArray, w: Int, h: Int, dst: FloatArray) {
+        if (format is DetectionFormat.YuNetLayout) fillYuNet(argb, w, h, dst) else fillInput(argb, w, h, dst)
+    }
+
+    /**
      * Writes [argb] ([w] × [h], fits the input) at the top left of [dst] in the profile's layout, channel order and
      * scaling; the rest is black (pixel value 0, scaled like any pixel).
      */
@@ -199,6 +207,33 @@ internal class ModelDetector(
                     val value = (v / div - mean[c]) / std[c]
                     if (nchw) dst[c * plane + o] = value else dst[o * 3 + c] = value
                 }
+            }
+        }
+    }
+
+    /**
+     * [fillInput] for the YuNet layout, written row by row without a branch or a division per pixel: NCHW planes in
+     * BGR order, identity scaling, so each tensor value is the 0..255 channel value as a float, and the padding is
+     * 0. This is exactly the tensor of [fillInput] for that layout: there `(v / 1 - 0) / 1` is `v` and the black of
+     * the padding is `(0 / 1 - 0) / 1`, which is +0.
+     */
+    fun fillYuNet(argb: IntArray, w: Int, h: Int, dst: FloatArray) {
+        val plane = inputWidth * inputHeight
+        // A tensor fully covered by the image has no padding to clear.
+        if (w < inputWidth || h < inputHeight) dst.fill(0f, 0, 3 * plane)
+        val green = plane
+        val red = 2 * plane
+        for (y in 0 until h) {
+            var i = y * w
+            var o = y * inputWidth
+            val end = i + w
+            while (i < end) {
+                val p = argb[i]
+                dst[o] = (p and 0xFF).toFloat()
+                dst[green + o] = ((p ushr 8) and 0xFF).toFloat()
+                dst[red + o] = ((p ushr 16) and 0xFF).toFloat()
+                i++
+                o++
             }
         }
     }
