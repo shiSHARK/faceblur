@@ -14,6 +14,14 @@
 # runner output unmodified, then the result of scripts/phone_test_log.py verify. No screenshot is ever taken, no file
 # is read from or written to the phone's shared storage, and nothing is uploaded.
 #
+# Second part (only when the commit has samples/android/src/androidTest): the Android demo app is built as its debug
+# variant (own application id), installed with its test APK, given the registered fixtures of
+# config/device-tests/sample-fixtures.txt (the reference model and one public fixture photo, in the test app's private
+# storage), run with the instrumentation runner (no filters, no retries) and uninstalled. The demo test masks and
+# saves that photo through the app's own screens and checks the export and that nothing was left behind. Its runner
+# output is stored unmodified in a second section of the log; `phone_test_log.py verify` fails the log unless the
+# demo's tests passed too, so a failure there fails the phone step.
+#
 # Usage:  FACEBLUR_PHONE_SERIAL=<serial> FACEBLUR_PHONE_MODEL=<ro.product.model> sh scripts/phone-device-tests.sh <log>
 #   The serial and the model are given by the caller (the local merge gate); this repository names no device.
 #   Emulators are refused (serial emulator-*, qemu properties). <log> must not exist yet.
@@ -91,8 +99,13 @@ instrument_cmd="adb -s $serial shell am instrument -r -w $pkg/$runner"
 work=$(mktemp -d)
 remote=/data/local/tmp/faceblur-fixtures-$$
 installed=0
+sample_installed=0
 cleanup() {
     if [ "$installed" -eq 1 ]; then phone uninstall "$pkg" > /dev/null 2>&1 || true; fi
+    if [ "$sample_installed" -eq 1 ]; then
+        phone uninstall "$sample_test_pkg" > /dev/null 2>&1 || true
+        phone uninstall "$sample_pkg" > /dev/null 2>&1 || true
+    fi
     phone shell rm -rf "$remote" > /dev/null 2>&1 || true
     rm -rf "$work"
 }
@@ -113,44 +126,70 @@ if [ "$fresh" != yes ]; then
 fi
 apk_sha=$(shasum -a 256 "$apk" | cut -d' ' -f1)
 
+# Second part: the demo app and its test APK (built in this run, like the device-test APK above).
+sample_dir=samples/android/src/androidTest
+sample_pkg=io.github.shishark.faceblur.sample.debug
+sample_test_pkg=$sample_pkg.test
+sample_apk=samples/android/build/outputs/apk/debug/android-debug.apk
+sample_test_apk=samples/android/build/outputs/apk/androidTest/debug/android-debug-androidTest.apk
+sample_build_cmd="./gradlew --console=plain :samples:android:assembleDebug :samples:android:assembleDebugAndroidTest"
+sample=no
+if [ -n "$(git ls-tree -r --name-only HEAD -- "$sample_dir")" ]; then
+    sample=yes
+    rm -f "$sample_apk" "$sample_test_apk"
+    if ! ./gradlew --console=plain :samples:android:assembleDebug :samples:android:assembleDebugAndroidTest \
+        > "$work/sample-build.txt" 2>&1 || [ ! -f "$sample_apk" ] || [ ! -f "$sample_test_apk" ]; then
+        say "FAIL - the demo app and its test APK were not built:"
+        tail -30 "$work/sample-build.txt"
+        exit 1
+    fi
+fi
+
 # Fixtures: only the pinned reference model, verified local files and registered tracked files under testdata/. The
 # build step above copied the local fixtures to build/local-fixtures/ after verifying every file against the manifest.
 local_dir=build/local-fixtures
 model_name=$(sed -n 's/^fileName=//p' "$local_dir/yunet/yunet.properties")
 model_pin=$(sed -n 's/^sha256=//p' "$local_dir/yunet/yunet.properties")
+# collect_fixtures <list> <out> <kinds>: checks every fixture of <list> (only the <kinds> named) and writes the file
+# names to place, one per line, to <out>. Any doubt exits 1.
+collect_fixtures() {
+    list=$1; out=$2; kinds=$3
+    : > "$out"
+    while read -r kind value rest; do
+        case "$kind" in "" | "#"*) continue ;; esac
+        if [ -n "$rest" ]; then say "FAIL - $list: unexpected text after '$value'"; exit 1; fi
+        case " $kinds " in *" $kind "*) ;; *) say "FAIL - $list: unknown kind '$kind'"; exit 1 ;; esac
+        case "$kind" in
+            model)
+                src=build/test-models/$value
+                if [ "$value" != "$model_name" ] || [ ! -f "$src" ] ||
+                    [ "$(shasum -a 256 "$src" | cut -d' ' -f1)" != "$model_pin" ]; then
+                    say "FAIL - fixture model '$value' is not the pinned reference test model"; exit 1
+                fi ;;
+            local)
+                src=$local_dir/$value
+                sum=$(shasum -a 256 "$src" 2>/dev/null | cut -d' ' -f1)
+                case "$value" in images/*) ;; *) say "FAIL - fixture '$value' is not under images/"; exit 1 ;; esac
+                if ! awk -v p="$value" -v s="$sum" '$2 == p && $1 == s { f = 1 } END { exit !f }' "$local_dir/MANIFEST.sha256"; then
+                    say "FAIL - fixture '$value' is not a local file with its manifest SHA-256"; exit 1
+                fi ;;
+            tracked)
+                src=$value
+                sum=$(shasum -a 256 "$src" 2>/dev/null | cut -d' ' -f1)
+                case "$src" in testdata/*) ;; *) say "FAIL - fixture '$src' is not under testdata/"; exit 1 ;; esac
+                if ! git ls-files --error-unmatch -- "$src" > /dev/null 2>&1 ||
+                    ! awk -F '\t' -v p="$src" -v s="$sum" '$1 == p && $2 == s { f = 1 } END { exit !f }' \
+                        config/data-admission/register.tsv; then
+                    say "FAIL - fixture '$src' is not a tracked, registered file with its registered SHA-256"; exit 1
+                fi ;;
+        esac
+        printf '%s\n' "$src" >> "$out"
+    done < "$list"
+    [ -s "$out" ] || { say "FAIL - $list names no fixture"; exit 1; }
+}
+
 fixtures=""
-: > "$work/fixtures.list"
-while read -r kind value rest; do
-    case "$kind" in "" | "#"*) continue ;; esac
-    if [ -n "$rest" ]; then say "FAIL - config/device-tests/fixtures.txt: unexpected text after '$value'"; exit 1; fi
-    case "$kind" in
-        model)
-            src=build/test-models/$value
-            if [ "$value" != "$model_name" ] || [ ! -f "$src" ] ||
-                [ "$(shasum -a 256 "$src" | cut -d' ' -f1)" != "$model_pin" ]; then
-                say "FAIL - fixture model '$value' is not the pinned reference test model"; exit 1
-            fi ;;
-        local)
-            src=$local_dir/$value
-            sum=$(shasum -a 256 "$src" 2>/dev/null | cut -d' ' -f1)
-            case "$value" in images/*) ;; *) say "FAIL - fixture '$value' is not under images/"; exit 1 ;; esac
-            if ! awk -v p="$value" -v s="$sum" '$2 == p && $1 == s { f = 1 } END { exit !f }' "$local_dir/MANIFEST.sha256"; then
-                say "FAIL - fixture '$value' is not a local file with its manifest SHA-256"; exit 1
-            fi ;;
-        tracked)
-            src=$value
-            sum=$(shasum -a 256 "$src" 2>/dev/null | cut -d' ' -f1)
-            case "$src" in testdata/*) ;; *) say "FAIL - fixture '$src' is not under testdata/"; exit 1 ;; esac
-            if ! git ls-files --error-unmatch -- "$src" > /dev/null 2>&1 ||
-                ! awk -F '\t' -v p="$src" -v s="$sum" '$1 == p && $2 == s { f = 1 } END { exit !f }' \
-                    config/data-admission/register.tsv; then
-                say "FAIL - fixture '$src' is not a tracked, registered file with its registered SHA-256"; exit 1
-            fi ;;
-        *) say "FAIL - config/device-tests/fixtures.txt: unknown kind '$kind'"; exit 1 ;;
-    esac
-    printf '%s\n' "$src" >> "$work/fixtures.list"
-done < config/device-tests/fixtures.txt
-[ -s "$work/fixtures.list" ] || { say "FAIL - config/device-tests/fixtures.txt names no fixture"; exit 1; }
+collect_fixtures config/device-tests/fixtures.txt "$work/fixtures.list" "model local tracked"
 
 # Generated fixture (not committed): the build task generates and checks the synthetic HEIC; any failure fails the run.
 heic_name=synthetic-pattern-canary-256x192.heic
@@ -205,6 +244,51 @@ if [ -s "$work/raw.txt" ] && [ "$(tail -c 1 "$work/raw.txt" | od -An -c | tr -d 
 fi
 raw_sha=$(shasum -a 256 "$work/raw.txt" | cut -d' ' -f1)
 phone uninstall "$pkg" > /dev/null 2>&1 && installed=0
+
+# Second part: the demo app on the phone. Fixtures: the files of config/device-tests/sample-fixtures.txt (the pinned
+# reference model and registered public photographs under testdata/, nothing else), in the test app's private storage.
+sample_exit=NA
+sample_fixtures=""
+if [ "$sample" = yes ]; then
+    collect_fixtures config/device-tests/sample-fixtures.txt "$work/sample-fixtures.list" "model tracked"
+    phone uninstall "$sample_test_pkg" > /dev/null 2>&1 || true
+    phone uninstall "$sample_pkg" > /dev/null 2>&1 || true
+    if ! phone install -t "$sample_apk" > "$work/sample-install.txt" 2>&1 ||
+        ! phone install -t "$sample_test_apk" >> "$work/sample-install.txt" 2>&1; then
+        sample_installed=1
+        say "FAIL - install of the demo app failed:"
+        cat "$work/sample-install.txt"
+        exit 1
+    fi
+    sample_installed=1
+    phone shell mkdir -p "$remote" > /dev/null 2>&1
+    phone shell run-as "$sample_test_pkg" mkdir -p files/faceblur-fixtures > /dev/null 2>&1
+    while IFS= read -r src; do
+        name=$(basename "$src")
+        want=$(shasum -a 256 "$src" | cut -d' ' -f1)
+        phone push "$src" "$remote/$name" > /dev/null 2>&1 &&
+            phone shell chmod 644 "$remote/$name" > /dev/null 2>&1 &&
+            phone shell run-as "$sample_test_pkg" cp "$remote/$name" "files/faceblur-fixtures/$name" > /dev/null 2>&1
+        got=$(phone shell run-as "$sample_test_pkg" sha256sum "files/faceblur-fixtures/$name" 2>/dev/null |
+            tr -d '\r' | cut -d' ' -f1)
+        if [ "$got" != "$want" ]; then say "FAIL - demo fixture $name was not placed intact in the test app's storage"; exit 1; fi
+        sample_fixtures="$sample_fixtures${sample_fixtures:+,}$name:$got"
+    done < "$work/sample-fixtures.list"
+    phone shell rm -rf "$remote" > /dev/null 2>&1 || true
+    # The demo's screens are driven from the test: the screen must be on (nothing is shown of any photo: the demo
+    # protects its photo screens against screenshots, and none is taken here).
+    phone shell input keyevent KEYCODE_WAKEUP > /dev/null 2>&1 || true
+    phone shell wm dismiss-keyguard > /dev/null 2>&1 || true
+    say "running the demo app's tests on the test phone"
+    phone shell am instrument -r -w "$sample_test_pkg/$runner" > "$work/sample-raw.txt" 2>&1
+    sample_exit=$?
+    if [ -s "$work/sample-raw.txt" ] && [ "$(tail -c 1 "$work/sample-raw.txt" | od -An -c | tr -d ' ')" != '\n' ]; then
+        printf '\n' >> "$work/sample-raw.txt"
+    fi
+    sample_raw_sha=$(shasum -a 256 "$work/sample-raw.txt" | cut -d' ' -f1)
+    phone uninstall "$sample_test_pkg" > /dev/null 2>&1 || true
+    phone uninstall "$sample_pkg" > /dev/null 2>&1 && sample_installed=0
+fi
 methods=$(python3 -I scripts/phone_test_log.py count-tests)
 end=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
@@ -239,6 +323,17 @@ end=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     echo "--- instrumentation output (unmodified) ---"
     cat "$work/raw.txt"
     echo "--- end of instrumentation output ---"
+    if [ "$sample" = yes ]; then
+        echo "sample_build_command=$sample_build_cmd"
+        echo "sample_test_package=$sample_test_pkg"
+        echo "sample_fixtures=$sample_fixtures"
+        echo "sample_instrument_command=adb -s $serial shell am instrument -r -w $sample_test_pkg/$runner"
+        echo "sample_instrument_exit=$sample_exit"
+        echo "sample_raw_sha256=$sample_raw_sha"
+        echo "--- sample demo instrumentation output (unmodified) ---"
+        cat "$work/sample-raw.txt"
+        echo "--- end of sample demo instrumentation output ---"
+    fi
     echo "--- build output (last 15 lines) ---"
     tail -15 "$work/build.txt"
 } > "$log"

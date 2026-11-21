@@ -21,9 +21,16 @@ android {
         targetSdk = libs.versions.android.compileSdk.get().toInt()
         versionCode = 1
         versionName = "0.1.0"
+        // The on-phone integration test of the demo (src/androidTest), run by scripts/phone-device-tests.sh.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        debug {
+            // The build that the phone test installs (scripts/phone-device-tests.sh). Its own application id, so that
+            // the run never replaces or removes a demo that a person has installed on the phone.
+            applicationIdSuffix = ".debug"
+        }
         release {
             // Shrunk with the consumer rules that the library ships, as an app would use them.
             isMinifyEnabled = true
@@ -73,6 +80,9 @@ dependencies {
         because("test-only Guava below 33.7.2 has a HIGH advisory")
     }
     robolectricAndroidAll(libs.robolectric.android.all)
+    androidTestImplementation(libs.junit4)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
 }
 
 val robolectricDepsDir = layout.buildDirectory.dir("robolectric-deps")

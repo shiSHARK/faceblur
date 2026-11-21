@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# faceblur demo-app test fixtures, format 1
+#
+# Files that scripts/phone-device-tests.sh places in the private storage of the demo app's test APK
+# (samples/android/src/androidTest) before the run; the test APK carries none of them. Only two kinds are accepted, so no
+# photo of any other source can reach the phone through this list (same rules as config/device-tests/fixtures.txt):
+#   model <file name>       the reference test model (build/test-models/, size and SHA-256 pinned by the local fixtures)
+#   tracked <path>          a file tracked in git under testdata/ that is registered in config/data-admission/register.tsv
+# The demo test names the one photo it accepts and the SHA-256 of both files itself.
+model face_detection_yunet_2023mar.onnx
+tracked testdata/pd/pd-p06-single-face-s100-x00200-y01600.png

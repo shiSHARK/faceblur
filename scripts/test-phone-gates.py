@@ -60,6 +60,12 @@ PHONE_LIST = PHONE_HEADER + "# comment\n" + LISTED + "\tplatform calls only\n"
 SKIP_LIST = SKIP_HEADER + "# comment\n" + SKIP_ROW
 FIXTURES = "m.onnx:" + "b" * 64 + ",l.png:" + "9" * 64 + ",t.png:" + "c" * 64
 KEEP = object()
+DEMO_PKG = "io.github.shishark.faceblur.sample.debug.test"
+DEMO_CLASS, DEMO_TEST = "io.github.shishark.faceblur.sample.DemoPhoneTest", "maskAndSaveTheFixturePhotoLeavesOnlyTheExport"
+DEMO_FIXTURES = "m.onnx:" + "b" * 64 + ",t.png:" + "c" * 64
+DEMO_SOURCE = ("package x\n\nclass DemoPhoneTest {\n    @Test\n    fun maskAndSaveTheFixturePhotoLeavesOnlyTheExport() {}"
+               "\n\n    @Test\n    fun other() {}\n}\n")
+DEMO_TESTS = [(DEMO_CLASS, DEMO_TEST), (DEMO_CLASS, "other")]
 
 
 def new_repo(root: str, base_phone=PHONE_LIST, base_skips=SKIP_LIST, head_phone=KEEP, head_skips=KEEP) -> str:
@@ -154,11 +160,22 @@ def make_log(repo: str, path: str, raw: str = None, api: str = "31", **over):
         "raw_sha256": hashlib.sha256(raw.encode()).hexdigest(),
     }
     tamper = over.pop("tamper_raw", None)
+    demo = over.pop("demo", None)  # (raw output, field overrides) of the demo section, or None for no section
     h.update(over)
     h = {k: v for k, v in h.items() if v is not None}
     body = ["faceblur-phone-test-log 1"] + [f"{k}={v}" for k, v in h.items()]
     body += ["--- instrumentation output (unmodified) ---", (tamper or raw).rstrip("\n"),
-             "--- end of instrumentation output ---", "result=PASS"]
+             "--- end of instrumentation output ---"]
+    if demo is not None:
+        draw, dover = demo
+        d = {"sample_fixtures": DEMO_FIXTURES, "sample_instrument_exit": "0",
+             "sample_instrument_command": f"adb -s {serial} shell am instrument -r -w {DEMO_PKG}/{RUNNER}",
+             "sample_raw_sha256": hashlib.sha256(draw.encode()).hexdigest()}
+        d.update(dover)
+        body += [f"{k}={v}" for k, v in d.items() if v is not None]
+        body += ["--- sample demo instrumentation output (unmodified) ---", draw.rstrip("\n"),
+                 "--- end of sample demo instrumentation output ---"]
+    body += ["result=PASS"]
     with open(path, "w", encoding="utf-8") as fh:
         fh.write("\n".join(body) + "\n")
 
@@ -284,6 +301,8 @@ def phone_cases(work: str):
            must_contain="ERROR")
     for label, path in (("device-test-source", "faceblur/src/androidDeviceTest/kotlin/x/android/More.kt"),
                         ("device-test-config", "config/device-tests/required-tests.txt"),
+                        ("demo-test-source", "samples/android/src/androidTest/kotlin/x/More.kt"),
+                        ("demo-fixtures", "config/device-tests/sample-fixtures.txt"),
                         ("checker", "scripts/phone_test_log.py"), ("producer", "scripts/phone-device-tests.sh"),
                         ("coverage-gate", "scripts/diff-coverage.py")):
         tip = git(repo, "rev-parse", "HEAD")
@@ -366,6 +385,60 @@ def phone_cases(work: str):
           "--phone-only", "config/coverage/phone-only.txt"]
     expect("Expected-skips-change-warns", 0, dc + ["--phone-log", log], repo,
            must_contain="::warning file=config/device-tests/expected-skips.txt::")
+
+
+def demo_cases(work: str):
+    """The Android demo's instrumented tests: their runner output is a second section of the log, checked by
+    `verify` and by `sample-check`; the demo's sources and tests are a reason for a log (`needed`)."""
+    repo = new_repo(work)
+    base = git(repo, "rev-parse", "HEAD~1")
+    write(repo, "samples/android/src/androidTest/kotlin/x/DemoPhoneTest.kt", DEMO_SOURCE)
+    write(repo, "config/device-tests/sample-fixtures.txt", "# SPDX-License-Identifier: Apache-2.0\n# demo fixtures\n"
+          "model m.onnx\ntracked testdata/t.png\n")
+    git(repo, "add", ".")
+    git(repo, "commit", "-q", "-m", "demo test")
+    log = os.path.join(work, "demo.log")
+    raw_file = os.path.join(work, "demo-raw.txt")
+    pt = [sys.executable, "-I", os.path.join(HERE, "phone_test_log.py")]
+    good = raw_output([(c, t, 0) for c, t in DEMO_TESTS], 2, "OK (2 tests)")
+
+    def v(label, want, contains=None, demo=None, **kw):
+        make_log(repo, log, demo=(good, {}) if demo is None else (None if demo == "none" else demo), **kw)
+        expect(label, want, pt + ["verify", "--log", log, "--base", base], repo, None, contains)
+
+    def sc(label, want, raw, contains=None):
+        with open(raw_file, "w", encoding="utf-8") as fh:
+            fh.write(raw)
+        expect(label, want, pt + ["sample-check", "--raw", raw_file], repo, None, contains)
+
+    v("Demo-log-positive", 0, "demo app: 2 passed of 2 @Test methods")
+    v("Demo-log-section-missing", 1, "no complete demo section", demo="none")
+    failed = raw_output([(DEMO_CLASS, DEMO_TEST, -2), (DEMO_CLASS, "other", 0)], 2, "FAILURES!!!\nTests run: 2,  Failures: 1")
+    v("Demo-log-failed-test", 1, f"demo: {DEMO_CLASS}::{DEMO_TEST}: failed", demo=(failed, {}))
+    skipped = raw_output([(DEMO_CLASS, DEMO_TEST, 0), (DEMO_CLASS, "other", -4)], 2, "OK (2 tests)")
+    v("Demo-log-skipped-test", 1, "other: skipped (assumption)", demo=(skipped, {}))
+    only_one = raw_output([(DEMO_CLASS, DEMO_TEST, 0)], 1, "OK (1 test)")
+    v("Demo-log-fewer-tests-than-sources", 1, "1 test results, 2 @Test methods", demo=(only_one, {}))
+    other_test = raw_output([(DEMO_CLASS, "other", 0), (DEMO_CLASS, "third", 0)], 2, "OK (2 tests)")
+    v("Demo-log-required-test-missing", 1, f"required demo test missing: {DEMO_CLASS}::{DEMO_TEST}", demo=(other_test, {}))
+    v("Demo-log-runner-crash", 1, "final INSTRUMENTATION_CODE 0",
+      demo=(raw_output([(c, t, 0) for c, t in DEMO_TESTS], 2, "OK (2 tests)", final="0"), {}))
+    v("Demo-log-retry", 1, "retries", demo=(raw_output([(c, t, 0) for c, t in DEMO_TESTS], 2, "OK (2 tests)",
+                                                       retry=f"{DEMO_CLASS}#other"), {}))
+    v("Demo-log-hand-edited", 1, "sample_raw_sha256", demo=(good, {"sample_raw_sha256": "f" * 64}))
+    v("Demo-log-instrument-exit", 1, "demo instrument command exit 1", demo=(good, {"sample_instrument_exit": "1"}))
+    v("Demo-log-filter", 1, "demo instrument command is not the canonical one",
+      demo=(good, {"sample_instrument_command": f"adb -s {SERIAL} shell am instrument -r -w -e class x.A {DEMO_PKG}/{RUNNER}"}))
+    v("Demo-log-fixture-other-hash", 1, "demo fixtures are not exactly those",
+      demo=(good, {"sample_fixtures": DEMO_FIXTURES.replace("c" * 64, "d" * 64)}))
+    v("Demo-log-fixture-extra-file", 1, "demo fixtures are not exactly those",
+      demo=(good, {"sample_fixtures": DEMO_FIXTURES + ",p.jpg:" + "e" * 64}))
+    v("Demo-log-fields-missing", 1, "demo section fields missing", demo=(good, {"sample_fixtures": None}))
+    v("Demo-log-shared-storage-path", 1, "demo: the demo test output names a shared-storage path",
+      demo=(good.replace("Time: 0.5", "Time: 0.5 /sdcard/x.jpg"), {}))
+    sc("Demo-check-positive", 0, good, "demo app: 2 passed of 2")
+    sc("Demo-check-failure", 1, failed, "failed")
+    sc("Demo-check-no-output", 1, "", "INSTRUMENTATION_CODE")
 
 
 def producer_cases(work: str):
@@ -516,6 +589,7 @@ def main() -> int:
     work = tempfile.mkdtemp()
     try:
         phone_cases(work)
+        demo_cases(work)
         producer_cases(work)
         publication_cases(work)
         consumer_cases(work)

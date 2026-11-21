@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- Test APK only (never part of the demo app): the document provider that stands in for the system pickers' results.
+     It serves the registered fixtures that scripts/phone-device-tests.sh placed in this test package's private
+     storage, and one export file. The test APK is uninstalled when the run ends. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <provider
+            android:name="io.github.shishark.faceblur.sample.FixtureProvider"
+            android:authorities="io.github.shishark.faceblur.sample.debug.test.fixtures"
+            android:exported="true" />
+    </application>
+</manifest>

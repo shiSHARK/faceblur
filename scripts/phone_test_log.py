@@ -31,7 +31,11 @@ a list that RELAXES a rule counts only with the entries the base has too - see "
   - every test of config/device-tests/required-tests.txt is present and passed (or an accepted expected skip), every
     test of config/device-tests/expected-skips.txt is present, and passed + accepted skips = the @Test count; the
     result reports "N passed, K expected skips (names)" and names each skipped test's other environment as NOT RUN;
-  - the log names no shared-storage path (/sdcard, /storage/, DCIM): no photo data is involved.
+  - the log names no shared-storage path (/sdcard, /storage/, DCIM): no photo data is involved;
+  - when the commit has instrumented tests of the Android demo (samples/android/src/androidTest): the log has the demo
+    section (its own markers, below) with the canonical install/instrument commands, its SHA-256, and a runner output
+    that passes `sample-check` (final INSTRUMENTATION_CODE -1, `OK (N tests)`, N = numtests = @Test methods of the demo
+    sources, every test started once and passed, no failure, ignored or skipped test, the required demo test present).
 
 Lists: a range cannot relax its own gate. The phone-only list (which lines may leave the 80 %) and the expected skips
 (which skips are accepted) take effect as base AND rev: an entry counts only if both have it, and a skip uses the
@@ -46,6 +50,8 @@ Usage:
                                                             base is empty or does not resolve: fail closed),
                                                             1 not required, 2 any other error
   phone_test_log.py count-tests [--rev HEAD]                prints the number of @Test methods (exit 1 on @Ignore)
+  phone_test_log.py sample-check --raw <file> [--rev HEAD]  checks the runner output of the Android demo's instrumented
+                                                            tests (exit 0 valid, 1 not valid, 2 usage/IO)
   phone_test_log.py lists [--rev HEAD]                      checks the format of the three list files (exit 0/1)
 Standard library only.
 """
@@ -59,6 +65,8 @@ import sys
 FORMAT_LINE = "faceblur-phone-test-log 1"
 RAW_BEGIN = "--- instrumentation output (unmodified) ---"
 RAW_END = "--- end of instrumentation output ---"
+SAMPLE_BEGIN = "--- sample demo instrumentation output (unmodified) ---"
+SAMPLE_END = "--- end of sample demo instrumentation output ---"
 PHONE_ONLY = "config/coverage/phone-only.txt"
 PHONE_ONLY_HEADER = ("# SPDX-License-Identifier: Apache-2.0", "# faceblur phone-only coverage list, format 1")
 PHONE_ONLY_MAX = 8
@@ -75,6 +83,12 @@ REGISTER = "config/data-admission/register.tsv"
 # The evidence machinery itself: a change to it is exercised against the phone before it is merged.
 PHONE_TOOLING = ("scripts/phone_test_log.py", "scripts/phone-device-tests.sh", "scripts/diff-coverage.py")
 DEVICE_TEST_DIR = "faceblur/src/androidDeviceTest/"
+# The Android demo's instrumented tests (run by the same script, after the library's device tests).
+SAMPLE_TEST_DIR = "samples/android/src/androidTest/"
+SAMPLE_TEST_PACKAGE = "io.github.shishark.faceblur.sample.debug.test"
+SAMPLE_REQUIRED = ("io.github.shishark.faceblur.sample.DemoPhoneTest::maskAndSaveTheFixturePhotoLeavesOnlyTheExport",)
+SAMPLE_FIXTURES = "config/device-tests/sample-fixtures.txt"
+SAMPLE_FIELDS = ("sample_instrument_command", "sample_instrument_exit", "sample_raw_sha256", "sample_fixtures")
 TEST_ANNOTATION_RE = re.compile(r"^[ \t]*@(?:org\.junit\.)?Test\b(?![.\w])", re.M)
 IGNORE_RE = re.compile(r"^[ \t]*@(?:org\.junit\.)?Ignore\b", re.M)
 TEST_PACKAGE = "io.github.shishark.faceblur.test"
@@ -228,11 +242,12 @@ def local_fixtures():
     return pins, manifest
 
 
-def expected_fixtures(rev: str):
-    """`name:sha256` of every fixture of the fixtures list at rev, in order; ListError when it cannot be derived."""
-    text = show(rev, FIXTURES)
+def expected_fixtures(rev: str, path: str = FIXTURES, kinds: tuple = ("model", "local", "tracked")):
+    """`name:sha256` of every fixture of the list `path` at rev, in order, only of the given kinds; ListError when it
+    cannot be derived."""
+    text = show(rev, path)
     if text is None:
-        raise ListError(f"{FIXTURES} does not exist at {rev}")
+        raise ListError(f"{path} does not exist at {rev}")
     register = {}
     for ln in (show(rev, REGISTER) or "").splitlines():
         parts = ln.split("\t")
@@ -244,28 +259,30 @@ def expected_fixtures(rev: str):
         if not parts or parts[0].startswith("#"):
             continue
         if len(parts) != 2:
-            raise ListError(f"{FIXTURES}: expected '<kind> <value>': {ln.strip()[:80]}")
+            raise ListError(f"{path}: expected '<kind> <value>': {ln.strip()[:80]}")
         kind, value = parts
+        if kind not in kinds:
+            raise ListError(f"{path}: kind {kind} is not allowed in this list")
         if kind == "model":
             pins, manifest = local_fixtures()
             if value != pins.get("fileName") or not HEX64.match(pins.get("sha256", "")):
-                raise ListError(f"{FIXTURES}: model {value} is not the fileName pinned in the local fixtures")
+                raise ListError(f"{path}: model {value} is not the fileName pinned in the local fixtures")
             if manifest.get(f"yunet/{value}") != pins["sha256"]:
-                raise ListError(f"{FIXTURES}: the local manifest does not list model {value} with its pinned SHA-256")
+                raise ListError(f"{path}: the local manifest does not list model {value} with its pinned SHA-256")
             out.append(f"{value}:{pins['sha256']}")
         elif kind == "local":
             _, manifest = local_fixtures()
             if not value.startswith("images/") or not HEX64.match(manifest.get(value, "")):
-                raise ListError(f"{FIXTURES}: {value} is not an images/ file listed in the local manifest")
+                raise ListError(f"{path}: {value} is not an images/ file listed in the local manifest")
             out.append(f"{value.rsplit('/', 1)[-1]}:{manifest[value]}")
         elif kind == "tracked":
             if not value.startswith("testdata/") or not exists(rev, value) or not HEX64.match(register.get(value, "")):
-                raise ListError(f"{FIXTURES}: {value} is not a tracked, registered file under testdata/")
+                raise ListError(f"{path}: {value} is not a tracked, registered file under testdata/")
             out.append(f"{value.rsplit('/', 1)[-1]}:{register[value]}")
         else:
-            raise ListError(f"{FIXTURES}: unknown kind {kind}")
+            raise ListError(f"{path}: unknown kind {kind}")
     if not out:
-        raise ListError(f"{FIXTURES} names no fixture")
+        raise ListError(f"{path} names no fixture")
     return out
 
 
@@ -276,9 +293,9 @@ def load_list(rev: str, path: str, parser):
     return parser(text)
 
 
-def count_tests(rev: str):
-    """(number of @Test methods, files with @Ignore) in the device-test sources at rev."""
-    files = [p for p in git("ls-tree", "-r", "--name-only", rev, "--", DEVICE_TEST_DIR).splitlines()
+def count_tests(rev: str, directory: str = DEVICE_TEST_DIR):
+    """(number of @Test methods, files with @Ignore) in the test sources of directory at rev."""
+    files = [p for p in git("ls-tree", "-r", "--name-only", rev, "--", directory).splitlines()
              if p.endswith((".kt", ".java"))]
     total, ignored = 0, []
     for p in files:
@@ -335,6 +352,73 @@ def read_log(path: str):
     if b < 0 or e < 0 or e < b:
         return None, None
     return data[:b].decode("utf-8", errors="replace"), data[b + len(begin):e + 1]
+
+
+def read_sample(path: str):
+    """(text before the demo section, raw runner output of the demo's tests) or (None, None) if the log has no complete
+    demo section. The `sample_*` fields are lines of the text before the section."""
+    with open(path, "rb") as fh:
+        data = fh.read()
+    begin = ("\n" + SAMPLE_BEGIN + "\n").encode()
+    end = ("\n" + SAMPLE_END + "\n").encode()
+    b = data.find(begin)
+    e = data.find(end)
+    if b < 0 or e < 0 or e < b:
+        return None, None
+    return data[:b].decode("utf-8", errors="replace"), data[b + len(begin):e + 1]
+
+
+def check_sample(raw: str, rev: str):
+    """(problems, summary) of the runner output of the demo's instrumented tests at rev; no problem = valid."""
+    bad = []
+    expected, ignored = count_tests(rev, SAMPLE_TEST_DIR)
+    if ignored:
+        bad.append(f"@Ignore in the demo's instrumented tests ({len(ignored)} file(s)): ignored tests are not accepted")
+    if expected == 0:
+        bad.append("no @Test method in the demo's instrumented tests of the commit")
+    blocks, result, final, problems = parse_instrumentation(raw)
+    bad += problems
+    if final != -1:
+        bad.append(f"final INSTRUMENTATION_CODE {final} (the runner must finish with -1)")
+    stream = result.get("stream", "")
+    m = re.search(r"^OK \((\d+) tests?\)$", stream, re.M)
+    if not m or int(m.group(1)) != expected:
+        bad.append(f"runner summary is not 'OK ({expected} tests)'")
+    if "FAILURES!!!" in stream:
+        bad.append("runner summary reports failures")
+    numtests = {b.get("numtests") for b, _ in blocks}
+    if numtests != {str(expected)}:
+        bad.append(f"numtests {sorted(x for x in numtests if x)} != {expected}")
+    outcome, starts = {}, {}
+    for b, code in blocks:
+        cls, test = b.get("class"), b.get("test")
+        if not cls or not test:
+            continue
+        name = f"{cls}::{test}"
+        if code == 1:
+            starts[name] = starts.get(name, 0) + 1
+        elif name in outcome:
+            bad.append(f"{name}: more than one result (retry)")
+        else:
+            outcome[name] = code
+    for name, n in starts.items():
+        if n != 1:
+            bad.append(f"{name}: started {n} times (retries are not accepted)")
+        if name not in outcome:
+            bad.append(f"{name}: started, no result")
+    labels = {-1: "error", -2: "failed", -3: "ignored", -4: "skipped (assumption)"}
+    for name, code in sorted(outcome.items()):
+        if code != 0:
+            bad.append(f"{name}: {labels.get(code, f'status {code}')}")
+    for name in SAMPLE_REQUIRED:
+        if name not in outcome:
+            bad.append(f"required demo test missing: {name}")
+    if len(outcome) != expected:
+        bad.append(f"{len(outcome)} test results, {expected} @Test methods at the commit")
+    if SHARED_STORAGE_RE.search(raw):
+        bad.append("the demo test output names a shared-storage path; only private test storage is allowed")
+    passed = sum(1 for c in outcome.values() if c == 0)
+    return bad, [f"demo app: {passed} passed of {expected} @Test methods"]
 
 
 def verify(log_path: str, rev: str, base: str = None):
@@ -488,8 +572,38 @@ def verify(log_path: str, rev: str, base: str = None):
             bad.append(f"required test missing: {name}")
         elif outcome[name] != 0 and name not in accepted:
             bad.append(f"required test not passed: {name}")
+    sample_expected, _ = count_tests(rev, SAMPLE_TEST_DIR)
+    sample_summary = []
+    if sample_expected > 0:
+        trailer, sample_raw = read_sample(log_path)
+        if sample_raw is None:
+            bad.append("the log has no complete demo section (the demo's instrumented tests were not run)")
+        else:
+            fields = dict(ln.split("=", 1) for ln in trailer.splitlines() if ln.startswith("sample_") and "=" in ln)
+            miss = [f for f in SAMPLE_FIELDS if f not in fields]
+            if miss:
+                bad.append(f"demo section fields missing: {', '.join(miss)}")
+            else:
+                if fields["sample_instrument_command"] != (
+                        f"adb -s {serial} shell am instrument -r -w {SAMPLE_TEST_PACKAGE}/{RUNNER}"):
+                    bad.append("demo instrument command is not the canonical one")
+                try:
+                    want_fixtures = ",".join(expected_fixtures(rev, SAMPLE_FIXTURES, ("model", "tracked")))
+                except ListError as e:
+                    want_fixtures = None
+                    bad.append(str(e))
+                if want_fixtures is not None and fields["sample_fixtures"] != want_fixtures:
+                    bad.append(f"demo fixtures are not exactly those of {SAMPLE_FIXTURES} at the commit")
+                if fields["sample_instrument_exit"] != "0":
+                    bad.append(f"demo instrument command exit {fields['sample_instrument_exit']}")
+                if hashlib.sha256(sample_raw).hexdigest() != fields["sample_raw_sha256"]:
+                    bad.append("sample_raw_sha256 does not match the stored demo runner output")
+            sample_text = sample_raw.decode("utf-8", errors="replace").replace("\r\n", "\n")
+            problems, sample_summary = check_sample(sample_text, rev)
+            bad += [f"demo: {p}" for p in problems]
     summary = [f"{passed} passed, {len(accepted)} expected skips"
                + (f" ({', '.join(accepted)})" if accepted else "") + f" of {expected} @Test methods at API {api}"]
+    summary += sample_summary
     for name in accepted:
         summary.append(f"NOT RUN here: {name} - its requirement needs a passing run on: {skips[name][1]}")
     return bad, summary
@@ -509,7 +623,7 @@ def needed(base: str, rev: str):
                 listed.update(parse_phone_only(text))
             except ListError:
                 return True, f"{PHONE_ONLY} at {r} is malformed"
-    hits = [p for p in changed if p in listed or p.startswith(DEVICE_TEST_DIR) or p == PHONE_ONLY
+    hits = [p for p in changed if p in listed or p.startswith((DEVICE_TEST_DIR, SAMPLE_TEST_DIR)) or p == PHONE_ONLY
             or p.startswith("config/device-tests/") or p in PHONE_TOOLING]
     return bool(hits), (f"{len(hits)} changed file(s), first {hits[0]}" if hits else "")
 
@@ -526,6 +640,9 @@ def main() -> int:
     n.add_argument("--rev", default="HEAD")
     c = sub.add_parser("count-tests")
     c.add_argument("--rev", default="HEAD")
+    sc = sub.add_parser("sample-check")
+    sc.add_argument("--raw", required=True)
+    sc.add_argument("--rev", default="HEAD")
     li = sub.add_parser("lists")
     li.add_argument("--rev", default="HEAD")
     a = ap.parse_args()
@@ -548,6 +665,16 @@ def main() -> int:
             total, ignored = count_tests(a.rev)
             print(total)
             return 1 if ignored else 0
+        if a.cmd == "sample-check":
+            with open(a.raw, encoding="utf-8", errors="replace") as fh:
+                bad, summary = check_sample(fh.read().replace("\r\n", "\n"), a.rev)
+            for b in bad:
+                print(f"phone-test-log: demo NOT VALID - {b}")
+            if bad:
+                return 1
+            for line in summary:
+                print(f"phone-test-log: {line}")
+            return 0
         load_list(a.rev, PHONE_ONLY, parse_phone_only)
         load_tests(a.rev)
         expected_fixtures(a.rev)
