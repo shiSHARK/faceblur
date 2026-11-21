@@ -39,7 +39,7 @@ import kotlin.test.assertTrue
  * storage (never in the APK). A missing fixture FAILS the test (it is never skipped).
  */
 @RunWith(AndroidJUnit4::class)
-class HeicInputDeviceTest {
+class HeicInputDeviceTest : TimeLimitedDeviceTest() {
     private companion object {
         const val FIXTURE = "synthetic-pattern-canary-256x192.heic"
 

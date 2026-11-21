@@ -48,7 +48,7 @@ import kotlin.test.assertEquals
  * ONNX Runtime with XNNPACK on the phone and the JVM's CPU runtime. Digests only, nothing of a picture is logged.
  */
 @RunWith(AndroidJUnit4::class)
-class GoldenOutputDeviceTest {
+class GoldenOutputDeviceTest : TimeLimitedDeviceTest() {
     private fun model(): DetectorModel = DetectorModel.load(
         ModelSource.fromFile(DeviceFixtures.file(DeviceFixtures.YUNET_FILE).path),
         DeviceFixtures.yunetProfile(),

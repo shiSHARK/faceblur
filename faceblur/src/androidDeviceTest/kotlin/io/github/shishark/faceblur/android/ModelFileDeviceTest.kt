@@ -24,7 +24,7 @@ import kotlin.test.assertTrue
  * Java heap (ADR 0012 decision 8) with the platform's real `Os` and `SharedMemory`.
  */
 @RunWith(AndroidJUnit4::class)
-class ModelFileDeviceTest {
+class ModelFileDeviceTest : TimeLimitedDeviceTest() {
     private lateinit var dir: File
 
     @Before

@@ -35,7 +35,7 @@ import kotlin.time.TimeSource
  * Any timing logged here comes from a debug build and is not performance evidence.
  */
 @RunWith(AndroidJUnit4::class)
-class AndroidRunnerDeviceTest {
+class AndroidRunnerDeviceTest : TimeLimitedDeviceTest() {
     // No install call: the Android bindings are the platform defaults (ADR 0015 decision 1), as in an app that only
     // adds the dependency.
     @Before

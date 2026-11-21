@@ -38,7 +38,7 @@ import kotlin.test.assertTrue
  * host test and the Android 37 emulator run.
  */
 @RunWith(AndroidJUnit4::class)
-class AndroidInMemoryDeviceTest {
+class AndroidInMemoryDeviceTest : TimeLimitedDeviceTest() {
     private lateinit var masker: FaceMasker
 
     @Before

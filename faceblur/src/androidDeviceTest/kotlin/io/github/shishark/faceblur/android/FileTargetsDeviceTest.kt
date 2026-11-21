@@ -44,7 +44,7 @@ import kotlin.test.assertTrue
  * the registered synthetic face. Every written file is decoded again and checked inside its masks.
  */
 @RunWith(AndroidJUnit4::class)
-class FileTargetsDeviceTest {
+class FileTargetsDeviceTest : TimeLimitedDeviceTest() {
     private companion object {
         const val TOLERANCE = 8.0
         const val SEPARATION = 32.0

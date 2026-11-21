@@ -23,7 +23,7 @@ import kotlin.test.assertTrue
  * library once a `FaceMasker` is created.
  */
 @RunWith(AndroidJUnit4::class)
-class PlanMaskerDeviceTest {
+class PlanMaskerDeviceTest : TimeLimitedDeviceTest() {
     private fun call(authority: String): Bundle {
         DeviceFixtures.logHeader()
         val r = DeviceFixtures.context.contentResolver.call(OrtProbeProvider.uri(authority), "run", null, null)

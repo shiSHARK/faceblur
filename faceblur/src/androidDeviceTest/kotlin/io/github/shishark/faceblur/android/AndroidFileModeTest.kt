@@ -52,7 +52,7 @@ import kotlin.test.assertTrue
  * ([PixelChecks]).
  */
 @RunWith(AndroidJUnit4::class)
-class AndroidFileModeTest {
+class AndroidFileModeTest : TimeLimitedDeviceTest() {
     private companion object {
         /** Largest mean channel difference to the reference inside a mask (the output's JPEG of a smooth fill). */
         const val TOLERANCE = 8.0
