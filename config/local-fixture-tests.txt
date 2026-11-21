@@ -7,6 +7,7 @@ jvmTest io.github.shishark.faceblur.eval.EvalSweepTest.aReplayMismatchThroughAFa
 jvmTest io.github.shishark.faceblur.eval.EvalSweepTest.eachThresholdEqualsABruteForceRerunAndTheModelRunsOncePerPass
 jvmTest io.github.shishark.faceblur.eval.FaceblurEvalCliTest
 jvmTest io.github.shishark.faceblur.jvm.GenericParityTest
+jvmTest io.github.shishark.faceblur.jvm.GoldenOutputJvmTest
 jvmTest io.github.shishark.faceblur.jvm.JvmBoundaryTest.detectOnlyFindsTwoFacesAndLeavesTheImageUnchanged
 jvmTest io.github.shishark.faceblur.jvm.JvmBoundaryTest.theOrtRunnerRefusesToStartWithoutTheTelemetryVariable
 jvmTest io.github.shishark.faceblur.jvm.JvmModelFileTest.theReportsCarryTheRealVersions
