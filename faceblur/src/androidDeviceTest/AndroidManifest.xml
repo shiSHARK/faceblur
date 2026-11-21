@@ -10,7 +10,8 @@
   PlanMaskerProcessProvider and OrtControlProcessProvider: private providers in processes of their own, so that
   PlanMaskerDeviceTest can check which ONNX Runtime classes and libraries a process has loaded.
   KeepAliveActivity: an empty activity that keeps the test process in the foreground during the run (see
-  ForegroundKeepAlive); not exported, no intent filter.
+  ForegroundKeepAlive); no intent filter. It is exported only so that the phone script can start it from the shell
+  before the run, to check that it can be resumed; it shows nothing, takes no input and handles no data.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
@@ -21,7 +22,7 @@
     <application>
         <activity
             android:name="io.github.shishark.faceblur.android.KeepAliveActivity"
-            android:exported="false" />
+            android:exported="true" />
         <provider
             android:name="io.github.shishark.faceblur.android.DeviceTestFilesProvider"
             android:authorities="io.github.shishark.faceblur.test.files"

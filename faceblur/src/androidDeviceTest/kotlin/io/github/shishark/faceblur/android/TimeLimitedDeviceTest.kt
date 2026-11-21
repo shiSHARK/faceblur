@@ -20,13 +20,14 @@ import java.util.concurrent.TimeUnit
  * the test APK resumed during every test and records that in a marker the phone script checks after the run.
  */
 abstract class TimeLimitedDeviceTest {
-    @get:Rule
+    // Explicit order (a lower value is the outer rule): the time limit also covers the start of the keep-alive.
+    @get:Rule(order = 0)
     val timeLimit: Timeout = Timeout.builder()
         .withTimeout(LIMIT_MINUTES, TimeUnit.MINUTES)
         .withLookingForStuckThread(true)
         .build()
 
-    @get:Rule
+    @get:Rule(order = 1)
     val foregroundKeepAlive: TestRule = ForegroundKeepAliveRule()
 
     private companion object {

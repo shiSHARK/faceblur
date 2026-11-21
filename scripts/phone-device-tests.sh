@@ -27,13 +27,17 @@
 #   Emulators are refused (serial emulator-*, qemu properties). <log> must not exist yet.
 # Environment (optional): ANDROID_HOME / ANDROID_SDK_ROOT for adb when it is not on PATH.
 # Foreground keep-alive: some phones' app freezers freeze the instrumentation process of a run that has no visible
-# activity, and a frozen process stops without any output. Every device test therefore runs while an empty
-# activity of the test APK is resumed during every test (ForegroundKeepAlive in androidDeviceTest), and the test side
-# writes one marker line per test (files/keepalive-marker.txt in the test app's private storage, test names and the
-# words ok/lost only). After the run this script reads the marker: no marker, or a test that ran without the
-# keep-alive in effect before or after it, ends the step BLOCKED (exit 3, no log): such a run does not measure the
-# library whatever its result. A run that finished OK with fewer marker lines than started tests FAILS (a test class
-# does not extend TimeLimitedDeviceTest).
+# activity, and a frozen process stops without any output. Every device test therefore runs while an empty activity
+# of the test APK is resumed (ForegroundKeepAlive in androidDeviceTest). The step checks that it is in effect before
+# and after the tests, and ends BLOCKED (exit 3) when it is not:
+#   before: the screen is on (dumpsys power: mWakefulness=Awake) and the keep-alive activity, started from the shell,
+#           is the resumed activity; otherwise BLOCKED before any test runs;
+#   after:  the test side writes one marker line per test (files/keepalive-marker.txt in the test app's private
+#           storage, test names and the words ok/lost only). A run that ended cleanly (runner exit 0, `OK (`, tests
+#           run, no crash line) with no marker or a test that ran without the keep-alive in effect is BLOCKED: it does
+#           not measure the library whatever its result. Every other run (crash, failed start, no tests, a failed or
+#           timed-out test) is never BLOCKED: its log is written and the verifier fails it. A clean run with fewer
+#           marker lines than started tests FAILS (a test class does not extend TimeLimitedDeviceTest).
 # Exit codes: 0 PASS (log valid), 1 FAIL (build, install, a test or the log check failed), 2 usage/environment,
 #             3 BLOCKED (the test phone is not connected or not authorised, or the foreground keep-alive was not in
 #             effect), 4 NOT APPLICABLE (no device tests in this revision).
@@ -245,10 +249,26 @@ phone shell rm -rf "$remote" > /dev/null 2>&1 || true
 
 say "running the device tests on the test phone (API $api)"
 phone shell run-as "$pkg" rm -f files/keepalive-marker.txt > /dev/null 2>&1 || true
-# The keep-alive activity can only be resumed with the screen on (nothing of any photo is shown: it is an empty
-# activity, and no screenshot is taken).
+# Before the tests: the keep-alive must be in effect (see the header). Nothing of any photo is shown (the activity is
+# empty) and no screenshot is taken.
 phone shell input keyevent KEYCODE_WAKEUP > /dev/null 2>&1 || true
 phone shell wm dismiss-keyguard > /dev/null 2>&1 || true
+sleep 1
+wake=$(phone shell dumpsys power 2> /dev/null | tr -d '\r' | grep -m1 'mWakefulness=' | tr -d ' ')
+if [ "$wake" != "mWakefulness=Awake" ]; then
+    say "BLOCKED - before the tests: the phone screen is not on (${wake:-no power state}); the foreground keep-alive cannot be in effect"
+    exit 3
+fi
+keep_activity=$pkg/io.github.shishark.faceblur.android.KeepAliveActivity
+phone shell am start -W -n "$keep_activity" > "$work/keepalive-start.txt" 2>&1 || true
+sleep 1
+if ! phone shell dumpsys activity activities 2> /dev/null | tr -d '\r' | grep -E 'ResumedActivity' | grep -q "$keep_activity"; then
+    phone shell am force-stop "$pkg" > /dev/null 2>&1 || true
+    say "BLOCKED - before the tests: the keep-alive activity is not the resumed activity of the phone (screen locked or covered?)"
+    exit 3
+fi
+# The probe is stopped; the instrumentation starts the test app's process anew.
+phone shell am force-stop "$pkg" > /dev/null 2>&1 || true
 phone shell am instrument -r -w "$pkg/$runner" > "$work/raw.txt" 2>&1
 instrument_exit=$?
 # The foreground keep-alive marker (see the header): read before the uninstall deletes the test app's storage.
@@ -259,15 +279,33 @@ if [ -s "$work/raw.txt" ] && [ "$(tail -c 1 "$work/raw.txt" | od -An -c | tr -d 
 fi
 raw_sha=$(shasum -a 256 "$work/raw.txt" | cut -d' ' -f1)
 phone uninstall "$pkg" > /dev/null 2>&1 && installed=0
-tests_started=$(grep -c '^INSTRUMENTATION_STATUS_CODE: 1$' "$work/raw.txt")
+# After the tests: the keep-alive marker against the runner result (see the header). BLOCKED only for a clean run.
+tr -d '\r' < "$work/raw.txt" > "$work/raw-lf.txt"
+tests_started=$(grep -c '^INSTRUMENTATION_STATUS_CODE: 1$' "$work/raw-lf.txt")
 marks_got=$(grep -c '^test=[A-Za-z0-9_.$#]* before=[a-z]* after=[a-z]*$' "$work/keepalive.txt")
-if [ "$marks_got" -eq 0 ] || grep -qv '^test=[A-Za-z0-9_.$#]* before=ok after=ok$' "$work/keepalive.txt"; then
-    say "BLOCKED - the foreground keep-alive was not in effect for every test ($marks_got marker lines, none or some not ok); the run is not a valid measurement"
-    exit 3
+marks_bad=$(grep -cv '^test=[A-Za-z0-9_.$#]* before=ok after=ok$' "$work/keepalive.txt")
+keep_state=ok
+if [ "${marks_got:-0}" -eq 0 ]; then keep_state=none
+elif [ "${marks_bad:-1}" -ne 0 ]; then keep_state=lost
+elif [ "$marks_got" -ne "${tests_started:-0}" ]; then keep_state=partial
 fi
-if [ "$marks_got" -ne "$tests_started" ] && grep -q '^OK (' "$work/raw.txt"; then
-    say "FAIL - $marks_got of $tests_started tests recorded the foreground keep-alive (a test class does not extend TimeLimitedDeviceTest)"
-    exit 1
+clean_run=no
+if [ "$instrument_exit" -eq 0 ] && [ "${tests_started:-0}" -gt 0 ] && grep -q '^OK (' "$work/raw-lf.txt" &&
+    ! grep -q 'INSTRUMENTATION_FAILED\|INSTRUMENTATION_ABORTED\|Process crashed' "$work/raw-lf.txt"; then
+    clean_run=yes
+fi
+if [ "$clean_run" = yes ]; then
+    case "$keep_state" in
+        none | lost)
+            say "BLOCKED - the foreground keep-alive was not in effect for every test (state $keep_state: $marks_bad of $marks_got marker lines not ok, $tests_started tests started); the run is not a valid measurement"
+            exit 3 ;;
+        partial)
+            say "FAIL - $marks_got of $tests_started tests recorded the foreground keep-alive (a test class does not extend TimeLimitedDeviceTest)"
+            exit 1 ;;
+    esac
+else
+    # Never BLOCKED: the log is written below and the verifier fails the run.
+    say "the run did not end cleanly (keep-alive state: $keep_state); the log check decides"
 fi
 
 # Second part: the demo app on the phone. Fixtures: the files of config/device-tests/sample-fixtures.txt (the pinned
@@ -345,7 +383,7 @@ end=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     echo "generate_command=$generate_cmd"
     echo "source_test_methods=$methods"
     echo "raw_sha256=$raw_sha"
-    echo "foreground_keepalive=ok tests=$marks_got"
+    echo "foreground_keepalive=$keep_state tests=$marks_got started=$tests_started clean_run=$clean_run"
     echo "--- instrumentation output (unmodified) ---"
     cat "$work/raw.txt"
     echo "--- end of instrumentation output ---"
