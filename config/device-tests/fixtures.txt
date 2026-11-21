@@ -11,3 +11,26 @@
 #   tracked <path>          a file tracked in git under testdata/ that is registered in config/data-admission/register.tsv
 model face_detection_yunet_2023mar.onnx
 local images/face-0003542-s0625-x0000-y0000.png
+# The public fixtures of GoldenOutputDeviceTest (the golden outputs recorded on the test phone).
+tracked testdata/pd/pd-p01-s025-x00938-y00610.png
+tracked testdata/pd/pd-p01-s035-x01339-y00967.png
+tracked testdata/pd/pd-p01-s050-x02090-y01537.png
+tracked testdata/pd/pd-p01-s075-x03369-y02443.png
+tracked testdata/pd/pd-p01-s075-x04860-y02556.png
+tracked testdata/pd/pd-p01-s100-x05759-y03433.png
+tracked testdata/pd/pd-p03-s025-x00000-y00014.png
+tracked testdata/pd/pd-p03-s035-x00277-y00161.png
+tracked testdata/pd/pd-p03-s050-x00532-y00367.png
+tracked testdata/pd/pd-p03-s075-x01154-y00684.png
+tracked testdata/pd/pd-p03-s100-x01141-y01015.png
+tracked testdata/pd/pd-p06-s026-x00000-y00191.png
+tracked testdata/pd/pd-p06-s035-x00145-y00379.png
+tracked testdata/pd/pd-p06-s050-x00258-y00663.png
+tracked testdata/pd/pd-p06-s075-x00950-y01178.png
+tracked testdata/pd/pd-p06-s100-x01377-y01454.png
+tracked testdata/pd/pd-p06-single-face-s100-x00200-y01600.png
+tracked testdata/pd/pd-p07-s026-x00183-y00018.png
+tracked testdata/pd/pd-p07-s035-x00442-y00052.png
+tracked testdata/pd/pd-p07-s050-x00635-y00212.png
+tracked testdata/pd/pd-p07-s075-x01273-y00525.png
+tracked testdata/pd/pd-p07-s100-x01616-y01074.png

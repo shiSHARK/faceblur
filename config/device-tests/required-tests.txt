@@ -58,3 +58,6 @@ io.github.shishark.faceblur.android.AndroidInMemoryDeviceTest::theWorstCaseOfAWh
 # HEIC input in file mode on the phone's own HEVC decoder; the synthetic fixture is generated at test time (generateHeicFixture), a missing fixture fails.
 io.github.shishark.faceblur.android.HeicInputDeviceTest::aHeicInputGivesAMaskedMetadataFreeJpegAtTheUprightSize
 io.github.shishark.faceblur.android.HeicInputDeviceTest::theScanFailsOnPlantedMetadata
+# Golden outputs recorded on the test phone: masked pixels, JPEG bytes, boxes and model inputs stay bit-identical.
+io.github.shishark.faceblur.android.GoldenOutputDeviceTest::theMaskedBitmapAndPlanJpegOfEveryStyleAreUnchangedOnThePhone
+io.github.shishark.faceblur.android.GoldenOutputDeviceTest::theReferenceModelGivesTheRecordedJpegsBoxesInputsAndPixelsOfThePublicFixturesOnThePhone
