@@ -23,12 +23,12 @@ import io.github.shishark.faceblur.internal.runtime.ModelSession
 import io.github.shishark.faceblur.internal.runtime.PassOutput
 import io.github.shishark.faceblur.maskInPlace
 import io.github.shishark.faceblur.maskJpeg
+import org.junit.Test
+import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.security.MessageDigest
-import org.junit.Test
-import org.junit.runner.RunWith
 import kotlin.test.assertEquals
 
 /**
