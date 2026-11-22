@@ -22,7 +22,8 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  *   [RuntimeOptionFailed] when one cannot be set;
  * - throws [SessionRejected] when the runtime refuses the model;
  * - never puts a runtime exception or its text into anything it throws (runtime messages can contain paths).
- * [threads] is the configured `onnxThreads` (0 = automatic).
+ * [threads] is the configured `onnxThreads` (0 = automatic). The `FaceMasker` calls [open] on a pass thread with a
+ * hard limit ([DeadlineSession.open]); a session returned after that limit is closed and never used.
  */
 internal fun interface ModelRuntime {
     fun open(model: DetectorModel, threads: Int): ModelSession

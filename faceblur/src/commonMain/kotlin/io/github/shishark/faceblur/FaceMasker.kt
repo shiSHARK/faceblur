@@ -22,6 +22,7 @@ import io.github.shishark.faceblur.internal.runtime.FaceBlurRuntime
 import io.github.shishark.faceblur.internal.runtime.ModelRuntime
 import io.github.shishark.faceblur.internal.runtime.RuntimeOptionFailed
 import io.github.shishark.faceblur.internal.runtime.SessionRejected
+import io.github.shishark.faceblur.internal.runtime.SessionTimeout
 import io.github.shishark.faceblur.mask.StageSeams
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -51,10 +52,12 @@ import kotlin.time.TimeSource
  * Detected faces get masks whose expansion is, per axis, the larger of the profile's minimum
  * ([DetectorProfile.minMaskExpandX]/`Y`) and [MaskingConfig.expandX]/`Y`; [Detection.masking] carries it.
  *
- * Every model run has a time limit. A run still going at its limit ends the call at the limit with
- * [FaceMaskException.ModelOutputInvalid] (`RUN_TIMEOUT`; at creation [FaceMaskException.ModelRejected] with
- * `TIMEOUT`), also when the runtime never returns; nothing of that run is used again, and the next call that detects
- * opens a new runtime session first.
+ * Every model run and every creation of a runtime session has a time limit. A run still going at its limit ends the
+ * call at the limit with [FaceMaskException.ModelOutputInvalid] (`RUN_TIMEOUT`; at creation
+ * [FaceMaskException.ModelRejected] with `TIMEOUT`), also when the runtime never returns; nothing of that run is used
+ * again, and the next call that detects opens a new runtime session first. A session creation still going at its
+ * limit ends the same way (at creation `ModelRejected` with `TIMEOUT`, during a call `RUN_TIMEOUT`); a session it
+ * returns later is closed and never used.
  *
  * @throws FaceMaskException.RuntimeUnavailable when no ONNX Runtime binding is installed for this platform or a
  * required session option cannot be set.
@@ -483,9 +486,9 @@ public class FaceMasker private constructor(
 
     /**
      * The detector of the session in use; after a run timeout (no session in use) a new session is opened and checked
-     * first, exactly as at creation. A failure to open it fails this call with `RUN_TIMEOUT` (its contract run
-     * timed out, or too many runs are stuck in the runtime) or `RUN_FAILED` (anything else), and the next call tries
-     * again.
+     * first, exactly as at creation. A failure to open it fails this call with `RUN_TIMEOUT` (its creation or its
+     * contract run timed out, or too many runs are stuck in the runtime) or `RUN_FAILED` (anything else), and the next
+     * call tries again.
      */
     private fun detectorForCall(): ModelDetector {
         current?.let { return it.checked.detector }
@@ -661,8 +664,9 @@ public class FaceMasker private constructor(
         private fun defaultLimits(model: DetectorModel) = DetectionSettings(minScore = model.profile.scoreThreshold)
 
         /**
-         * Steps 5-7 of ADR 0012 decision 4: session, runtime view of the inputs and outputs, contract run. Every run
-         * of the session has a hard limit ([DeadlineSession]).
+         * Steps 5-7 of ADR 0012 decision 4: session, runtime view of the inputs and outputs, contract run. The
+         * session creation and every run of the session have a hard limit ([DeadlineSession]); a creation that
+         * passes its limit is `ModelRejected` with `TIMEOUT`.
          */
         private fun openSession(
             model: DetectorModel,
@@ -674,9 +678,12 @@ public class FaceMasker private constructor(
                 runtime ?: throw FaceMaskException.RuntimeUnavailable(
                     "no ONNX Runtime binding is installed for this platform (see the integration guide)",
                 )
-            val opened =
+            val session =
                 try {
-                    factory.open(model, config.onnxThreads)
+                    DeadlineSession.open(runLimits.openMillis) { factory.open(model, config.onnxThreads) }
+                } catch (e: SessionTimeout) {
+                    // The creation passed its limit (or too many runs are stuck in the runtime): abandoned, never used.
+                    throw FaceMaskException.ModelRejected(listOf(OpenedSession.TIMEOUT))
                 } catch (e: FaceMaskException) {
                     throw e
                 } catch (e: SessionRejected) {
@@ -688,7 +695,6 @@ public class FaceMasker private constructor(
                     // Runtime exceptions are never chained: their text can contain paths or model names.
                     throw FaceMaskException.RuntimeUnavailable("the runtime session could not be created")
                 }
-            val session = DeadlineSession(opened)
             try {
                 return Opened(OpenedSession.check(model, session, runLimits), session)
             } catch (e: Throwable) {

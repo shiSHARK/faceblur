@@ -3,6 +3,7 @@ package io.github.shishark.faceblur.android
 
 import android.system.ErrnoException
 import android.system.OsConstants
+import io.github.shishark.faceblur.BlockingSession
 import io.github.shishark.faceblur.FaceMaskException
 import io.github.shishark.faceblur.FaceMasker
 import io.github.shishark.faceblur.FaceMaskerConfig
@@ -11,9 +12,15 @@ import io.github.shishark.faceblur.MaskPlan
 import io.github.shishark.faceblur.MaskingConfig
 import io.github.shishark.faceblur.MutablePixelImage
 import io.github.shishark.faceblur.OneFaceRunner
+import io.github.shishark.faceblur.Release
+import io.github.shishark.faceblur.RunLimits
+import io.github.shishark.faceblur.TIMEOUT_MARGIN_MILLIS
+import io.github.shishark.faceblur.assertNoAbandonedRunsLeft
 import io.github.shishark.faceblur.detect.RunnerRuntime
 import io.github.shishark.faceblur.detect.testYuNetModel
+import io.github.shishark.faceblur.internal.runtime.AbandonedRuns
 import io.github.shishark.faceblur.internal.runtime.FaceBlurRuntime
+import io.github.shishark.faceblur.internal.runtime.ModelRuntime
 import io.github.shishark.faceblur.internal.runtime.ModelSession
 import io.github.shishark.faceblur.internal.runtime.PassOutput
 import io.github.shishark.faceblur.internal.runtime.PlatformDefaults
@@ -22,12 +29,14 @@ import io.github.shishark.faceblur.internal.runtime.SessionTensor
 import io.github.shishark.faceblur.internal.runtime.platformDefaults
 import io.github.shishark.faceblur.mask.MemoryRule
 import io.github.shishark.faceblur.mask.ReservedBytes
+import io.github.shishark.faceblur.millisOf
 import org.junit.After
 import org.junit.Before
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.nio.ByteBuffer
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -37,6 +46,7 @@ import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import io.github.shishark.faceblur.detect.FakeSession as RunnerSession
 
 /**
  * The Android binding without a setup call (ADR 0015 decision 1, ADR 0007 decision 2, ADR 0013 decision 6): the
@@ -206,6 +216,47 @@ class AndroidBindingTest {
             }
         }
         assertFalse(opened)
+    }
+
+    @Test
+    fun aSessionCreationThatNeverReturnsFailsCreationWithTimeoutAndItsLateSessionIsClosed() {
+        AndroidBinding.environment = RecordingEnvironment()
+        ModelBuffer.sharedMemoryAvailable = false // the host cannot run the shared-memory copy
+        val release = Release()
+        val limits = RunLimits(contractMillis = 1_000L, minPassMillis = 300L, openMillis = 500L)
+        val late = AtomicReference<BlockingSession?>(null)
+        val thread = AtomicReference<String?>(null)
+        // The Android binding's own open, with a session factory that blocks without CPU until the release.
+        val runtime = ModelRuntime { model, threads ->
+            AndroidModelRuntime.open(model, threads) { _, _ ->
+                thread.set(Thread.currentThread().name)
+                val session = BlockingSession(RunnerSession(OneFaceRunner(), model), release, Int.MAX_VALUE)
+                late.set(session)
+                release.await()
+                session
+            }
+        }
+        try {
+            val took = millisOf {
+                val e = assertFailsWith<FaceMaskException.ModelRejected> {
+                    FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), runtime, runLimits = limits)
+                }
+                assertEquals(listOf("TIMEOUT"), e.findings)
+            }
+            assertTrue(took >= limits.openMillis, "the creation limit applies: $took ms")
+            assertTrue(took <= limits.openMillis + TIMEOUT_MARGIN_MILLIS, "ended at the limit: $took ms")
+            assertEquals("faceblur-pass", thread.get(), "the creation runs on a pass thread")
+            assertEquals(1, AbandonedRuns.count())
+            val session = late.get() ?: error("no session was created")
+            assertEquals(0, session.closes, "not closed under its running creation")
+            release.open()
+            assertTrue(session.awaitClosed(10_000L), "the late session is closed when its creation returns")
+            assertEquals(0, session.runs, "the late session never ran")
+        } finally {
+            release.open()
+            ModelBuffer.sharedMemoryAvailable = true
+        }
+        assertNoAbandonedRunsLeft()
     }
 
     /** A session that is never run. */

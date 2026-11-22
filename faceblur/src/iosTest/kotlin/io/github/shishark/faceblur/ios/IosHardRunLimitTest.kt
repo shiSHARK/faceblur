@@ -24,6 +24,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import platform.CoreGraphics.CGImageRelease
 import platform.Foundation.NSFileManager
 import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -38,7 +39,8 @@ import kotlin.test.assertTrue
  * while the test checks the library. The call ends at its limit with `RUN_TIMEOUT`, the stuck glue is never closed
  * or used under its running pass, the next call opens a new glue and gives the output of a normal run, file mode
  * leaves no file, and a blocked contract run fails creation with `TIMEOUT`. When the stuck run returns at last, its
- * pass thread closes the glue (and only then frees its buffers).
+ * pass thread closes the glue (and only then frees its buffers). A glue `open` that never returns fails creation with
+ * `TIMEOUT` (a replacement during a call: `RUN_TIMEOUT`); if it returns at last, the session is closed, never used.
  */
 class IosHardRunLimitTest {
     private val releases = ArrayList<Release>()
@@ -55,13 +57,30 @@ class IosHardRunLimitTest {
         private val inner: FakeBridge,
         private val release: Release,
         private val blockFrom: Int,
+        private val blockOpen: Boolean = false,
     ) : OnnxBridge by inner {
         private val runCount = AtomicInt(0)
         private val closeCount = AtomicInt(0)
+        private val openCount = AtomicInt(0)
         private val closedSignal = platformPassThreads().newSignal()
 
         val runs: Int get() = runCount.load()
         val closes: Int get() = closeCount.load()
+        val opens: Int get() = openCount.load()
+
+        override fun open(
+            modelAddress: Long,
+            modelByteCount: Long,
+            threads: Int,
+            inputName: String,
+            inputShape: LongArray,
+            outputNames: List<String>,
+        ): Int {
+            openCount.addAndFetch(1)
+            // The model bytes stay pinned by the abandoned creation until this returns.
+            if (blockOpen) release.await()
+            return inner.open(modelAddress, modelByteCount, threads, inputName, inputShape, outputNames)
+        }
 
         override fun run(inputAddress: Long, inputByteCount: Long, outputTableAddress: Long): Int {
             if (runCount.addAndFetch(1) >= blockFrom) release.await()
@@ -179,6 +198,88 @@ class IosHardRunLimitTest {
             assertTrue(bridges[0].awaitClosed(10_000L))
             assertNoAbandonedRunsLeft()
         }
+    }
+
+    @Test
+    fun aGlueOpenThatNeverReturnsFailsCreationWithTimeoutWithinItsLimitAndItsLateSessionIsClosed() {
+        val limits = RunLimits(contractMillis = 1_000L, minPassMillis = 300L, openMillis = 500L)
+        // Glue creations run on pass threads: the glue is recorded thread-safely before its open blocks.
+        val stuck = AtomicReference<BlockingBridge?>(null)
+        val runtime = IosModelRuntime(
+            OnnxBridgeFactory {
+                BlockingBridge(FakeBridge(OneFaceRunner()), release, Int.MAX_VALUE, blockOpen = true).also {
+                    stuck.store(it)
+                }
+            },
+        )
+        val took = millisOf {
+            val e = assertFailsWith<FaceMaskException.ModelRejected> {
+                FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), runtime, runLimits = limits)
+            }
+            assertEquals(listOf("TIMEOUT"), e.findings)
+        }
+        assertTrue(took >= limits.openMillis, "the creation limit applies: $took ms")
+        assertTrue(took <= limits.openMillis + TIMEOUT_MARGIN_MILLIS, "ended at the limit: $took ms")
+        assertEquals(1, AbandonedRuns.count(), "the stuck creation counts toward the bound")
+        val glue = stuck.load() ?: error("no glue was created")
+        assertEquals(1, glue.opens)
+        assertEquals(0, glue.closes, "the glue is not closed under its running open")
+
+        release.open()
+        assertTrue(glue.awaitClosed(10_000L), "the late session is closed when its open returns")
+        assertNoAbandonedRunsLeft()
+        assertEquals(0, glue.runs, "the late session never ran")
+        assertEquals(1, glue.closes)
+    }
+
+    @Test
+    fun aReplacementGlueThatNeverOpensEndsTheCallWithRunTimeoutAndTheNextCallTriesAgain() {
+        val limits = RunLimits(contractMillis = 1_000L, minPassMillis = 300L, openMillis = 500L)
+        // Glue 0 blocks in its first pass after the contract run; glue 1 (the replacement) never opens; glue 2 works.
+        val made = AtomicReference<List<BlockingBridge>>(emptyList())
+        val runtime = IosModelRuntime(
+            OnnxBridgeFactory {
+                val before = made.load()
+                val n = before.size
+                val glue = BlockingBridge(
+                    FakeBridge(OneFaceRunner()),
+                    release,
+                    blockFrom = if (n == 0) 2 else Int.MAX_VALUE,
+                    blockOpen = n == 1,
+                )
+                check(made.compareAndSet(before, before + glue)) { "one creation at a time" }
+                glue
+            },
+        )
+        val masker = FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), runtime, runLimits = limits)
+        val img = IntArrayPixels(640, 480, gradientPixels(640, 480))
+        val before = img.data.copyOf()
+        val first = assertFailsWith<FaceMaskException.ModelOutputInvalid> { masker.maskInPlace(img) }
+        assertEquals(listOf("RUN_TIMEOUT"), first.findings)
+        val took = millisOf {
+            val e = assertFailsWith<FaceMaskException.ModelOutputInvalid> { masker.maskInPlace(img) }
+            assertEquals(listOf("RUN_TIMEOUT"), e.findings)
+        }
+        assertTrue(took >= limits.openMillis, "the creation limit applies: $took ms")
+        assertTrue(took <= limits.openMillis + TIMEOUT_MARGIN_MILLIS, "ended at the limit: $took ms")
+        assertContentEquals(before, img.data, "nothing was written into the image")
+        assertEquals(2, AbandonedRuns.count(), "the stuck pass and the stuck open")
+
+        val result = masker.maskInPlace(img)
+        assertEquals(3, made.load().size, "the next call created a new glue")
+        val reference = IntArrayPixels(640, 480, gradientPixels(640, 480))
+        val expected = IosFiles.masker().use { it.maskInPlace(reference) }
+        assertEquals(expected.masks, result.masks)
+        assertContentEquals(reference.data, img.data, "the same output as a normal run")
+
+        release.open()
+        val glues = made.load()
+        assertTrue(glues[0].awaitClosed(10_000L))
+        assertTrue(glues[1].awaitClosed(10_000L), "the late replacement is closed when its open returns")
+        assertNoAbandonedRunsLeft()
+        assertEquals(0, glues[1].runs, "the late replacement never ran")
+        masker.close()
+        assertEquals(1, glues[2].closes)
     }
 
     private fun jpeg(w: Int = 900, h: Int = 700): ByteArray {

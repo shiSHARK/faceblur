@@ -3,12 +3,15 @@
 
 package io.github.shishark.faceblur
 
+import io.github.shishark.faceblur.detect.FakeSession
 import io.github.shishark.faceblur.internal.runtime.AbandonedRuns
+import io.github.shishark.faceblur.internal.runtime.ModelRuntime
 import io.github.shishark.faceblur.internal.runtime.ModelSession
 import io.github.shishark.faceblur.internal.runtime.PassOutput
 import io.github.shishark.faceblur.internal.runtime.platformPassThreads
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.test.assertEquals
 import kotlin.time.TimeSource
@@ -82,6 +85,37 @@ internal class BlockingSession(
 
     /** True if [close] was called within [millis]. */
     fun awaitClosed(millis: Long): Boolean = closedSignal.await(millis)
+}
+
+/**
+ * A runtime over the one-face runner whose session creation number i (0-based) first waits on [release] without CPU
+ * when [blockOpen] (i) is true and then returns its session all the same; session i blocks from run [blockFrom] (i).
+ * Creations run on pass threads, so every session is recorded (thread-safe) before its creation blocks.
+ */
+internal class BlockingRuntime(
+    private val release: Release,
+    private val blockOpen: (Int) -> Boolean,
+    private val blockFrom: (Int) -> Int = { Int.MAX_VALUE },
+) : ModelRuntime {
+    private val opened = AtomicReference<List<BlockingSession>>(emptyList())
+    private val openCount = AtomicInt(0)
+
+    /** The sessions created or being created, in order. */
+    val sessions: List<BlockingSession> get() = opened.load()
+
+    /** The creations started. */
+    val opens: Int get() = openCount.load()
+
+    override fun open(model: DetectorModel, threads: Int): ModelSession {
+        val i = openCount.addAndFetch(1) - 1
+        val session = BlockingSession(FakeSession(OneFaceRunner(), model), release, blockFrom(i))
+        while (true) {
+            val before = opened.load()
+            if (opened.compareAndSet(before, before + session)) break
+        }
+        if (blockOpen(i)) release.await()
+        return session
+    }
 }
 
 /** Waits [millis] without CPU. */

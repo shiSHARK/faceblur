@@ -35,9 +35,9 @@ internal interface PassThreads {
 internal expect fun platformPassThreads(): PassThreads
 
 /**
- * The process-wide count of abandoned runs: runs that passed their limit while still inside the runtime.
- * Each one keeps a thread and its session's memory until it returns. At [MAX] no new run starts anywhere in the
- * process (fail closed) until one of them returns.
+ * The process-wide count of abandoned runs: runs and session creations ([DeadlineSession.open]) that passed their
+ * limit while still inside the runtime. Each one keeps a thread and its session's memory until it returns. At [MAX] no
+ * new run and no new session creation starts anywhere in the process (fail closed) until one of them returns.
  */
 internal object AbandonedRuns {
     /** The most abandoned runs before every new run is refused. */
@@ -68,20 +68,21 @@ internal object AbandonedRuns {
  *
  * While [AbandonedRuns] is at its maximum no run is started ([SessionTimeout], the session stays usable).
  *
+ * The `FaceMasker` creates every session through [open], which bounds the creation the same way.
+ *
  * One caller at a time (the `FaceMasker` rule): [inner] is used by one thread at a time, the pass thread during a run
  * and the caller otherwise; the signal and the atomic state order the hand-over.
  */
 internal class DeadlineSession(
     private val inner: ModelSession,
     private val threads: PassThreads = platformPassThreads(),
+    /** One signal per session: a retired session never waits again, so a late signal is never read. */
+    private val signal: PassSignal = threads.newSignal(),
 ) : ModelSession {
     override val runtimeVersion: String get() = inner.runtimeVersion
     override val executionProvider: String get() = inner.executionProvider
     override val inputs: List<SessionTensor> get() = inner.inputs
     override val outputs: List<SessionTensor> get() = inner.outputs
-
-    /** One signal per session: a retired session never waits again, so a late signal is never read. */
-    private val signal = threads.newSignal()
 
     /** True after a timeout: this session never runs again and must be replaced. */
     var retired: Boolean = false
@@ -162,13 +163,65 @@ internal class DeadlineSession(
     /** A failure of the inner run, rethrown on the caller's thread. */
     private class Failed(val error: Throwable)
 
-    private companion object {
-        const val RUNNING = 0
-        const val DONE = 1
-        const val ABANDONED = 2
+    companion object {
+        private const val RUNNING = 0
+        private const val DONE = 1
+        private const val ABANDONED = 2
+
+        /**
+         * Creates a session with [open] on a pass thread of [threads] and waits at most [timeoutMillis] for it. A
+         * creation still going then is abandoned and [SessionTimeout] is thrown at once, whether or not the runtime
+         * ever returns: the pass thread owns it, and if it ever returns a session, that session is closed there and
+         * never used. A creation that ended only after the deadline is a timeout as well (its session is closed at
+         * once). An abandoned creation counts in [AbandonedRuns] until it returns; at its maximum no creation starts
+         * ([SessionTimeout]). A failure of [open] within the limit is rethrown unchanged.
+         */
+        fun open(
+            timeoutMillis: Long,
+            threads: PassThreads = platformPassThreads(),
+            open: () -> ModelSession,
+        ): DeadlineSession {
+            if (AbandonedRuns.count() >= AbandonedRuns.MAX) throw SessionTimeout()
+            val pass = Pass()
+            val signal = threads.newSignal()
+            threads.start {
+                val outcome: Any =
+                    try {
+                        open()
+                    } catch (e: Throwable) {
+                        Failed(e)
+                    }
+                pass.outcome.store(outcome)
+                if (!pass.state.compareAndSet(RUNNING, DONE)) {
+                    // Abandoned: nobody waits for this session any more; it is closed here and never used.
+                    pass.outcome.store(null)
+                    try {
+                        (outcome as? ModelSession)?.close()
+                    } catch (e: Throwable) {
+                        // Nobody to report to on a pass thread; an escaping error would end the process.
+                    } finally {
+                        AbandonedRuns.add(-1)
+                    }
+                } else {
+                    signal.signal()
+                }
+            }
+            if (!signal.await(timeoutMillis)) {
+                AbandonedRuns.add(1)
+                if (pass.state.compareAndSet(RUNNING, ABANDONED)) throw SessionTimeout()
+                // The creation ended just at the deadline: a timeout all the same; its session is closed now.
+                AbandonedRuns.add(-1)
+                (pass.outcome.load() as? ModelSession)?.let { closeQuietly(it) }
+                throw SessionTimeout()
+            }
+            val outcome = pass.outcome.load()
+            if (outcome is Failed) throw outcome.error
+            // The signal was consumed by this wait, so the session can keep it for its runs.
+            return DeadlineSession(outcome as ModelSession, threads, signal)
+        }
 
         /** A close after a timeout: its failure is not reported (the timeout is), except the JVM's fatal errors. */
-        fun closeQuietly(session: ModelSession) {
+        private fun closeQuietly(session: ModelSession) {
             try {
                 session.close()
             } catch (e: Throwable) {

@@ -27,6 +27,8 @@ import kotlin.test.assertTrue
  * A model run that never returns (it blocks without CPU) ends the call at its limit with the existing
  * timeout error; nothing of that run is used again, the next call gets a new session and correct output, file mode
  * writes nothing, a blocked contract run fails creation with `TIMEOUT`, and stuck runs are bounded (fail closed).
+ * A session creation that never returns is bounded the same way: creation fails with `TIMEOUT`, a replacement during a
+ * call with `RUN_TIMEOUT`, its late session is closed and never used, and it counts toward the same bound.
  */
 class HardRunLimitTest {
     private val release = Release()
@@ -39,8 +41,11 @@ class HardRunLimitTest {
 
     private fun image() = IntArrayPixels(640, 480, gradientPixels(640, 480))
 
-    /** Short limits for the tests that do not check the production values (contract run 1 s, passes 300 ms). */
-    private val short = RunLimits(contractMillis = 1_000L, minPassMillis = 300L)
+    /**
+     * Short limits for the tests that do not check the production values (contract run 1 s, passes 300 ms, session
+     * creation 500 ms).
+     */
+    private val short = RunLimits(contractMillis = 1_000L, minPassMillis = 300L, openMillis = 500L)
 
     @AfterTest
     fun cleanUp() {
@@ -157,8 +162,8 @@ class HardRunLimitTest {
         }
         assertEquals(AbandonedRuns.MAX, AbandonedRuns.count())
         val opened = sessions.size
-        // At the bound no run starts: the call fails at once (its new session is refused before its contract run and
-        // closed), and so does a creation.
+        // At the bound no run and no session creation starts: the call fails at once (its new session is refused
+        // before the runtime is asked for it), and so does a creation.
         val took = millisOf {
             val e = assertFailsWith<FaceMaskException.ModelOutputInvalid> { masker.detect(image()) }
             assertEquals(listOf("RUN_TIMEOUT"), e.findings)
@@ -169,13 +174,101 @@ class HardRunLimitTest {
             FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), healthy, runLimits = short)
         }
         assertEquals(listOf("TIMEOUT"), e.findings)
-        assertEquals(2, sessions.size - opened)
-        assertTrue(sessions.drop(opened).all { it.runs == 0 && it.closes == 1 }, "no run started; closed at once")
+        assertEquals(opened, sessions.size, "no session was created at the bound")
 
         release.open()
         assertNoAbandonedRunsLeft()
         assertTrue(sessions.take(AbandonedRuns.MAX).all { it.closes == 1 }, "every stuck session was closed")
         masker.close()
+    }
+
+    @Test
+    fun aSessionCreationThatNeverReturnsFailsCreationWithTimeoutWithinItsLimit() {
+        val rt = BlockingRuntime(release, blockOpen = { true })
+        var e: FaceMaskException.ModelRejected? = null
+        val took = millisOf {
+            e = assertFailsWith<FaceMaskException.ModelRejected> {
+                FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), rt, runLimits = short)
+            }
+        }
+        assertEquals(listOf("TIMEOUT"), e?.findings)
+        assertTrue(took >= short.openMillis, "the creation limit applies: $took ms")
+        assertTrue(took <= short.openMillis + TIMEOUT_MARGIN_MILLIS, "ended at the limit: $took ms")
+        assertEquals(1, AbandonedRuns.count(), "the stuck creation counts toward the bound")
+
+        // The creation returns at last: its pass thread closes the session, which is never used.
+        release.open()
+        val late = rt.sessions.single()
+        assertTrue(late.awaitClosed(10_000L), "the late session is closed when its creation returns")
+        assertNoAbandonedRunsLeft()
+        assertEquals(0, late.runs, "the late session never ran")
+        assertEquals(1, late.closes)
+    }
+
+    @Test
+    fun aReplacementSessionThatNeverFinishesLoadingEndsTheCallWithRunTimeoutAndTheNextCallTriesAgain() {
+        // Session 0 blocks in its first pass after the contract run; creation 1 (its replacement) never returns;
+        // creation 2 is healthy.
+        val rt = BlockingRuntime(release, blockOpen = { it == 1 }, blockFrom = { if (it == 0) 2 else NEVER })
+        val masker = FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), rt, runLimits = short)
+        val img = image()
+        val before = img.data.copyOf()
+        val first = assertFailsWith<FaceMaskException.ModelOutputInvalid> { masker.maskInPlace(img) }
+        assertEquals(listOf("RUN_TIMEOUT"), first.findings)
+
+        var e: FaceMaskException.ModelOutputInvalid? = null
+        val took = millisOf { e = assertFailsWith<FaceMaskException.ModelOutputInvalid> { masker.maskInPlace(img) } }
+        assertEquals(listOf("RUN_TIMEOUT"), e?.findings, "a replacement past its limit is the call's run timeout")
+        assertTrue(took >= short.openMillis, "the creation limit applies: $took ms")
+        assertTrue(took <= short.openMillis + TIMEOUT_MARGIN_MILLIS, "ended at the limit: $took ms")
+        assertContentEquals(before, img.data, "nothing was written into the image")
+        assertEquals(2, rt.opens)
+        assertEquals(2, AbandonedRuns.count(), "the stuck pass and the stuck creation")
+
+        val result = masker.maskInPlace(img)
+        assertEquals(3, rt.opens, "the next call created a new session")
+        val reference = image()
+        val expected = FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), RunnerRuntime(OneFaceRunner())).use {
+            it.maskInPlace(reference)
+        }
+        assertEquals(expected.masks, result.masks)
+        assertContentEquals(reference.data, img.data, "the same output as a normal run")
+
+        release.open()
+        assertTrue(rt.sessions[0].awaitClosed(10_000L))
+        assertTrue(rt.sessions[1].awaitClosed(10_000L), "the late replacement is closed when its creation returns")
+        assertNoAbandonedRunsLeft()
+        assertEquals(0, rt.sessions[1].runs, "the late replacement never ran")
+        assertEquals(2, rt.sessions[0].runs, "the stuck session never ran again")
+        masker.close()
+        assertEquals(1, rt.sessions[2].closes)
+    }
+
+    @Test
+    fun abandonedCreationsCountTowardTheBoundAndAtTheBoundNoCreationStarts() {
+        val stuck = BlockingRuntime(release, blockOpen = { true })
+        repeat(AbandonedRuns.MAX) {
+            val e = assertFailsWith<FaceMaskException.ModelRejected> {
+                FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), stuck, runLimits = short)
+            }
+            assertEquals(listOf("TIMEOUT"), e.findings)
+        }
+        assertEquals(AbandonedRuns.MAX, AbandonedRuns.count())
+        val healthy = BlockingRuntime(release, blockOpen = { false })
+        val took = millisOf {
+            val e = assertFailsWith<FaceMaskException.ModelRejected> {
+                FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), healthy, runLimits = short)
+            }
+            assertEquals(listOf("TIMEOUT"), e.findings)
+        }
+        assertTrue(took < short.openMillis, "refused without waiting: $took ms")
+        assertEquals(0, healthy.opens, "no creation starts at the bound (fail closed)")
+
+        release.open()
+        assertNoAbandonedRunsLeft()
+        assertTrue(stuck.sessions.all { it.runs == 0 && it.closes == 1 }, "every late session closed, never used")
+        FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), healthy, runLimits = short).close()
+        assertEquals(1, healthy.opens, "creation works again once the stuck creations returned")
     }
 
     @Test

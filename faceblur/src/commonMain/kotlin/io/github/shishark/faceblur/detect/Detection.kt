@@ -150,6 +150,14 @@ internal object Limits {
     /** Contract run time limit at creation, in milliseconds. */
     const val CONTRACT_RUN_MILLIS: Long = 30_000L
 
+    /**
+     * Time limit for creating one runtime session (the runtime parses and optimises the model), in milliseconds, at
+     * creation and when a session is replaced after a run timeout. A technical bound against a runtime that never
+     * returns, not a performance target: a creation still going at the limit is abandoned and fails (`ModelRejected`
+     * with `TIMEOUT`; a replacement during a call: `ModelOutputInvalid` with `RUN_TIMEOUT`).
+     */
+    const val SESSION_OPEN_MILLIS: Long = 60_000L
+
     /** Smallest per-pass run timeout (Android and JVM), in milliseconds. */
     const val MIN_RUN_TIMEOUT_MILLIS: Long = 2_000L
 

@@ -8,7 +8,8 @@ amendment of 2026-11-11 (decisions 1, 2, 3, 4, 5 and 6: the session is created f
 ONNX Runtime C API, the carrier file is withdrawn, telemetry is disabled through the C API) records the design that
 was built in the third milestone and replaces the carrier-file design (kept as history in decision 6). The first
 build passed code review; the security review of the bridge, which this area requires, is still open, and this
-amendment is not final until it is done.
+amendment is not final until it is done. Amendment (0.1.1): a caller-side hard limit for every pass, the contract
+run and the session creation, on iOS as on Android (decision 4, alternative H).
 Date: 2026-11-01 (revised the same day after code, security and feasibility review: exact output sizes and sentinels,
 known-answer check at session open, `close()` during a call (never throws; release deferred), bounds contract,
 runtime logging and options, template home and comparison, trust boundary, measured telemetry facts; 2026-11-02:
@@ -322,6 +323,22 @@ same exact-size checks.
 - **No run timeout and no creation bound on iOS (platform limitation).** The 1.20.0 API has no call that stops a
   running pass. A pass that never returns blocks that call and that `FaceMasker`; cancellation acts only between
   passes; the integration guide says so. The Android/JVM run timeout of ADR 0012 decision 6 has no iOS counterpart.
+- **Amendment (0.1.1): a caller-side hard limit on iOS and Android.** The runtime still cannot stop a running pass on
+  iOS, but the caller no longer waits for it. Every pass, the contract run and the session creation (the glue's
+  `open`) run on a library pass thread (iOS: the global dispatch queue of the caller's quality-of-service class,
+  started with a C function, no block object per pass; Android and the JVM: a pool of daemon threads), and the
+  calling thread waits for each with a deadline: the per-pass limit of ADR 0012 decision 6, the contract-run limit,
+  and a fixed technical bound for session creation (not a performance target). At the deadline the call fails at
+  once with the existing codes (`ModelOutputInvalid[RUN_TIMEOUT]` during a call, `ModelRejected[TIMEOUT]` at
+  creation), also when the runtime never returns, and the session is abandoned: it never runs again and nothing it
+  produces is read. If the runtime returns later, the pass thread discards the output and closes the session (bridge
+  first, then the output table and buffers); the model bytes or the input of that call stay pinned until then. The
+  next call on the same `FaceMasker` opens and checks a new session first (steps 4 and 5 above). Abandoned runs and
+  creations are counted per process; at a small fixed bound no new pass, contract run or session creation starts in
+  the process (fail closed) until one of them returns. Each abandoned one keeps a thread and its session's memory
+  until it returns. Cancellation still acts only between passes. This replaces the limitation in the bullet above
+  and the timing statements of step 5. The threading rules below hold for the calling thread; the bridge's `open`
+  and `run` now run on a pass thread, still one call at a time per session.
 - **Error text never crosses the bridge.** Runtime error messages can contain the model path; the glue returns codes
   only. Exception messages are fixed English text plus the code (ADR 0002 decision 9).
 - **Exceptions at the boundary:**
@@ -418,6 +435,10 @@ pass with a deadline; on expiry it fails, the `FaceMasker` becomes unusable, and
 the runtime returns. Pro: the caller gets an error instead of a blocked call. Con: the runtime keeps the CPU busy
 until the pass ends anyway, the instance and its buffers stay alive for an unknown time, and a second thread per call
 adds complexity to the memory-critical path. Not chosen for 0.1.0; the limitation is documented (decision 4).
+**Amendment (0.1.1).** Adopted in a revised form (decision 4, amendment): the call waits with a deadline, but the
+instance is not poisoned. Only the abandoned session is retired, and the next call opens and checks a new one. The
+cons remain for the abandoned run itself (the runtime may keep its thread and CPU busy, and its session's memory
+stays alive until it returns); a per-process bound limits how many can pile up, and the bound fails closed.
 
 **I. Keep the carrier file (the earlier design).** Pro: Objective-C API only, no C target. Con: a copy of the app's model
 sits in the caches directory for a short time, which breaks the rule that only the masked output is written; file
@@ -443,7 +464,8 @@ Negative / risks
   of that version remains a residual risk. It is reduced by the required SHA-256, which is checked before the
   pre-parse, and by the guidance to bundle the model and hard-code its hash (ADR 0012 decisions 8 and 10). An app
   that computes the hash from an untrusted file at runtime gets no such reduction.
-- No run timeout on iOS (decision 4).
+- No run timeout on iOS (decision 4). Amendment (0.1.1): replaced by the caller-side hard limit (decision 4); an
+  abandoned run keeps a thread and its session's memory until it returns.
 - KMP apps must export the FaceBlur API in their framework header.
 - Keeping the template in step needs the scripts of decision 3. Across repositories it is checked per milestone and
   release, not per push, until the repositories are public.

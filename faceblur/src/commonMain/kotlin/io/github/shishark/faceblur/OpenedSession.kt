@@ -109,13 +109,15 @@ internal class OpenedSession private constructor(
 }
 
 /**
- * The run limits of a masker: the contract run's limit and the smallest per-pass limit. Production uses [DEFAULT]
- * (`Limits.CONTRACT_RUN_MILLIS`, `Limits.MIN_RUN_TIMEOUT_MILLIS`); only tests pass shorter ones, so that a run that
- * never returns can be tested in little time.
+ * The run limits of a masker: the contract run's limit, the smallest per-pass limit and the limit for creating a
+ * session. Production uses [DEFAULT] (`Limits.CONTRACT_RUN_MILLIS`, `Limits.MIN_RUN_TIMEOUT_MILLIS`,
+ * `Limits.SESSION_OPEN_MILLIS`); only tests pass shorter ones, so that a run or a session creation that never
+ * returns can be tested in little time.
  */
 internal class RunLimits(
     val contractMillis: Long = Limits.CONTRACT_RUN_MILLIS,
     val minPassMillis: Long = Limits.MIN_RUN_TIMEOUT_MILLIS,
+    val openMillis: Long = Limits.SESSION_OPEN_MILLIS,
 ) {
     companion object {
         val DEFAULT: RunLimits = RunLimits()

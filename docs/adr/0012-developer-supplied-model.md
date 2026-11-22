@@ -18,7 +18,9 @@ technical rationale, the final values of the merge work bound, the per-face cap 
 for the in-pass NMS with the code `TOO_MANY_NMS_PAIR_CHECKS`, and an actionable `TOO_MANY_MASKS` message; amended
 again 2026-11-03: the in-pass NMS work bound is final, with an actionable `TOO_MANY_NMS_PAIR_CHECKS` message, and
 the evaluation tool's formats and metrics are recorded in ADR 0014; amended 2026-11-03 (project owner): mask area
-factor lowered from 64 to 32; the pre-parse walker is fuzzed on path-filtered push and dispatch, no schedule)
+factor lowered from 64 to 32; the pre-parse walker is fuzzed on path-filtered push and dispatch, no schedule).
+Amendment (0.1.1): a caller-side hard limit for every pass, the contract run and the session creation on Android and
+iOS (decision 4 step 7, decision 5, decision 6; ADR 0010 decision 4).
 
 ## Context
 
@@ -347,7 +349,7 @@ public class ProfileCheckResult /* detections: List<FaceBox>, bestIoU: List<Floa
 | 4 Pre-parse | same | The bounded walk below: format identifier, external data anywhere, protobuf rules, graph IO for the contract (exactly one non-initializer input, float32, rank 4, compatible with the profile; every output the format needs present and float32, with a compatible rank and static K). | `ModelRejected[NOT_ONNX, NESTING_TOO_DEEP, EXTERNAL_DATA, INPUT_COUNT, INPUT_TYPE, INPUT_SHAPE, OUTPUT_MISSING, OUTPUT_TYPE, OUTPUT_SHAPE]` |
 | 5 Session | `FaceMasker(model, config)` | Runtime available (iOS: bridge registered, version 1.20.0, ADR 0010). Session created from the verified bytes with the locked options below; an option that cannot be set fails creation. | `RuntimeUnavailable`; `ModelRejected[RUNTIME_REJECTED]` |
 | 6 Runtime IO | same | Android/JVM: input and output info from the runtime equal the pre-parse result. iOS: the names equal it; the 1.20.0 API has names only. | `ModelRejected[IO_MISMATCH]` |
-| 7 Contract run | same | One pass on a uniform mid-grey input. Output names, types and shapes as declared; the checks of decision 5 pass; the pass ends within 30 s. Android/JVM stop the run at 30 s; iOS cannot stop a run (ADR 0010), so the limit is checked when the run returns, and a run that never returns blocks creation. A static output shape is recorded as the exact size for every later pass. The pass's duration sets the Android/JVM run timeout (decision 6). | `ModelRejected[CONTRACT_OUTPUT, CONTRACT_VALUES, TIMEOUT]` |
+| 7 Contract run | same | One pass on a uniform mid-grey input. Output names, types and shapes as declared; the checks of decision 5 pass; the pass ends within 30 s. Android/JVM stop the run at 30 s; iOS cannot stop a run (ADR 0010), so the limit is checked when the run returns, and a run that never returns blocks creation. A static output shape is recorded as the exact size for every later pass. The pass's duration sets the Android/JVM run timeout (decision 6). **Amendment (0.1.1):** on every platform the caller waits at most the limit (ADR 0010 decision 4), so a contract run that never returns fails creation with `TIMEOUT` at the limit instead of blocking it; the session is abandoned and never used. The pass's duration sets the per-pass limit on every platform. | `ModelRejected[CONTRACT_OUTPUT, CONTRACT_VALUES, TIMEOUT]` |
 
 **Fixed order (project owner's decision): size cap, then SHA-256, then pre-parse, then runtime.**
 - Each step runs only on bytes that passed the step before. Consequences:
@@ -461,6 +463,11 @@ Session creation itself (parsing, graph optimisation, constant folding) has **no
 only the contract run is timed. A model can stall or exhaust memory at creation. This is a documented residual and
 the developer's responsibility.
 
+**Amendment (0.1.1).** Session creation now has a caller-side hard limit on both platforms (decision 6): a creation
+still going at the limit fails with `ModelRejected[TIMEOUT]` (a new session opened during a call after a run
+timeout: `ModelOutputInvalid[RUN_TIMEOUT]`), also when the runtime never returns; a session it returns later is
+closed and never used. A model can still exhaust memory at creation; that part stays a documented residual.
+
 What the library does **not** check (the developer's responsibility):
 - **Operators.** There is no operator allow-list and no domain, IR or opset window. Any model that the runtime
   loads with its built-in operators is accepted, and an operator the runtime lacks fails at step 5.
@@ -500,7 +507,9 @@ in-memory image stays unchanged.
   `TOO_MANY_DETECTIONS`), never a truncation.
 - **Run failure.** A runtime error during a pass is `RUN_FAILED`; the Android/JVM run timeout is `RUN_TIMEOUT`
   (distinct from `Cancelled`). After `RUN_TIMEOUT` the instance stays usable; the next call uses new run options
-  (ASSUMPTION that a terminated run leaves the session valid, checked by a test).
+  (ASSUMPTION that a terminated run leaves the session valid, checked by a test). Amendment (0.1.1): `RUN_TIMEOUT`
+  on every platform (decision 6); the timed-out session is never used again, and the next call that detects opens and
+  checks a new session first (decision 4 steps 5 to 7), so the assumption is no longer needed.
 - **Runtime errors stay inside.** Runtime exception objects (`OrtException`, `NSError`) are never chained as `cause`,
   and their text never enters a FaceBlur message, on every platform (runtime messages can contain paths and names).
 
@@ -527,9 +536,9 @@ truncated and no box dropped to stay within a limit.
 | Part-mask growth per face | `MAX_PART_MASK_GROWTH` = 32, final | Above it the face is drawn as one RECTANGLE cover (decision 3, ADR 0013 decision 1); never an error. Technical rationale: it bounds the masks of one face at 33. A face grows only when a lower-scored box of the same face changes its edges; with overlap 0.25 a face is seen by a few tiles and the global pass, so ordinary output needs a few growth steps per face |
 | Masks per image (faces plus part masks) | `MAX_MASKS_PER_IMAGE` = 65,536, final (project owner's decision) | `TOO_MANY_MASKS` for masks from the model, checked after the merge before any result object is created; a caller's plan gives `InvalidConfiguration("masks")` (ADR 0013 decision 2). Technical rationale: it bounds the per-mask memory (at most 8 MiB of per-mask arrays, ADR 0013 decision 6) and fixed costs. A photo has far fewer faces; a model reaches the limit only at a score threshold far below its useful range, which is why the message says so (decision 7) |
 | Mask work per image | `MAX_MASK_AREA_FACTOR` = 32, final (lowered from 64 by the project owner after the phone measurements): the summed working-rectangle area of all masks, clipped to the image, at most 32 × max(image pixels, 1,048,576) | `TOO_MANY_MASKS` or `InvalidConfiguration("masks")` as above, checked before the mask stage reads any pixel. Technical rationale: the stage's run time grows with this sum, so the limit bounds it at 32 passes over the image (over 1 MP for small images); separate faces cover a fraction of the image once, so only heavily stacked masks reach it. A generous technical limit; exceeding it fails safely. The guides give the worst-case rule (memory and mask limit) but state no masking times; slower phones take longer. Run masking off the main thread and offer cancellation. |
-| Contract-run time | 30 s | Android/JVM: the run is stopped; iOS: checked when the run returns (decision 4 step 7) |
-| Run timeout per pass | Android/JVM: max(2 s, 20 × the contract-run time), through `RunOptions.setTerminate` | iOS: none. The 1.20.0 runtime has no terminate call; a pass that never returns blocks that call and that instance, and cancellation acts only between passes (platform limitation, ADR 0010) |
-| Session creation | no time limit (both platforms) | documented residual (decision 4) |
+| Contract-run time | 30 s | Android/JVM: the run is stopped; iOS: checked when the run returns (decision 4 step 7). Amendment (0.1.1): on both platforms the caller also waits at most this long (row "Run timeout per pass") |
+| Run timeout per pass | Android/JVM: max(2 s, 20 × the contract-run time), through `RunOptions.setTerminate`. Amendment (0.1.1): the same value on iOS | iOS: none. The 1.20.0 runtime has no terminate call; a pass that never returns blocks that call and that instance, and cancellation acts only between passes (platform limitation, ADR 0010). **Amendment (0.1.1):** a caller-side hard limit on both platforms (ADR 0010 decision 4): the caller waits for the pass on a library thread at most this long, then fails with `RUN_TIMEOUT` whether or not the runtime returns; Android/JVM still also stop the run. The session is abandoned and never used again; a per-process bound on abandoned runs fails closed. Cancellation still acts only between passes |
+| Session creation | no time limit (both platforms). Amendment (0.1.1): `SESSION_OPEN_MILLIS` on both platforms, a fixed technical bound | documented residual (decision 4). **Amendment (0.1.1):** a technical bound against a runtime that never returns, not a performance target; past it `ModelRejected[TIMEOUT]` (during a call `RUN_TIMEOUT`), and the creation counts toward the same per-process bound |
 | `onnxThreads` | 0 .. 4 | ADR 0002 decision 10 |
 
 **Rule for the limits.** Every limit in this table is a generous technical limit: its value comes from the memory or
@@ -795,7 +804,8 @@ Negative / risks
   removes them too. The extra area is small (the slivers only).
 - On iOS, models reach ONNX Runtime 1.20.0, so its parser surface is exposed to the app's model file. The pre-parse,
   the format lock and the trusted-model advice reduce this risk but do not remove it. iOS has no run timeout, and
-  session creation has no time limit on either platform.
+  session creation has no time limit on either platform. Amendment (0.1.1): both now have a caller-side hard limit
+  (decision 6); an abandoned run or creation keeps a thread and its session's memory until the runtime returns.
 - iOS writes a short-lived copy of the model to Caches during creation.
 - About a dozen new public types, each in the ABI dump and mirrored in Swift.
 - Tests depend on the reference model's upstream download (cache, clear failure, never skipped).

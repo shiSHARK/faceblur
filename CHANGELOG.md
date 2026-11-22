@@ -14,10 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
-- A model run that never returns no longer blocks the masking call; it ends with the existing run-timeout error
-  (`ModelOutputInvalid` with `RUN_TIMEOUT`; when creating a `FaceMasker`, `ModelRejected` with `TIMEOUT`) at its
-  time limit, on Android and iOS. Nothing of that run is used again: the next call on the same `FaceMasker` opens a
-  new runtime session first.
+- A model run that never returns, or a model that never finishes loading, no longer blocks the masking call or the
+  creation of a `FaceMasker`; it ends with the existing run-timeout error (`ModelOutputInvalid` with `RUN_TIMEOUT`;
+  when creating a `FaceMasker`, `ModelRejected` with `TIMEOUT`) at its time limit, on Android and iOS. Nothing of
+  that run or session is used again: the next call on the same `FaceMasker` opens a new runtime session first.
 
 ## Repository updates after 0.1.0 (no new artifacts)
 
