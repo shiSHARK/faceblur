@@ -3,16 +3,24 @@ package io.github.shishark.faceblur.android
 
 import android.content.Context
 import android.system.OsConstants
+import io.github.shishark.faceblur.BlockingSession
 import io.github.shishark.faceblur.CancellationToken
 import io.github.shishark.faceblur.FaceMaskException
 import io.github.shishark.faceblur.FaceMasker
 import io.github.shishark.faceblur.FaceMaskerConfig
 import io.github.shishark.faceblur.OneFaceRunner
 import io.github.shishark.faceblur.OutputTarget
+import io.github.shishark.faceblur.Release
+import io.github.shishark.faceblur.RunLimits
+import io.github.shishark.faceblur.TIMEOUT_MARGIN_MILLIS
+import io.github.shishark.faceblur.assertNoAbandonedRunsLeft
+import io.github.shishark.faceblur.detect.FakeSession
 import io.github.shishark.faceblur.detect.RunnerRuntime
 import io.github.shishark.faceblur.detect.testYuNetModel
 import io.github.shishark.faceblur.internal.runtime.FaceBlurRuntime
+import io.github.shishark.faceblur.internal.runtime.ModelRuntime
 import io.github.shishark.faceblur.maskJpeg
+import io.github.shishark.faceblur.millisOf
 import org.junit.After
 import org.junit.Before
 import org.junit.runner.RunWith
@@ -309,6 +317,61 @@ class NoCopyLeftBehindTest {
         assertEquals(0, sink.size())
         assertEquals(emptyList(), dir)
         assertEquals(emptyList(), elsewhere)
+    }
+
+    // --- a model run that never returns ----------------------------------------------------------------------------
+
+    @Test
+    fun aRunThatNeverReturnsLeavesTheDirectoryByteIdenticalAndTheNextCallWritesTheNormalOutput() {
+        val input = source()
+        val existing = File(out, "existing.jpg").apply { writeBytes(byteArrayOf(9, 8, 7)) }
+        val sourceBytes = input.readBytes()
+        val limits = RunLimits(contractMillis = 1_000L, minPassMillis = 300L)
+        val release = Release()
+        try {
+            for ((name, target) in listOf(
+                "new file" to OutputTarget.NewFile(File(out, "fresh.jpg").path),
+                "replace" to OutputTarget.NewFile(existing.path, true),
+                "overwrite source" to OutputTarget.OverwriteSource,
+            )) {
+                val sessions = ArrayList<BlockingSession>()
+                // The first session blocks without CPU in its first pass after the contract run, and never returns.
+                val runtime = ModelRuntime { model, _ ->
+                    val blockFrom = if (sessions.isEmpty()) 2 else Int.MAX_VALUE
+                    BlockingSession(FakeSession(OneFaceRunner(), model), release, blockFrom).also { sessions += it }
+                }
+                val stuck = FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), runtime, runLimits = limits)
+                var thrown: Throwable? = null
+                var took = 0L
+                val (dir, elsewhere) = changes {
+                    took = millisOf { thrown = runCatching { stuck.maskFile(input.path, target) }.exceptionOrNull() }
+                }
+                val e = thrown as? FaceMaskException.ModelOutputInvalid
+                assertEquals(listOf("RUN_TIMEOUT"), e?.findings, "$name: $thrown")
+                val limit = sessions[0].blockedLimit
+                assertTrue(took <= limit + TIMEOUT_MARGIN_MILLIS, "$name: ended at the limit ($took ms, $limit ms)")
+                assertEquals(emptyList(), dir, "$name: the target directory is unchanged")
+                assertEquals(emptyList(), elsewhere, "$name: nothing written elsewhere")
+                assertContentEquals(byteArrayOf(9, 8, 7), existing.readBytes())
+                assertContentEquals(sourceBytes, input.readBytes())
+                noTemporaryFile()
+
+                // The next call on the same masker (a new session) writes what a normal masker writes.
+                val fresh = File(out, "next.jpg")
+                stuck.maskFile(input.path, OutputTarget.NewFile(fresh.path))
+                assertEquals(2, sessions.size, "$name: a new session was opened")
+                val normal = File(out, "normal.jpg")
+                masker.maskFile(input.path, OutputTarget.NewFile(normal.path))
+                assertContentEquals(normal.readBytes(), fresh.readBytes(), "$name: the same output as a normal run")
+                fresh.delete()
+                normal.delete()
+                stuck.close()
+                noTemporaryFile()
+            }
+        } finally {
+            release.open()
+        }
+        assertNoAbandonedRunsLeft()
     }
 
     // --- the read-only opens and where the writer may write (scripts/sast/write-sites.txt, read-open row) ----------

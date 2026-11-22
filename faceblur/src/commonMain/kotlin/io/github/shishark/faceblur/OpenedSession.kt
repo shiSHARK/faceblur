@@ -17,8 +17,11 @@ internal class OpenedSession private constructor(
     val info: MaskerModelInfo,
 ) {
     companion object {
-        /** Step 6 (runtime view of the inputs and outputs) and step 7 (contract run) for [model] on [session]. */
-        fun check(model: DetectorModel, session: ModelSession): OpenedSession {
+        /**
+         * Step 6 (runtime view of the inputs and outputs) and step 7 (contract run) for [model] on [session], with
+         * the run limits [limits] (production: [RunLimits.DEFAULT]).
+         */
+        fun check(model: DetectorModel, session: ModelSession, limits: RunLimits = RunLimits.DEFAULT): OpenedSession {
             val d = model.description
             if (!matches(d.inputs, session.inputs) || !matches(d.outputs, session.outputs)) {
                 throw FaceMaskException.ModelRejected(listOf(IO_MISMATCH))
@@ -29,7 +32,7 @@ internal class OpenedSession private constructor(
                     session,
                     model.profile,
                     declaredOutputs = declared,
-                    timeoutMillis = Limits.CONTRACT_RUN_MILLIS,
+                    timeoutMillis = limits.contractMillis,
                 )
             val mark = TimeSource.Monotonic.markNow()
             val outputs =
@@ -41,8 +44,8 @@ internal class OpenedSession private constructor(
                     )
                 }
             val contractMillis = mark.elapsedNow().inWholeMilliseconds
-            // Platforms that cannot stop a run (iOS) check the limit when the run returns.
-            if (contractMillis > Limits.CONTRACT_RUN_MILLIS) throw FaceMaskException.ModelRejected(listOf(TIMEOUT))
+            // A run that returned only just in time but measured above the limit is a timeout as well.
+            if (contractMillis > limits.contractMillis) throw FaceMaskException.ModelRejected(listOf(TIMEOUT))
             try {
                 probe.decode(outputs, model.profile.scoreThreshold) {}
             } catch (e: OutputCheckFailed) {
@@ -66,7 +69,7 @@ internal class OpenedSession private constructor(
                     recorded[name] = expected
                 }
             }
-            val timeout = maxOf(Limits.MIN_RUN_TIMEOUT_MILLIS, Limits.RUN_TIMEOUT_FACTOR * contractMillis)
+            val timeout = maxOf(limits.minPassMillis, Limits.RUN_TIMEOUT_FACTOR * contractMillis)
             val detector = ModelDetector(session, model.profile, recorded, declared, timeout)
             val info =
                 MaskerModelInfo(model.info, session.runtimeVersion, session.executionProvider, FaceBlurInfo.VERSION)
@@ -102,5 +105,19 @@ internal class OpenedSession private constructor(
         const val CONTRACT_OUTPUT = "CONTRACT_OUTPUT"
         const val CONTRACT_VALUES = "CONTRACT_VALUES"
         const val TIMEOUT = "TIMEOUT"
+    }
+}
+
+/**
+ * The run limits of a masker: the contract run's limit and the smallest per-pass limit. Production uses [DEFAULT]
+ * (`Limits.CONTRACT_RUN_MILLIS`, `Limits.MIN_RUN_TIMEOUT_MILLIS`); only tests pass shorter ones, so that a run that
+ * never returns can be tested in little time.
+ */
+internal class RunLimits(
+    val contractMillis: Long = Limits.CONTRACT_RUN_MILLIS,
+    val minPassMillis: Long = Limits.MIN_RUN_TIMEOUT_MILLIS,
+) {
+    companion object {
+        val DEFAULT: RunLimits = RunLimits()
     }
 }

@@ -37,7 +37,10 @@ internal class SessionTensor(val name: String, val elementType: Int?, val shape:
  */
 internal class PassOutput(val elementType: Int, val shape: LongArray, val data: FloatArray?)
 
-/** A runtime session. Not thread-safe: the `FaceMasker` makes at most one call at a time. */
+/**
+ * A runtime session. Not thread-safe: the `FaceMasker` makes at most one call at a time, and [DeadlineSession] uses
+ * it from one thread at a time (a pass thread during [run], the caller otherwise).
+ */
 internal interface ModelSession {
     /** The runtime's version string, read from the runtime. */
     val runtimeVersion: String
@@ -55,7 +58,9 @@ internal interface ModelSession {
      * Runs one pass on [input] (shape [inputShape]) and returns exactly the requested [outputNames] it produced.
      * An output with more than [maxElements] elements is returned without data. A run still going after
      * [timeoutMillis] (0 = no limit) is stopped and [SessionTimeout] is thrown; any other failure throws
-     * [SessionRunFailed]. Platforms that cannot stop a run (iOS 1.20.0) ignore [timeoutMillis].
+     * [SessionRunFailed]. Platforms that cannot stop a run (iOS 1.20.0) ignore [timeoutMillis]. The `FaceMasker`
+     * wraps every session in a [DeadlineSession], which releases the caller at [timeoutMillis] on every platform,
+     * also when this call never returns.
      */
     fun run(
         input: FloatArray,

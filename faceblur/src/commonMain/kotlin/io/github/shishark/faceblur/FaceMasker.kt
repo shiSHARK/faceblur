@@ -17,9 +17,9 @@ import io.github.shishark.faceblur.filemode.StreamSink
 import io.github.shishark.faceblur.geometry.DetectedFace
 import io.github.shishark.faceblur.image.PixelDetectionImage
 import io.github.shishark.faceblur.internal.model.Warnings
+import io.github.shishark.faceblur.internal.runtime.DeadlineSession
 import io.github.shishark.faceblur.internal.runtime.FaceBlurRuntime
 import io.github.shishark.faceblur.internal.runtime.ModelRuntime
-import io.github.shishark.faceblur.internal.runtime.ModelSession
 import io.github.shishark.faceblur.internal.runtime.RuntimeOptionFailed
 import io.github.shishark.faceblur.internal.runtime.SessionRejected
 import io.github.shishark.faceblur.mask.StageSeams
@@ -51,6 +51,11 @@ import kotlin.time.TimeSource
  * Detected faces get masks whose expansion is, per axis, the larger of the profile's minimum
  * ([DetectorProfile.minMaskExpandX]/`Y`) and [MaskingConfig.expandX]/`Y`; [Detection.masking] carries it.
  *
+ * Every model run has a time limit. A run still going at its limit ends the call at the limit with
+ * [FaceMaskException.ModelOutputInvalid] (`RUN_TIMEOUT`; at creation [FaceMaskException.ModelRejected] with
+ * `TIMEOUT`), also when the runtime never returns; nothing of that run is used again, and the next call that detects
+ * opens a new runtime session first.
+ *
  * @throws FaceMaskException.RuntimeUnavailable when no ONNX Runtime binding is installed for this platform or a
  * required session option cannot be set.
  * @throws FaceMaskException.ModelRejected when the runtime refuses the model, its view of the inputs and outputs
@@ -60,24 +65,37 @@ import kotlin.time.TimeSource
 public class FaceMasker private constructor(
     /** The settings of this instance. */
     public val config: FaceMaskerConfig,
-    private val profile: DetectorProfile,
-    private val opened: OpenedSession,
+    private val model: DetectorModel,
+    /** The runtime binding the sessions of this instance come from (the first one and every replacement). */
+    private val runtime: ModelRuntime?,
     private val limits: DetectionSettings,
+    private val runLimits: RunLimits,
 ) : AutoCloseable {
     /** Creates a masker for [model] with [config]. */
     @JvmOverloads
     @Throws(FaceMaskException::class)
     public constructor(model: DetectorModel, config: FaceMaskerConfig = FaceMaskerConfig()) :
-        this(config, model.profile, openSession(model, config, FaceBlurRuntime.runtime()), defaultLimits(model))
+        this(config, model, FaceBlurRuntime.runtime(), defaultLimits(model), RunLimits.DEFAULT)
+
+    private val profile: DetectorProfile = model.profile
+
+    /**
+     * The checked session in use, or null after a run timeout until the next call that detects opens a new one.
+     * Read and written only inside a call or the release ([busy] held).
+     */
+    private var current: Opened?
 
     /**
      * Report of this instance: the model report plus the runtime version read from the runtime, the execution provider
      * actually used and the FaceBlur version. FaceBlur never logs it.
      */
-    public val modelInfo: MaskerModelInfo = opened.info
+    public val modelInfo: MaskerModelInfo
 
-    private val session: ModelSession = opened.session
-    private val detector = opened.detector
+    init {
+        val first = openSession(model, config, runtime, runLimits)
+        current = first
+        modelInfo = first.checked.info
+    }
 
     /** The masking of detected faces: the instance's [MaskingConfig] with at least the profile's expansion. */
     private val effectiveMasking = MaskingConfig(
@@ -454,10 +472,48 @@ public class FaceMasker private constructor(
      * again either way. Only the JVM's fatal errors pass (ADR 0002 decision 9); on iOS nothing escapes.
      */
     private fun closeRunner() {
+        val session = current?.session ?: return
+        current = null
         try {
             session.close()
         } catch (e: Throwable) {
             if (isFatal(e)) throw e
+        }
+    }
+
+    /**
+     * The detector of the session in use; after a run timeout (no session in use) a new session is opened and checked
+     * first, exactly as at creation. A failure to open it fails this call with `RUN_TIMEOUT` (its contract run
+     * timed out, or too many runs are stuck in the runtime) or `RUN_FAILED` (anything else), and the next call tries
+     * again.
+     */
+    private fun detectorForCall(): ModelDetector {
+        current?.let { return it.checked.detector }
+        val fresh =
+            try {
+                openSession(model, config, runtime, runLimits)
+            } catch (e: FaceMaskException.ModelRejected) {
+                val code = if (OpenedSession.TIMEOUT in
+                    e.findings
+                ) {
+                    ModelDetector.RUN_TIMEOUT
+                } else {
+                    ModelDetector.RUN_FAILED
+                }
+                throw FaceMaskException.ModelOutputInvalid(listOf(code))
+            } catch (e: FaceMaskException) {
+                throw FaceMaskException.ModelOutputInvalid(listOf(ModelDetector.RUN_FAILED))
+            }
+        current = fresh
+        return fresh.checked.detector
+    }
+
+    /** Drops a session retired by a run timeout (its own pass thread or its timeout already released it). */
+    private fun dropRetiredSession() {
+        val session = current?.session ?: return
+        if (session.retired) {
+            current = null
+            session.close()
         }
     }
 
@@ -469,6 +525,7 @@ public class FaceMasker private constructor(
         checkSize(image.width, image.height)
         checkCancelled(cancellation)
         val mark = TimeSource.Monotonic.markNow()
+        val detector = detectorForCall()
         val tiler = TiledFaceDetector(detector, limits, checkCancelled = { checkCancelled(cancellation) })
         val outcome = tiler.detect(PixelDetectionImage(image))
         val faces = outcome.faces.map { it.toFaceBox() }
@@ -558,6 +615,7 @@ public class FaceMasker private constructor(
             if (isFatal(e)) throw e
             throw FaceMaskException.Internal("unexpected failure", e)
         } finally {
+            dropRetiredSession()
             busy.store(false)
             if (closed.load()) releaseIfIdle()
             // ADR 0004 decision 4: iOS collects garbage here ("between photos"); null on Android and the JVM.
@@ -582,7 +640,9 @@ public class FaceMasker private constructor(
         @HiddenFromJava
         internal fun FaceMasker.globalPassForTest(image: PixelImage, minScore: Float): List<FaceBox> = guarded {
             val settings = DetectionSettings(minScore = minScore)
-            TiledFaceDetector(detector, settings).globalPassOnly(PixelDetectionImage(image)).map { it.toFaceBox() }
+            TiledFaceDetector(detectorForCall(), settings).globalPassOnly(PixelDetectionImage(image)).map {
+                it.toFaceBox()
+            }
         }
 
         /**
@@ -595,17 +655,26 @@ public class FaceMasker private constructor(
             config: FaceMaskerConfig,
             runtime: ModelRuntime?,
             limits: DetectionSettings = defaultLimits(model),
-        ): FaceMasker = FaceMasker(config, model.profile, openSession(model, config, runtime), limits)
+            runLimits: RunLimits = RunLimits.DEFAULT,
+        ): FaceMasker = FaceMasker(config, model, runtime, limits, runLimits)
 
         private fun defaultLimits(model: DetectorModel) = DetectionSettings(minScore = model.profile.scoreThreshold)
 
-        /** Steps 5-7 of ADR 0012 decision 4: session, runtime view of the inputs and outputs, contract run. */
-        private fun openSession(model: DetectorModel, config: FaceMaskerConfig, runtime: ModelRuntime?): OpenedSession {
+        /**
+         * Steps 5-7 of ADR 0012 decision 4: session, runtime view of the inputs and outputs, contract run. Every run
+         * of the session has a hard limit ([DeadlineSession]).
+         */
+        private fun openSession(
+            model: DetectorModel,
+            config: FaceMaskerConfig,
+            runtime: ModelRuntime?,
+            runLimits: RunLimits,
+        ): Opened {
             val factory =
                 runtime ?: throw FaceMaskException.RuntimeUnavailable(
                     "no ONNX Runtime binding is installed for this platform (see the integration guide)",
                 )
-            val session =
+            val opened =
                 try {
                     factory.open(model, config.onnxThreads)
                 } catch (e: FaceMaskException) {
@@ -619,8 +688,9 @@ public class FaceMasker private constructor(
                     // Runtime exceptions are never chained: their text can contain paths or model names.
                     throw FaceMaskException.RuntimeUnavailable("the runtime session could not be created")
                 }
+            val session = DeadlineSession(opened)
             try {
-                return OpenedSession.check(model, session)
+                return Opened(OpenedSession.check(model, session, runLimits), session)
             } catch (e: Throwable) {
                 try {
                     session.close()
@@ -633,6 +703,9 @@ public class FaceMasker private constructor(
         }
 
         private fun checkSize(width: Int, height: Int) = MaskWrite.checkSize(width, height)
+
+        /** A checked session and its hard-limit wrapper (the same session). */
+        private class Opened(val checked: OpenedSession, val session: DeadlineSession)
 
         private fun checkCancelled(cancellation: CancellationToken?) {
             if (cancellation?.isCancellationRequested == true) throw FaceMaskException.Cancelled()
