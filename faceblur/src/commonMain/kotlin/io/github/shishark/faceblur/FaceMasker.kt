@@ -57,7 +57,11 @@ import kotlin.time.TimeSource
  * [FaceMaskException.ModelRejected] with `TIMEOUT`), also when the runtime never returns; nothing of that run is used
  * again, and the next call that detects opens a new runtime session first. A session creation still going at its
  * limit ends the same way (at creation `ModelRejected` with `TIMEOUT`, during a call `RUN_TIMEOUT`); a session it
- * returns later is closed and never used.
+ * returns later is closed and never used. Each such run or creation keeps a thread and its session's memory until it
+ * returns, so their number is bounded process-wide: once the bound is reached, every masker in the process, also one
+ * with a healthy model, fails at once (calls with `RUN_TIMEOUT`, creation with `ModelRejected` and `TIMEOUT`) until
+ * one of them returns. So `TIMEOUT` and `RUN_TIMEOUT` also mean "creation took too long" and "refused at the bound",
+ * not only "this model is too slow".
  *
  * @throws FaceMaskException.RuntimeUnavailable when no ONNX Runtime binding is installed for this platform or a
  * required session option cannot be set.
@@ -680,7 +684,9 @@ public class FaceMasker private constructor(
                 )
             val session =
                 try {
-                    DeadlineSession.open(runLimits.openMillis) { factory.open(model, config.onnxThreads) }
+                    DeadlineSession.open(runLimits.openMillis, runLimits.threads) {
+                        factory.open(model, config.onnxThreads)
+                    }
                 } catch (e: SessionTimeout) {
                     // The creation passed its limit (or too many runs are stuck in the runtime): abandoned, never used.
                     throw FaceMaskException.ModelRejected(listOf(OpenedSession.TIMEOUT))

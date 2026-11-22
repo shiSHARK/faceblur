@@ -7,7 +7,9 @@ import io.github.shishark.faceblur.detect.OutputCheckFailed
 import io.github.shishark.faceblur.internal.model.DeclaredTensor
 import io.github.shishark.faceblur.internal.model.ModelLoader
 import io.github.shishark.faceblur.internal.runtime.ModelSession
+import io.github.shishark.faceblur.internal.runtime.PassThreads
 import io.github.shishark.faceblur.internal.runtime.SessionTensor
+import io.github.shishark.faceblur.internal.runtime.platformPassThreads
 import kotlin.time.TimeSource
 
 /** A session that passed steps 6 and 7 of ADR 0012 decision 4, with its detector and report. */
@@ -109,15 +111,17 @@ internal class OpenedSession private constructor(
 }
 
 /**
- * The run limits of a masker: the contract run's limit, the smallest per-pass limit and the limit for creating a
- * session. Production uses [DEFAULT] (`Limits.CONTRACT_RUN_MILLIS`, `Limits.MIN_RUN_TIMEOUT_MILLIS`,
- * `Limits.SESSION_OPEN_MILLIS`); only tests pass shorter ones, so that a run or a session creation that never
- * returns can be tested in little time.
+ * The run limits of a masker: the contract run's limit, the smallest per-pass limit, the limit for creating a
+ * session and the pass threads its sessions are created and run on. Production uses [DEFAULT]
+ * (`Limits.CONTRACT_RUN_MILLIS`, `Limits.MIN_RUN_TIMEOUT_MILLIS`, `Limits.SESSION_OPEN_MILLIS`, the platform's pass
+ * threads); only tests pass shorter limits, so that a run or a session creation that never returns can be tested in
+ * little time, or other pass threads, so that a failing hand-over can be tested.
  */
 internal class RunLimits(
     val contractMillis: Long = Limits.CONTRACT_RUN_MILLIS,
     val minPassMillis: Long = Limits.MIN_RUN_TIMEOUT_MILLIS,
     val openMillis: Long = Limits.SESSION_OPEN_MILLIS,
+    val threads: PassThreads = platformPassThreads(),
 ) {
     companion object {
         val DEFAULT: RunLimits = RunLimits()

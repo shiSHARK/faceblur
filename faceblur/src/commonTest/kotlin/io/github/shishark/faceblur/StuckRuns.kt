@@ -14,6 +14,7 @@ import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.TimeSource
 
 /**
@@ -121,6 +122,16 @@ internal class BlockingRuntime(
 /** Waits [millis] without CPU. */
 internal fun pause(millis: Long) {
     platformPassThreads().newSignal().await(millis)
+}
+
+/** Waits up to 10 s without CPU until [session] has a run blocked on its release, then asserts it. */
+internal fun awaitBlocked(session: BlockingSession) {
+    var waited = 0L
+    while (session.blockedLimit < 0L && waited < 10_000L) {
+        pause(5L)
+        waited += 5L
+    }
+    assertTrue(session.blockedLimit >= 0L, "a run of the session is blocked")
 }
 
 /** Milliseconds [block] took. */

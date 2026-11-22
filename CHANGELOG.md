@@ -18,6 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   creation of a `FaceMasker`; it ends with the existing run-timeout error (`ModelOutputInvalid` with `RUN_TIMEOUT`;
   when creating a `FaceMasker`, `ModelRejected` with `TIMEOUT`) at its time limit, on Android and iOS. Nothing of
   that run or session is used again: the next call on the same `FaceMasker` opens a new runtime session first.
+  Runs and creations that never return are bounded process-wide: once the bound is reached, every `FaceMasker` in the
+  process, also one with a healthy model, fails at once with the same errors (`RUN_TIMEOUT`, or `TIMEOUT` when
+  creating) until one of them returns.
 
 ## Repository updates after 0.1.0 (no new artifacts)
 

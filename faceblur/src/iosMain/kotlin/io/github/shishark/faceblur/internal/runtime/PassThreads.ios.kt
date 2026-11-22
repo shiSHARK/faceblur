@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
-@file:OptIn(ExperimentalForeignApi::class)
+@file:OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 
 package io.github.shishark.faceblur.internal.runtime
 
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.asStableRef
+import kotlinx.cinterop.autoreleasepool
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.staticCFunction
 import platform.darwin.DISPATCH_TIME_FOREVER
@@ -44,10 +46,14 @@ private fun runPass(context: COpaquePointer?) {
     val ref = context?.asStableRef<() -> Unit>() ?: return
     val task = ref.get()
     ref.dispose()
-    try {
-        task()
-    } catch (e: Throwable) {
-        // The task reports its own failures; an exception escaping a dispatch thread would end the process.
+    // Global queues drain no autorelease pool per work item: objects the glue autoreleases (bridged strings) are
+    // freed here, at the end of each pass.
+    autoreleasepool {
+        try {
+            task()
+        } catch (e: Throwable) {
+            // The task reports its own failures; an exception escaping a dispatch thread would end the process.
+        }
     }
 }
 

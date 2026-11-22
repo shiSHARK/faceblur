@@ -64,7 +64,9 @@ internal object AbandonedRuns {
  * the deadline) this session is RETIRED: it never runs again ([SessionTimeout] at once), no output of the timed-out
  * run is ever read, and [inner] is closed: at once if its run has ended, otherwise by the pass thread if that run ever
  * returns (its output is then discarded). [close] of a retired session touches nothing of [inner]. The owner replaces
- * a retired session by a newly opened one ([retired]).
+ * a retired session by a newly opened one ([retired]). Every other way a run can end on the caller's side without
+ * its outcome (the start or the wait threw, or the wait woke before the run ended) retires the session the same way
+ * (fail closed) and is rethrown: a late signal of that run is never read, and no later run shares [inner] with it.
  *
  * While [AbandonedRuns] is at its maximum no run is started ([SessionTimeout], the session stays usable).
  *
@@ -84,7 +86,7 @@ internal class DeadlineSession(
     override val inputs: List<SessionTensor> get() = inner.inputs
     override val outputs: List<SessionTensor> get() = inner.outputs
 
-    /** True after a timeout: this session never runs again and must be replaced. */
+    /** True after a timeout or a failed hand-over: this session never runs again and must be replaced. */
     var retired: Boolean = false
         private set
 
@@ -100,38 +102,45 @@ internal class DeadlineSession(
         if (retired || closed) throw SessionTimeout()
         if (AbandonedRuns.count() >= AbandonedRuns.MAX) throw SessionTimeout()
         val pass = Pass()
-        threads.start {
-            val outcome: Any =
-                try {
-                    inner.run(input, inputShape, outputNames, maxElements, timeoutMillis)
-                } catch (e: Throwable) {
-                    Failed(e)
-                }
-            pass.outcome.store(outcome)
-            if (!pass.state.compareAndSet(RUNNING, DONE)) {
-                // Abandoned: nobody reads this outcome, and nobody but this thread holds the session any more.
-                pass.outcome.store(null)
-                try {
-                    inner.close()
-                } catch (e: Throwable) {
-                    // Nobody to report to on a pass thread; an escaping error would end the process.
-                } finally {
-                    AbandonedRuns.add(-1)
-                }
-            } else {
-                signal.signal()
+        try {
+            threads.start {
+                // A pass abandoned before it started (its start failed on the caller's side) never runs the session.
+                val outcome: Any? =
+                    if (pass.state.load() != RUNNING) {
+                        null
+                    } else {
+                        try {
+                            inner.run(input, inputShape, outputNames, maxElements, timeoutMillis)
+                        } catch (e: Throwable) {
+                            Failed(e)
+                        }
+                    }
+                // If abandoned, nobody reads the outcome and only this thread still holds the session: it closes it.
+                finish(pass, outcome, signal) { inner.close() }
             }
+        } catch (e: Throwable) {
+            // The start failed: its task may never run, so it is not counted; if it runs, it only closes the session.
+            retireAfter(pass, counted = false)
+            throw e
         }
-        if (!signal.await(timeoutMillis)) {
-            AbandonedRuns.add(1)
-            if (pass.state.compareAndSet(RUNNING, ABANDONED)) {
-                retired = true
-                throw SessionTimeout()
+        val ended =
+            try {
+                signal.await(timeoutMillis)
+            } catch (e: Throwable) {
+                // Fail closed: the run may still be going and its signal may come later; this session never waits
+                // again, so that signal is never read and no later run can share the session with this one.
+                retireAfter(pass, counted = true)
+                throw e
             }
-            // The run ended just at the deadline: a timeout all the same, and the session is free to close now.
-            AbandonedRuns.add(-1)
-            retireAndClose()
+        if (!ended) {
+            // The deadline passed (or the run ended just at it): a timeout either way.
+            retireAfter(pass, counted = true)
             throw SessionTimeout()
+        }
+        if (pass.state.load() != DONE) {
+            // Woken although the run has not ended: never expected; fail closed as on a timeout.
+            retireAfter(pass, counted = true)
+            throw IllegalStateException("the pass signal came before its run ended")
         }
         val outcome = pass.outcome.load()
         if (outcome is Failed) {
@@ -140,6 +149,15 @@ internal class DeadlineSession(
         }
         @Suppress("UNCHECKED_CAST")
         return outcome as Map<String, PassOutput>
+    }
+
+    /**
+     * Retires this session after its [pass] did not end normally: the pass is abandoned to its thread, which closes
+     * [inner] if its run ever returns, or, if the run has ended already, [inner] is closed now.
+     */
+    private fun retireAfter(pass: Pass, counted: Boolean) {
+        retired = true
+        if (!abandon(pass, counted)) closeQuietly(inner)
     }
 
     private fun retireAndClose() {
@@ -154,7 +172,10 @@ internal class DeadlineSession(
         if (!retired) inner.close()
     }
 
-    /** One pass: its state ([RUNNING] -> [DONE] by the pass thread, or -> [ABANDONED] by the caller) and outcome. */
+    /**
+     * One pass: its state ([RUNNING] -> [DONE] by the pass thread, or -> [ABANDONED] / [ABANDONED_UNCOUNTED] by the
+     * caller) and outcome.
+     */
     private class Pass {
         val state = AtomicInt(RUNNING)
         val outcome = AtomicReference<Any?>(null)
@@ -166,7 +187,12 @@ internal class DeadlineSession(
     companion object {
         private const val RUNNING = 0
         private const val DONE = 1
+
+        /** Abandoned by the caller and counted in [AbandonedRuns]: the pass thread gives the slot back. */
         private const val ABANDONED = 2
+
+        /** Abandoned because its start failed: not counted (its task may never run), so nothing is given back. */
+        private const val ABANDONED_UNCOUNTED = 3
 
         /**
          * Creates a session with [open] on a pass thread of [threads] and waits at most [timeoutMillis] for it. A
@@ -174,7 +200,9 @@ internal class DeadlineSession(
          * ever returns: the pass thread owns it, and if it ever returns a session, that session is closed there and
          * never used. A creation that ended only after the deadline is a timeout as well (its session is closed at
          * once). An abandoned creation counts in [AbandonedRuns] until it returns; at its maximum no creation starts
-         * ([SessionTimeout]). A failure of [open] within the limit is rethrown unchanged.
+         * ([SessionTimeout]). A failure of [open] within the limit is rethrown unchanged. Any other failure on the
+         * caller's side (the start or the wait threw) abandons the creation the same way and is rethrown: a session it
+         * returns later is closed and never used.
          */
         fun open(
             timeoutMillis: Long,
@@ -184,40 +212,93 @@ internal class DeadlineSession(
             if (AbandonedRuns.count() >= AbandonedRuns.MAX) throw SessionTimeout()
             val pass = Pass()
             val signal = threads.newSignal()
-            threads.start {
-                val outcome: Any =
-                    try {
-                        open()
-                    } catch (e: Throwable) {
-                        Failed(e)
-                    }
-                pass.outcome.store(outcome)
-                if (!pass.state.compareAndSet(RUNNING, DONE)) {
-                    // Abandoned: nobody waits for this session any more; it is closed here and never used.
-                    pass.outcome.store(null)
-                    try {
-                        (outcome as? ModelSession)?.close()
-                    } catch (e: Throwable) {
-                        // Nobody to report to on a pass thread; an escaping error would end the process.
-                    } finally {
-                        AbandonedRuns.add(-1)
-                    }
-                } else {
-                    signal.signal()
+            try {
+                threads.start {
+                    // A creation abandoned before it started (its start failed on the caller's side) never runs.
+                    val outcome: Any? =
+                        if (pass.state.load() != RUNNING) {
+                            null
+                        } else {
+                            try {
+                                open()
+                            } catch (e: Throwable) {
+                                Failed(e)
+                            }
+                        }
+                    // If abandoned, nobody waits for this session any more: it is closed here and never used.
+                    finish(pass, outcome, signal) { (outcome as? ModelSession)?.close() }
                 }
+            } catch (e: Throwable) {
+                abandonCreation(pass, counted = false)
+                throw e
             }
-            if (!signal.await(timeoutMillis)) {
-                AbandonedRuns.add(1)
-                if (pass.state.compareAndSet(RUNNING, ABANDONED)) throw SessionTimeout()
-                // The creation ended just at the deadline: a timeout all the same; its session is closed now.
-                AbandonedRuns.add(-1)
-                (pass.outcome.load() as? ModelSession)?.let { closeQuietly(it) }
+            val ended =
+                try {
+                    signal.await(timeoutMillis)
+                } catch (e: Throwable) {
+                    abandonCreation(pass, counted = true)
+                    throw e
+                }
+            if (!ended) {
+                // The deadline passed (or the creation ended just at it): a timeout either way.
+                abandonCreation(pass, counted = true)
                 throw SessionTimeout()
+            }
+            if (pass.state.load() != DONE) {
+                abandonCreation(pass, counted = true)
+                throw IllegalStateException("the creation signal came before the creation ended")
             }
             val outcome = pass.outcome.load()
             if (outcome is Failed) throw outcome.error
-            // The signal was consumed by this wait, so the session can keep it for its runs.
-            return DeadlineSession(outcome as ModelSession, threads, signal)
+            val session = outcome as ModelSession
+            try {
+                // The signal was consumed by this wait, so the session can keep it for its runs.
+                return DeadlineSession(session, threads, signal)
+            } catch (e: Throwable) {
+                closeQuietly(session)
+                throw e
+            }
+        }
+
+        /**
+         * Abandons a creation that did not end normally: its pass thread closes a session it returns later, or, if it
+         * has ended already, its session is closed now.
+         */
+        private fun abandonCreation(pass: Pass, counted: Boolean) {
+            if (!abandon(pass, counted)) (pass.outcome.load() as? ModelSession)?.let { closeQuietly(it) }
+        }
+
+        /**
+         * The caller gives up [pass]: true if it was still going (now abandoned: its thread owns the session and
+         * discards the outcome; [counted] adds it to [AbandonedRuns] until it returns), false if it had ended (the
+         * caller cleans up; nothing stays counted). The count is raised before the state changes, so the pass thread,
+         * which gives the slot back only after it saw [ABANDONED], never takes it below zero.
+         */
+        private fun abandon(pass: Pass, counted: Boolean): Boolean {
+            if (counted) AbandonedRuns.add(1)
+            if (pass.state.compareAndSet(RUNNING, if (counted) ABANDONED else ABANDONED_UNCOUNTED)) return true
+            if (counted) AbandonedRuns.add(-1)
+            return false
+        }
+
+        /**
+         * The end of a pass on its thread: hands [outcome] to the waiting caller, or, if the caller abandoned the pass,
+         * drops it, runs [discard] and gives back the pass's slot in [AbandonedRuns] if it was counted.
+         */
+        private fun finish(pass: Pass, outcome: Any?, signal: PassSignal, discard: () -> Unit) {
+            pass.outcome.store(outcome)
+            if (pass.state.compareAndSet(RUNNING, DONE)) {
+                signal.signal()
+                return
+            }
+            pass.outcome.store(null)
+            try {
+                discard()
+            } catch (e: Throwable) {
+                // Nobody to report to on a pass thread; an escaping error would end the process.
+            } finally {
+                if (pass.state.load() == ABANDONED) AbandonedRuns.add(-1)
+            }
         }
 
         /** A close after a timeout: its failure is not reported (the timeout is), except the JVM's fatal errors. */
