@@ -29,6 +29,7 @@ import kotlin.test.assertTrue
  * writes nothing, a blocked contract run fails creation with `TIMEOUT`, and stuck runs are bounded (fail closed).
  * A session creation that never returns is bounded the same way: creation fails with `TIMEOUT`, a replacement during a
  * call with `RUN_TIMEOUT`, its late session is closed and never used, and it counts toward the same bound.
+ * The two-step API is covered too: `detect` runs the model under the same limit, and `applyMasks` never runs it.
  */
 class HardRunLimitTest {
     private val release = Release()
@@ -87,6 +88,86 @@ class HardRunLimitTest {
         assertNoAbandonedRunsLeft()
         masker.close()
         assertEquals(1, sessions[1].closes)
+        assertEquals(1, sessions[0].closes, "closing the masker does not touch the abandoned session")
+    }
+
+    @Test
+    fun aPassThatNeverReturnsInsideDetectEndsTheCallAtItsLimitAndTheNextDetectAndApplyMasksAreCorrect() {
+        // The two-step API: detect runs the model under the same per-pass limit as maskInPlace.
+        val masker = FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), runtime { if (it == 0) 2 else NEVER })
+        val img = image()
+        val before = img.data.copyOf()
+        var e: FaceMaskException.ModelOutputInvalid? = null
+        val took = millisOf { e = assertFailsWith<FaceMaskException.ModelOutputInvalid> { masker.detect(img) } }
+        assertEquals(listOf("RUN_TIMEOUT"), e?.findings)
+        val limit = sessions[0].blockedLimit
+        assertTrue(limit >= Limits.MIN_RUN_TIMEOUT_MILLIS, "the production pass limit applies: $limit")
+        assertTrue(took >= limit && took <= limit + TIMEOUT_MARGIN_MILLIS, "ended at the limit: $took ms, $limit ms")
+        assertContentEquals(before, img.data, "nothing was written into the image")
+        assertEquals(0, sessions[0].closes, "the stuck session is left to its pass thread")
+        assertEquals(1, AbandonedRuns.count())
+
+        val detection = masker.detect(img)
+        assertEquals(2, sessions.size, "the next call opened a new session")
+        assertEquals(2, sessions[0].runs, "the stuck session never ran again")
+        assertContentEquals(before, img.data, "detect never writes into the image")
+        val reference = image()
+        val normal = FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), RunnerRuntime(OneFaceRunner()))
+        val expected = normal.use { it.detect(reference) }
+        assertEquals(1, detection.faces.size)
+        assertEquals(expected.faces, detection.faces, "the same faces as a normal run")
+
+        // Second step: the plan of that detection gives the pixels of a normal one-call run.
+        val runsBefore = sessions[1].runs
+        val result = masker.applyMasks(img, detection.toMaskPlan())
+        assertEquals(runsBefore, sessions[1].runs, "applyMasks does not run the model")
+        FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), RunnerRuntime(OneFaceRunner())).use {
+            assertEquals(it.maskInPlace(reference).masks, result.masks)
+        }
+        assertContentEquals(reference.data, img.data, "the same output as a normal run")
+
+        release.open()
+        assertTrue(sessions[0].awaitClosed(10_000L), "the abandoned session is closed when its run returns")
+        assertNoAbandonedRunsLeft()
+        masker.close()
+        assertEquals(1, sessions[1].closes)
+    }
+
+    @Test
+    fun applyMasksNeverRunsTheModelSoAStuckModelNeitherDelaysItNorIsReopenedByIt() {
+        // Every session blocks in every pass after its contract run.
+        val masker = FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), runtime { 2 }, runLimits = short)
+        val plan = FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), RunnerRuntime(OneFaceRunner())).use {
+            it.detect(image()).toMaskPlan()
+        }
+        assertEquals(1, plan.masks.size)
+        val reference = image()
+        FaceMasker.forTest(testYuNetModel(), FaceMaskerConfig(), RunnerRuntime(OneFaceRunner())).use {
+            it.applyMasks(reference, plan)
+        }
+
+        val img = image()
+        val result = masker.applyMasks(img, plan)
+        assertEquals(plan.masks, result.masks)
+        assertContentEquals(reference.data, img.data, "masked although every model pass would block")
+        assertEquals(1, sessions[0].runs, "only the contract run at creation; applyMasks ran no pass")
+        assertEquals(-1L, sessions[0].blockedLimit, "no run blocked")
+        assertEquals(0, AbandonedRuns.count())
+
+        // After a run timeout the masker has no session; applyMasks does not open one and still masks.
+        val e = assertFailsWith<FaceMaskException.ModelOutputInvalid> { masker.detect(image()) }
+        assertEquals(listOf("RUN_TIMEOUT"), e.findings)
+        assertEquals(1, AbandonedRuns.count())
+        val after = image()
+        masker.applyMasks(after, plan)
+        assertContentEquals(reference.data, after.data, "the same output after the timeout")
+        assertEquals(1, sessions.size, "applyMasks opened no session")
+        assertEquals(2, sessions[0].runs, "the stuck session never ran again")
+
+        release.open()
+        assertTrue(sessions[0].awaitClosed(10_000L))
+        assertNoAbandonedRunsLeft()
+        masker.close()
         assertEquals(1, sessions[0].closes, "closing the masker does not touch the abandoned session")
     }
 

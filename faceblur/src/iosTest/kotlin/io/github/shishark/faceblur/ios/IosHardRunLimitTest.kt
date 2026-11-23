@@ -41,6 +41,7 @@ import kotlin.test.assertTrue
  * leaves no file, and a blocked contract run fails creation with `TIMEOUT`. When the stuck run returns at last, its
  * pass thread closes the glue (and only then frees its buffers). A glue `open` that never returns fails creation with
  * `TIMEOUT` (a replacement during a call: `RUN_TIMEOUT`); if it returns at last, the session is closed, never used.
+ * The two-step API is covered too: `detect` ends at the same limit, and `applyMasks` never runs the model.
  */
 class IosHardRunLimitTest {
     private val releases = ArrayList<Release>()
@@ -141,6 +142,53 @@ class IosHardRunLimitTest {
         val reference = IntArrayPixels(640, 480, gradientPixels(640, 480))
         val expected = IosFiles.masker().use { it.maskInPlace(reference) }
         assertEquals(expected.masks, result.masks)
+        assertContentEquals(reference.data, img.data, "the same output as a normal run")
+
+        release.open()
+        assertTrue(bridges[0].awaitClosed(10_000L), "the abandoned glue is closed when its run returns")
+        assertNoAbandonedRunsLeft()
+        masker.close()
+        assertEquals(1, bridges[1].closes)
+        assertEquals(1, bridges[0].closes)
+    }
+
+    @Test
+    fun aGlueRunThatNeverReturnsInsideDetectEndsTheCallAtItsLimitAndTheNextDetectAndApplyMasksAreCorrect() {
+        val masker = masker(firstBlocksFrom = 2)
+        val img = IntArrayPixels(640, 480, gradientPixels(640, 480))
+        val before = img.data.copyOf()
+        val took = millisOf {
+            val e = assertFailsWith<FaceMaskException.ModelOutputInvalid> { masker.detect(img) }
+            assertEquals(listOf("RUN_TIMEOUT"), e.findings)
+        }
+        assertTrue(took >= Limits.MIN_RUN_TIMEOUT_MILLIS, "the production pass limit applies: $took ms")
+        assertTrue(took <= Limits.MIN_RUN_TIMEOUT_MILLIS + TIMEOUT_MARGIN_MILLIS, "ended at the limit: $took ms")
+        assertContentEquals(before, img.data, "nothing was written into the image")
+        assertEquals(0, bridges[0].closes, "the stuck glue is not closed under its running pass")
+        assertEquals(1, AbandonedRuns.count())
+
+        // After the timeout the masker has no session: applyMasks masks without opening a glue or running the model.
+        val reference = IntArrayPixels(640, 480, gradientPixels(640, 480))
+        val (expectedFaces, plan) = IosFiles.masker().use { normal ->
+            val d = normal.detect(reference)
+            d.faces to d.toMaskPlan()
+        }
+        IosFiles.masker().use { it.maskInPlace(reference) }
+        val early = IntArrayPixels(640, 480, gradientPixels(640, 480))
+        masker.applyMasks(early, plan)
+        assertContentEquals(reference.data, early.data, "applyMasks masks while the model is stuck")
+        assertEquals(1, bridges.size, "applyMasks opened no glue")
+        assertEquals(2, bridges[0].runs, "the stuck glue never ran again")
+
+        val detection = masker.detect(img)
+        assertEquals(2, bridges.size, "the next detect opened a new glue")
+        assertEquals(2, bridges[0].runs, "the stuck glue never ran again")
+        assertContentEquals(before, img.data, "detect never writes into the image")
+        assertEquals(1, detection.faces.size)
+        assertEquals(expectedFaces, detection.faces, "the same faces as a normal run")
+        val runsBefore = bridges[1].runs
+        masker.applyMasks(img, detection.toMaskPlan())
+        assertEquals(runsBefore, bridges[1].runs, "applyMasks does not run the model")
         assertContentEquals(reference.data, img.data, "the same output as a normal run")
 
         release.open()
