@@ -30,12 +30,12 @@ Requirements: `minSdk` 30 (Android 11) or higher.
 ```kotlin
 // build.gradle.kts of your app module
 dependencies {
-    implementation("io.github.shishark:faceblur:0.1.0")
+    implementation("io.github.shishark:faceblur:0.1.1")
 }
 ```
 
 The artifact is published on Maven Central, so `mavenCentral()` must be in the repositories of your project. For
-Groovy build files: `implementation 'io.github.shishark:faceblur:0.1.0'`. Gradle picks the Android variant of this multiplatform
+Groovy build files: `implementation 'io.github.shishark:faceblur:0.1.1'`. Gradle picks the Android variant of this multiplatform
 coordinate. ONNX Runtime (`com.microsoft.onnxruntime:onnxruntime-android`) comes with it as a dependency.
 
 Import the Android calls from `io.github.shishark.faceblur`. In Kotlin the Android forms are extension functions on

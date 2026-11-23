@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The project follows
 [Semantic Versioning](https://semver.org/); the API is not stable before 1.0, and breaking changes are listed here.
 
-## [0.1.1] - Unreleased
+## [0.1.1] - 2026-11-23
 
 Bug-fix release; the public API is unchanged. One version number covers the Maven artifact
 `io.github.shishark:faceblur`, the `FaceBlurCore` XCFramework and the `faceblur-swift` Swift package.
@@ -37,15 +37,6 @@ Bug-fix release; the public API is unchanged. One version number covers the Mave
   Resize announce the new position and size; focus moves to the new screen, the placing panel and the control that
   replaces a vanished one; errors and the model hash are read once, line by line; a mask larger than the photo reads at
   most 100 %.
-
-### Documentation
-
-- The Swift and Kotlin Multiplatform iOS guides gain a "Known issue" section on the App Store validation messages
-  ITMS-90360 / ITMS-90530 for `onnxruntime.framework`, with a build-phase workaround.
-- The threading guide and the Android and Swift guides describe the run time limit and its errors.
-
-## Repository updates after 0.1.0 (no new artifacts)
-
 - Build verification: the dependency-verification files of the root build and of the two consumer builds now list the
   Android aapt2 packages for Linux and Windows hosts, the Kotlin/Native toolchain archive for Windows hosts, and the
   module files that a build on Linux needs. Every entry is an exact SHA-256 value with its origin; verification stays
@@ -54,7 +45,13 @@ Bug-fix release; the public API is unchanged. One version number covers the Mave
   trust the library's own just-built publication for the duration of that run only and then restores the metadata
   file; the CI workflow and the consumer device-test script use it.
 
-## [0.1.0] - Unreleased
+### Documentation
+
+- The Swift and Kotlin Multiplatform iOS guides gain a "Known issue" section on the App Store validation messages
+  ITMS-90360 / ITMS-90530 for `onnxruntime.framework`, with a build-phase workaround.
+- The threading guide and the Android and Swift guides describe the run time limit and its errors.
+
+## [0.1.0] - 2026-11-12
 
 First release, for Android and iOS. One version number covers the Maven artifact `io.github.shishark:faceblur`, the
 `FaceBlurCore` XCFramework and the `faceblur-swift` Swift package.

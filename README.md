@@ -45,9 +45,9 @@ miss faces, and masks cover only the faces that the model finds. Check the resul
 
 | Platform | Requirements | Install |
 |---|---|---|
-| Android | `minSdk` 30 (Android 11) | Maven Central: `implementation("io.github.shishark:faceblur:0.1.0")` |
-| Kotlin Multiplatform (Android and iOS) | Kotlin Multiplatform project | `api("io.github.shishark:faceblur:0.1.0")` in `commonMain`; iOS also needs the ONNX Runtime bridge, see the [KMP guide](docs/guides/kmp-ios.md) |
-| iOS (Swift) | iOS 18 or newer | Swift Package Manager: `.package(url: "https://github.com/shiSHARK/faceblur-swift", .upToNextMinor(from: "0.1.0"))` |
+| Android | `minSdk` 30 (Android 11) | Maven Central: `implementation("io.github.shishark:faceblur:0.1.1")` |
+| Kotlin Multiplatform (Android and iOS) | Kotlin Multiplatform project | `api("io.github.shishark:faceblur:0.1.1")` in `commonMain`; iOS also needs the ONNX Runtime bridge, see the [KMP guide](docs/guides/kmp-ios.md) |
+| iOS (Swift) | iOS 18 or newer | Swift Package Manager: `.package(url: "https://github.com/shiSHARK/faceblur-swift", .upToNextMinor(from: "0.1.1"))` |
 
 Input formats are JPEG, HEIC and PNG, decoded by the platform decoder; the output is always JPEG. The Android build uses
 ONNX Runtime 1.31.0 and the iOS build ONNX Runtime 1.20.0.

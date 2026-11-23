@@ -30,11 +30,11 @@ Related guides: [Providing your model](providing-your-model.md), [Score threshol
 Requirements: iOS 18 or newer; a Swift 6.2 toolchain (Xcode with Swift 6.2), as the package declares.
 
 In Xcode, choose File > Add Package Dependencies, enter `https://github.com/shiSHARK/faceblur-swift` and use the rule
-"Up to Next Minor Version" from `0.1.0`. In a `Package.swift`:
+"Up to Next Minor Version" from `0.1.1`. In a `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/shiSHARK/faceblur-swift", .upToNextMinor(from: "0.1.0")),
+    .package(url: "https://github.com/shiSHARK/faceblur-swift", .upToNextMinor(from: "0.1.1")),
 ],
 targets: [
     .target(name: "MyApp", dependencies: [.product(name: "FaceBlur", package: "faceblur-swift")]),
