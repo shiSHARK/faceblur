@@ -96,6 +96,8 @@ Related guides: [Android](android.md), [Providing your model](providing-your-mod
 
 6. **Call FaceBlur from common code, off the main thread.** The common code below loads the model, creates the masker
    and masks one photo in each API mode. Every call blocks until it is done, so never call it on the main thread.
+   A run that never returns ends the call at its time limit with `ModelOutputInvalid` (`RUN_TIMEOUT`); see
+   [Threading, cancellation and memory](threading-and-memory.md).
 
 ## Known issue: App Store validation reports `onnxruntime.framework`
 

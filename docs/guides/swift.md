@@ -178,7 +178,10 @@ masker handles one call after another. Cancel with Swift task cancellation: a ca
 `CancellationError`, and in file mode writes nothing. For an in-place call, treat `CancellationError` as "not masked":
 the buffer is either untouched or fully masked, and you cannot tell which. Never publish, upload or share it. For
 parallel work create one `FaceMasker` per worker; on phones, at most 2 masking calls in parallel is the
-recommendation. More is in [Threading, cancellation and memory](threading-and-memory.md).
+recommendation. A model run that does not return no longer holds a call: every run and every session creation has a
+time limit, and the call then throws `modelOutputInvalid(findings: ["RUN_TIMEOUT"])` (creating a masker:
+`modelRejected(findings: ["TIMEOUT"])`) with nothing written, also on iOS, where a run cannot be stopped. More is in
+[Threading, cancellation and memory](threading-and-memory.md).
 
 ## Errors
 
@@ -190,7 +193,7 @@ paths, file names, pixel data or coordinates. New cases and finding codes may ap
 |---|---|---|
 | `invalidConfiguration(parameter:)` | A value is out of range. | Fix the value named by `parameter`. |
 | `modelIntegrity` | The model's SHA-256 differs from `expectedSHA256`. | Load the file you hashed. |
-| `modelRejected(findings:)`, `modelOutputInvalid(findings:)` | The model or its output failed the checks. | Read the finding codes; see [Score threshold](score-threshold.md). |
+| `modelRejected(findings:)`, `modelOutputInvalid(findings:)` | The model or its output failed the checks. Finding `TIMEOUT` (creating a masker) and `RUN_TIMEOUT` (masking): the runtime session or a run reached its time limit. | Read the finding codes; see [Score threshold](score-threshold.md) and [Threading](threading-and-memory.md). Nothing was written; treat the photo as not masked. |
 | `runtimeUnavailable` | ONNX Runtime could not be set up. | Check that the package pins the ONNX Runtime version and that no other runtime bridge was registered first. |
 | `imageTooLarge`, `unsupportedImage`, `unsupportedTarget`, `ioFailed` | The source or target cannot be used. | Nothing was written. |
 | `sourceChanged`, `maskPlanMismatch` | The plan does not belong to this image. | Detect again on the current image. |

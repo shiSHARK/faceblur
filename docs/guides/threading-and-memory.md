@@ -21,6 +21,13 @@ give the person a way to cancel.
 - **Cancellation is cooperative.** Pass a `CancellationToken` to the call. FaceBlur reads it before detection,
   between detector passes, in long loops over many detections and immediately before writing masks. A pass already
   inside the runtime is not interrupted, and `DetectorModel.load` cannot be cancelled.
+- **Every run has a time limit.** A call never waits for a model run for ever. A pass that is still going at its limit
+  (the larger of 2 seconds and 20 times the duration of the check pass at creation) ends the call with
+  `ModelOutputInvalid` (finding `RUN_TIMEOUT`), and creating a `FaceMasker` that takes longer than 60 seconds fails with
+  `ModelRejected` (finding `TIMEOUT`). Nothing is written, and treat the photo as not masked. The next call on the same
+  `FaceMasker` opens a new runtime session first. A run that the runtime cannot stop (on iOS none can) keeps a thread
+  and its session's memory until it returns, so the number of such runs is bounded for the whole process: when the
+  bound is reached, every `FaceMasker` in the process fails at once with the same errors until one of them returns.
 - **What the image looks like after `Cancelled`.** If cancellation was seen before the finished masks were copied into
   the image, the image is untouched. If it was requested during that final copy, the copy completes first (the image
   is fully masked) and `Cancelled` is thrown afterwards. An image is never half-masked by a cancellation. Your app

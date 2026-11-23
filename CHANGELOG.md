@@ -6,25 +6,46 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The project follows
 [Semantic Versioning](https://semver.org/); the API is not stable before 1.0, and breaking changes are listed here.
 
-## [Unreleased]
+## [0.1.1] - Unreleased
 
-### Changed
-
-- Detection input and mask writing do less work; output unchanged.
+Bug-fix release; the public API is unchanged. One version number covers the Maven artifact
+`io.github.shishark:faceblur`, the `FaceBlurCore` XCFramework and the `faceblur-swift` Swift package.
 
 ### Fixed
 
 - A model run that never returns, or a model that never finishes loading, no longer blocks the masking call or the
-  creation of a `FaceMasker`; it ends with the existing run-timeout error (`ModelOutputInvalid` with `RUN_TIMEOUT`;
-  when creating a `FaceMasker`, `ModelRejected` with `TIMEOUT`) at its time limit, on Android and iOS. Nothing of
-  that run or session is used again: the next call on the same `FaceMasker` opens a new runtime session first.
-  Runs and creations that never return are bounded process-wide: once the bound is reached, every `FaceMasker` in the
-  process, also one with a healthy model, fails at once with the same errors (`RUN_TIMEOUT`, or `TIMEOUT` when
+  creation of a `FaceMasker`, on Android and on iOS. Every run and every runtime session creation has a time limit
+  (the limit of one pass is the larger of 2 seconds and 20 times the duration of the check pass at creation; creating
+  a session may take at most 60 seconds). A call still waiting at its limit ends with the existing error: `ModelOutputInvalid`
+  with the finding `RUN_TIMEOUT` while masking, `ModelRejected` with `TIMEOUT` when creating a `FaceMasker`. Nothing is
+  written and nothing of that run is used: the next call on the same `FaceMasker` opens a new runtime session first.
+  Before, iOS could not stop a run and waited for it.
+- A run that ONNX Runtime cannot stop (on iOS no run can be stopped) keeps a thread and its session's memory until it
+  returns. Such runs and creations are therefore bounded process-wide: once the bound is reached, every `FaceMasker` in
+  the process, also one with a healthy model, fails at once with the same errors (`RUN_TIMEOUT`, or `TIMEOUT` when
   creating) until one of them returns.
+- Cancellation is unchanged: it is still read between passes, and a pass inside the runtime is not interrupted, but the
+  time limit now ends the call.
+
+### Changed
+
+- Detection input and mask writing do less work (one pixel copy per detection pass, whole-tile mask writes); the
+  output is unchanged.
+- Android demo app: accessibility pass. Body text uses the primary text colour and the system-bar icons are dark on the
+  light background (the dark theme keeps light icons); the photo preview stays in view while a mask is placed
+  (landscape: beside the controls); title and status no longer take a third of the screen at 200 % font; Move and
+  Resize announce the new position and size; focus moves to the new screen, the placing panel and the control that
+  replaces a vanished one; errors and the model hash are read once, line by line; a mask larger than the photo reads at
+  most 100 %.
+
+### Documentation
+
+- The Swift and Kotlin Multiplatform iOS guides gain a "Known issue" section on the App Store validation messages
+  ITMS-90360 / ITMS-90530 for `onnxruntime.framework`, with a build-phase workaround.
+- The threading guide and the Android and Swift guides describe the run time limit and its errors.
 
 ## Repository updates after 0.1.0 (no new artifacts)
 
-- Documentation: the Swift and Kotlin Multiplatform iOS guides gain a "Known issue" section on the App Store validation messages ITMS-90360 / ITMS-90530 for `onnxruntime.framework`, with a build-phase workaround.
 - Build verification: the dependency-verification files of the root build and of the two consumer builds now list the
   Android aapt2 packages for Linux and Windows hosts, the Kotlin/Native toolchain archive for Windows hosts, and the
   module files that a build on Linux needs. Every entry is an exact SHA-256 value with its origin; verification stays
@@ -32,12 +53,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Build scripts: a helper in `scripts/` (`own_publication_trust.py`) lets a local or CI run of the consumer checks
   trust the library's own just-built publication for the duration of that run only and then restores the metadata
   file; the CI workflow and the consumer device-test script use it.
-- Android demo: accessibility pass. Body text uses the primary text colour and the system-bar icons are dark on the
-  light background (the dark theme keeps light icons); the photo preview stays in view while a mask is placed
-  (landscape: beside the controls); title and status no longer take a third of the screen at 200 % font; Move and
-  Resize announce the new position and size; focus moves to the new screen, the placing panel and the control that
-  replaces a vanished one; errors and the model hash are read once, line by line; a mask larger than the photo reads at
-  most 100 %.
 
 ## [0.1.0] - Unreleased
 

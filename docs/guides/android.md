@@ -345,8 +345,8 @@ logs: treat every code, known or not, as a failure.
 | `MaskPlanMismatch` | The plan is for another image size, or in file mode was not made by `detectFile` or `planFile`. | Fix the code that builds the plan. |
 | `IoFailed` | The model, source, target or a stream cannot be read or written; or the target does not hold exactly the written output. | Check access. After a content-Uri target error, treat the target as unmasked. |
 | `ModelIntegrity` | The model's SHA-256 differs from `expectedSha256`. | Load the file you hashed. See [Providing your model](providing-your-model.md). |
-| `ModelRejected` | The model or its profile was refused when loading or creating the masker. | Read the finding codes. |
-| `ModelOutputInvalid` | The model's output failed the checks (with `TOO_MANY_MASKS` the score threshold is very likely too low). | See [Score threshold](score-threshold.md). Nothing was written. |
+| `ModelRejected` | The model or its profile was refused when loading or creating the masker; finding `TIMEOUT`: creating the runtime session took too long. | Read the finding codes. |
+| `ModelOutputInvalid` | The model's output failed the checks (with `TOO_MANY_MASKS` the score threshold is very likely too low); finding `RUN_TIMEOUT`: a run reached its time limit. | See [Score threshold](score-threshold.md) and [Threading](threading-and-memory.md). Nothing was written. |
 | `RuntimeUnavailable` | ONNX Runtime could not be set up on this device, or a required session option cannot be set. | Check the dependency and your ONNX Runtime usage. |
 | `OutputValidationFailed` | The encoded file failed the library's own structure and metadata check. | Nothing was written. Treat it as a failure. |
 | `ConcurrentUse` | A second call entered the same masker. | One masker per worker. |
