@@ -199,6 +199,22 @@ after the last push. A clean build without any Gradle cache (for example to rule
 `gh workflow run ci.yml --ref <branch> -f gradle-cache=disabled`. The fuzz workflow can be started the same way:
 `gh workflow run fuzz.yml --ref <branch>`.
 
+### Maven Central through a mirror (CI only)
+GitHub's runners share IP addresses and Maven Central sometimes answers them with HTTP 429. Every Gradle job of the
+workflows (`ci.yml` build and verification, `macos.yml`, `fuzz.yml`) therefore runs the step `maven-mirror-install` of
+`scripts/ci-steps.sh` before its first Gradle command and `maven-mirror-report` as its last step. `install` copies
+`.github/gradle/maven-central-mirror.init.gradle` into `GRADLE_USER_HOME/init.d`, which Gradle applies to every build of
+the job (the main build, the verification build and the consumer builds of the check scripts). The init script points
+every repository that uses Maven Central (settings plugin and dependency repositories, settings and project build
+scripts, project repositories) at Google's mirror, `https://maven-central.storage-download.googleapis.com/maven2/`, and
+inserts a Maven Central repository right after it as the fallback, which Gradle asks when the mirror has no such module
+(404). Dependency verification is not touched: `gradle/verification-metadata.xml` stays strict and its checksums do not
+depend on the repository URL. No cache is added. Every redirect, the final repository order and every repository that
+still points at Maven Central are logged (`maven-mirror: redirect|order|UNREDIRECTED|check ...`, also in
+`GRADLE_USER_HOME/maven-mirror.log`); `report` counts them in the job summary and warns about an unredirected entry or
+an init script that did not run. Outside GitHub Actions both steps only print a line, so `scripts/ci-local.sh` resolves
+as before; to get the same resolution locally, copy the init script into the `init.d` folder of a Gradle user home.
+
 ### On `main`: tree-hash reuse
 After a merge, the `gates` job always runs on `main`. The `build` and `verification` jobs are skipped only when
 `scripts/ci-reuse.py` finds a run of `ci.yml` in this repository, at most 24 hours old, whose head commit has exactly

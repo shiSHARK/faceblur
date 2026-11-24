@@ -7,6 +7,10 @@
 #
 # Usage: scripts/ci-steps.sh <step>            run one step (exit code of the check)
 #        scripts/ci-steps.sh --list <job>      print the steps of a job in order (gates | build | verification)
+# maven-mirror-install / maven-mirror-report (first and last step of the Gradle jobs): on GitHub Actions the Gradle jobs
+# resolve Maven Central through Google's mirror of it, Maven Central stays the fallback (shared runner IPs get HTTP 429).
+# The local merge gate is not a GitHub Actions run: for these two steps it prints one line and does nothing, because
+# the maintainer's gate installs the same kind of init script into its own Gradle home.
 # Environment: REF and BEFORE (CI: github.ref and github.event.before) choose the diff base of the range checks:
 # the previous main tip on a push to main, otherwise the merge base with origin/main. FACEBLUR_GITLEAKS, OPENGREP and
 # OSV_SCANNER name the scanners (data admission, SAST, gate self-tests, OSV); a missing scanner fails its step.
@@ -18,9 +22,9 @@ set -eu
 
 GATES="data-admission dco spdx licence-index api-wording wording internal-ids internal-figures sast write-sites dependency-verification
 osv-build-tooling gate-self-tests ort-telemetry ort-options ci-step-list"
-BUILD="build-main publish-local publication-contents consumer-manifest guide-snippets osv-runtime-gate licence-notices runtime-deps test-results local-fixture-tests large-heap-switch eval-smoke
-privacy-crosscheck changed-lines-coverage test-model-controls artifact-paths model-leak reports-paths"
-VERIFICATION="verification-check verification-results verification-reports-paths"
+BUILD="maven-mirror-install build-main publish-local publication-contents consumer-manifest guide-snippets osv-runtime-gate licence-notices runtime-deps test-results local-fixture-tests large-heap-switch eval-smoke
+privacy-crosscheck changed-lines-coverage test-model-controls artifact-paths model-leak reports-paths maven-mirror-report"
+VERIFICATION="maven-mirror-install verification-check verification-results verification-reports-paths maven-mirror-report"
 
 # The Gradle tasks of the build job (one list for CI and the local gate).
 BUILD_TASKS="jvmTest testAndroidHostTest checkKotlinAbi lint ktlintCheck koverVerify
@@ -92,6 +96,43 @@ own_trust_run() {
     return $otr_code
 }
 
+# Maven Central through Google's mirror, GitHub Actions only (see the header). The init script lives in
+# .github/gradle/; Gradle applies GRADLE_USER_HOME/init.d to every build of the job, the verification and consumer builds
+# of the check scripts included. Dependency verification is untouched (checksums do not depend on the repository URL).
+mirror_home() { printf '%s\n' "${GRADLE_USER_HOME:-$HOME/.gradle}"; }
+
+mirror_install() {
+    mi_home=$(mirror_home)
+    mkdir -p "$mi_home/init.d"
+    cp .github/gradle/maven-central-mirror.init.gradle "$mi_home/init.d/maven-central-mirror.init.gradle"
+    rm -f "$mi_home/maven-mirror.log"
+    echo "ci-steps: maven-mirror-install: init script installed in the Gradle user home (init.d)"
+}
+
+# Counts the init script's log lines (job summary). A Maven Central entry that stayed unredirected, or an init script
+# that did not run, is a warning annotation; the step never fails (a missed redirect falls back to Maven Central).
+mirror_report() {
+    mr_log=$(mirror_home)/maven-mirror.log
+    if [ ! -f "$mr_log" ]; then
+        echo "::warning title=Maven Central mirror::no redirect log: the init script did not run, Gradle used Maven Central directly"
+        echo "Maven Central mirror: NOT ACTIVE (no redirect log)" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+        return 0
+    fi
+    mr_redirects=$(grep -c '^maven-mirror: redirect ' "$mr_log" || true)
+    mr_unredirected=$(grep -c '^maven-mirror: UNREDIRECTED ' "$mr_log" || true)
+    mr_checks=$(grep -c '^maven-mirror: check ' "$mr_log" || true)
+    mr_nonzero=$(grep '^maven-mirror: check ' "$mr_log" | grep -vc 'unredirected=0$' || true)
+    grep -E '^maven-mirror: (redirect|UNREDIRECTED|check) ' "$mr_log" | sort | uniq -c
+    echo "Maven Central mirror: redirect lines=$mr_redirects, check lines=$mr_checks, UNREDIRECTED lines=$mr_unredirected" |
+        tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+    if [ "$mr_redirects" -eq 0 ]; then
+        echo "::warning title=Maven Central mirror::no repository was redirected to the mirror (the init script ran but found no Maven Central entry)"
+    fi
+    if [ "$mr_unredirected" -ne 0 ] || [ "$mr_nonzero" -ne 0 ]; then
+        echo "::warning title=Maven Central mirror::entries still point at Maven Central without the mirror (the UNREDIRECTED lines are printed by this step)"
+    fi
+}
+
 run_step() {
     case "$1" in
         # --- gates ---------------------------------------------------------------------------------------------------
@@ -140,6 +181,18 @@ run_step() {
         # CI and the local merge gate run the same checks (scripts/check-ci-steps.py, both directions).
         ci-step-list) python3 -I scripts/check-ci-steps.py . ;;
         # --- build ---------------------------------------------------------------------------------------------------
+        maven-mirror-install)
+            if [ "${GITHUB_ACTIONS:-}" = true ]; then
+                mirror_install
+            else
+                echo "ci-steps: maven-mirror-install: not a GitHub Actions run, nothing installed (the local gate handles its own mirror)"
+            fi ;;
+        maven-mirror-report)
+            if [ "${GITHUB_ACTIONS:-}" = true ]; then
+                mirror_report
+            else
+                echo "ci-steps: maven-mirror-report: not a GitHub Actions run, nothing to report (the local gate counts its own mirror lines)"
+            fi ;;
         build-main)
             tasks=$BUILD_TASKS
             [ "$(fixtures_mode)" = local ] && tasks="$LOCAL_BUILD_TASKS $BUILD_TASKS"

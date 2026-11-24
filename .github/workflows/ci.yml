@@ -2,7 +2,9 @@
 # Linux CI (GitHub Free plan: private repositories get $12 of included Actions compute per month, Linux 2-core about
 # $0.006/min). No pull_request trigger: merges are local and a PR would run everything twice; add it back, with `push`
 # limited to main, when PRs are used. Every check of these jobs also runs locally, in the same order and from the same
-# step definitions (scripts/ci-steps.sh), with scripts/ci-local.sh (the local merge gate). When the jobs run:
+# step definitions (scripts/ci-steps.sh), with scripts/ci-local.sh (the local merge gate). The Gradle jobs resolve Maven
+# Central through Google's mirror of it (steps maven-mirror-install and maven-mirror-report; Maven Central stays the
+# fallback). When the jobs run:
 #   push to a branch other than main  - gates. The build and verification jobs run too when the branch changes CI or
 #                                       build configuration (scripts/ci-changes.sh: ci_config); otherwise only when
 #                                       started by hand: `gh workflow run ci.yml --ref <branch>`
@@ -257,6 +259,11 @@ jobs:
           path: ~/.konan
           key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
 
+      # Maven Central through Google's mirror (Maven Central as the fallback): runners share IP addresses and Maven
+      # Central answers some of their requests with HTTP 429. Dependency verification is unchanged. Before any Gradle step.
+      - name: Maven Central mirror (install the Gradle init script)
+        run: sh scripts/ci-steps.sh maven-mirror-install
+
       - name: Tests, ABI, lint, coverage gate, iOS klibs, API docs
         run: sh scripts/ci-steps.sh build-main
 
@@ -373,6 +380,11 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+      # Counts the init script's redirect lines; a Maven Central entry that stayed unredirected is a warning.
+      - name: Maven Central mirror (report)
+        if: always()
+        run: sh scripts/ci-steps.sh maven-mirror-report
+
   verification:
     name: Verification build (privacy checker and consumer checks)
     needs: gates
@@ -414,6 +426,10 @@ jobs:
           cache-provider: basic
           cache-disabled: ${{ inputs.gradle-cache == 'disabled' }}
 
+      - name: Maven Central mirror (install the Gradle init script)
+        if: steps.present.outputs.present == 'true'
+        run: sh scripts/ci-steps.sh maven-mirror-install
+
       - name: Verification checks
         if: steps.present.outputs.present == 'true'
         run: sh scripts/ci-steps.sh verification-check
@@ -437,3 +453,7 @@ jobs:
             verification/*/build/test-results/
           retention-days: 7
           if-no-files-found: ignore
+
+      - name: Maven Central mirror (report)
+        if: always() && steps.present.outputs.present == 'true'
+        run: sh scripts/ci-steps.sh maven-mirror-report

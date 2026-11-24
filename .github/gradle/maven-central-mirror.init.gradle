@@ -1,0 +1,110 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Gradle init script of the GitHub Actions workflows (installed into GRADLE_USER_HOME/init.d by the ci-steps.sh step
+// maven-mirror-install, so it reaches every Gradle process of a job: the main build, the verification build and
+// the consumer sub-builds).
+//
+// Every repository that points at Maven Central (https://repo.maven.apache.org/maven2) - in settings pluginManagement,
+// settings dependencyResolutionManagement, settings buildscript, every project buildscript and every project's own
+// repositories - is pointed at Google's Maven Central mirror, and a Maven Central repository is inserted RIGHT AFTER it
+// as the fallback:
+//     google(), mavenCentral(), gradlePluginPortal()
+//  -> google(), <mirror>, <Maven Central (fallback)>, gradlePluginPortal()
+// Gradle asks the next repository when a module is not found (404) in the mirror. Nothing else changes: dependency
+// verification stays strict and comes from the repository's gradle/verification-metadata.xml (checksums do not depend on
+// the repository URL), no repository is removed, no content filter is changed, and no repository is added to a list that
+// had no Maven Central entry (so FAIL_ON_PROJECT_REPOS behaves exactly as before).
+// Output (the ci-steps.sh step maven-mirror-report counts the lines):
+//   "maven-mirror: redirect <where> <name> -> <mirror> ; fallback <name>CentralFallback -> <central> right after it"
+//   "maven-mirror: order <where>: <final list>"            for every changed list, once it is complete
+//   "maven-mirror: UNREDIRECTED <where> <name> <url>"     any repository (or extra artifact URL) that still points at
+//                                                         Maven Central and is not the fallback right after its mirror
+//   "maven-mirror: check <build> <settings|projects>: unredirected=<n>"   one per build and phase
+// Every line goes to stdout AND is appended to <GRADLE_USER_HOME>/maven-mirror.log, so the report step also sees the lines of the
+// builds whose output a repository script keeps in its own temporary file (the consumer builds under verification/).
+// Fail closed: a mirror entry that is not immediately followed by its fallback fails the build.
+def mirror = 'https://maven-central.storage-download.googleapis.com/maven2/'
+def central = 'https://repo.maven.apache.org/maven2/'
+def norm = { Object u -> u == null ? '' : u.toString().replaceAll('/+$', '') }
+def fallbackSuffix = 'CentralFallback'
+def logFile = new File(gradle.gradleUserHomeDir, 'maven-mirror.log')
+def emit = { String line ->
+    println line
+    synchronized (logFile.absolutePath.intern()) { logFile << (line + '\n') }
+}
+
+// Registers the rewrite on one repository list and returns its checks. `all` (not configureEach) because the callback adds
+// the fallback repository to the same list, which Gradle does not allow from a configureEach action.
+def hook = { String where, RepositoryHandler repos ->
+    def changed = []   // [mirror name, fallback name]
+    repos.withType(MavenArtifactRepository).all { MavenArtifactRepository r ->
+        if (r.name.endsWith(fallbackSuffix) || norm(r.url) != norm(central)) return
+        def fbName = r.name + fallbackSuffix
+        if (repos.findByName(fbName) != null) {
+            throw new GradleException("maven-mirror: ${where}: a repository named ${fbName} already exists")
+        }
+        r.url = mirror
+        repos.maven { MavenArtifactRepository fb ->
+            fb.name = fbName
+            fb.url = central
+        }
+        def names = repos*.name
+        if (names.indexOf(fbName) != names.indexOf(r.name) + 1) {
+            throw new GradleException("maven-mirror: ${where}: fallback ${fbName} is not right after ${r.name}: ${names}")
+        }
+        changed << [r.name, fbName]
+        emit "maven-mirror: redirect ${where} ${r.name} -> ${mirror} ; fallback ${fbName} -> ${central} right after it"
+    }
+    // Run once the list is complete (settings or projects evaluated): the order check (fail closed), the order line, and
+    // the UNREDIRECTED lines. Returns the number of unredirected entries.
+    return { ->
+        def names = repos*.name
+        def fallbacks = [] as Set
+        changed.each { pair ->
+            def i = names.indexOf(pair[0])
+            if (i < 0 || names.indexOf(pair[1]) != i + 1 || norm(repos.getByName(pair[0]).url) != norm(mirror)
+                    || norm(repos.getByName(pair[1]).url) != norm(central)) {
+                throw new GradleException("maven-mirror: ${where}: mirror/fallback order broken: ${names}")
+            }
+            fallbacks << pair[1]
+        }
+        if (!changed.isEmpty()) {
+            def order = repos.collect { a -> a instanceof MavenArtifactRepository ? "${a.name}(${a.url})" : a.name }
+            emit "maven-mirror: order ${where}: ${order.join(', ')}"
+        }
+        def missed = 0
+        repos.withType(MavenArtifactRepository).each { MavenArtifactRepository a ->
+            if (norm(a.url) == norm(central) && !fallbacks.contains(a.name)) {
+                emit "maven-mirror: UNREDIRECTED ${where} ${a.name} ${a.url}"
+                missed++
+            }
+            a.artifactUrls.findAll { u -> norm(u) == norm(central) }.each { u ->
+                emit "maven-mirror: UNREDIRECTED ${where} ${a.name} artifactUrl ${u}"
+                missed++
+            }
+        }
+        return missed
+    }
+}
+
+beforeSettings { s ->
+    def build = s.rootDir.name
+    def checks = [
+        hook("settings(${build}) plugins", s.pluginManagement.repositories),
+        hook("settings(${build}) deps", s.dependencyResolutionManagement.repositories),
+        hook("settings(${build}) buildscript", s.buildscript.repositories),
+    ]
+    s.gradle.settingsEvaluated {
+        def n = checks.sum { c -> c() }
+        emit "maven-mirror: check ${build} settings: unredirected=${n}"
+    }
+    def projectChecks = []
+    s.gradle.beforeProject { p ->
+        projectChecks << hook("project(${build}${p.path}) buildscript", p.buildscript.repositories)
+        projectChecks << hook("project(${build}${p.path}) repositories", p.repositories)
+    }
+    s.gradle.projectsEvaluated {
+        def n = projectChecks.isEmpty() ? 0 : projectChecks.sum { c -> c() }
+        emit "maven-mirror: check ${build} projects: unredirected=${n}"
+    }
+}

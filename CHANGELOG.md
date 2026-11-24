@@ -6,6 +6,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The project follows
 [Semantic Versioning](https://semver.org/); the API is not stable before 1.0, and breaking changes are listed here.
 
+## [Unreleased]
+
+### Changed
+
+- Build scripts: the CI workflows resolve Maven Central through Google's mirror of it, with Maven Central itself as the
+  fallback, because GitHub's shared runners are sometimes refused by Maven Central (HTTP 429). Two steps of
+  `scripts/ci-steps.sh` install and report one Gradle init script. Dependency verification stays strict and unchanged,
+  no cache is added, and `scripts/ci-local.sh` behaves as before.
+
 ## [0.1.1] - 2026-11-23
 
 Bug-fix release; the public API is unchanged. One version number covers the Maven artifact

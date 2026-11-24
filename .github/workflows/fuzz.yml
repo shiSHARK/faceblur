@@ -27,6 +27,7 @@ on:
       - "scripts/test-models/**"
       - "gradle/libs.versions.toml"
       - ".github/workflows/fuzz.yml"
+      - ".github/gradle/maven-central-mirror.init.gradle"
 
 permissions:
   contents: read
@@ -57,6 +58,10 @@ jobs:
           cache-provider: basic
           cache-read-only: true
 
+      # Maven Central through Google's mirror, Maven Central as the fallback (shared runner IPs get HTTP 429).
+      - name: Maven Central mirror (install the Gradle init script)
+        run: sh scripts/ci-steps.sh maven-mirror-install
+
       - name: Fixed seed
         run: |
           set -eu
@@ -71,3 +76,7 @@ jobs:
           echo "Fuzz random seed: $seed"
           echo "Fuzz random seed: $seed" >> "$GITHUB_STEP_SUMMARY"
           ./gradlew --stacktrace :faceblur:fuzzOnnxPreParse -Pfaceblur.fuzz.seed="$seed" -Pfaceblur.fuzz.seconds=90
+
+      - name: Maven Central mirror (report)
+        if: always()
+        run: sh scripts/ci-steps.sh maven-mirror-report
