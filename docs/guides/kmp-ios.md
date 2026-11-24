@@ -42,11 +42,11 @@ Related guides: [Android](android.md), [Providing your model](providing-your-mod
            it.binaries.framework {
                baseName = "Shared"   // the name of YOUR framework; used in step 3
                isStatic = true
-               export("io.github.shishark:faceblur:0.1.1")
+               export("io.github.shishark:faceblur:0.1.2")
            }
        }
        sourceSets {
-           commonMain.dependencies { api("io.github.shishark:faceblur:0.1.1") }
+           commonMain.dependencies { api("io.github.shishark:faceblur:0.1.2") }
        }
    }
    ```
@@ -55,14 +55,14 @@ Related guides: [Android](android.md), [Providing your model](providing-your-mod
    `iosSimulatorArm64`) from Maven Central; `mavenCentral()` must be in the repositories of your project.
 
 2. **Add ONNX Runtime to the iOS app.** In Xcode, add the package `https://github.com/shiSHARK/faceblur-swift` with the
-   dependency rule "Exact Version" `0.1.1` (the version of your FaceBlur dependency) and link only the product
+   dependency rule "Exact Version" `0.1.2` (the version of your FaceBlur dependency) and link only the product
    `FaceBlurOrtShim` to your app target. It brings
    ONNX Runtime 1.20.0 and the C functions that the bridge calls. Do not add the product `FaceBlur` (see above): a KMP
    app must not link it. The `faceblur-swift` package declares the FaceBlurCore binary as a package dependency, so
    SwiftPM fetches it even when your app links only `FaceBlurOrtShim`; it is not linked into your app.
 
 3. **Add the bridge to your app target.** Copy `Sources/FaceBlurOnnxRuntime/OnnxRuntimeGlue.swift` from
-   `faceblur-swift` (tag `0.1.1`, the version that matches your FaceBlur dependency) into your app target and change its first import from `import FaceBlurCore` to
+   `faceblur-swift` (tag `0.1.2`, the version that matches your FaceBlur dependency) into your app target and change its first import from `import FaceBlurCore` to
    the module of your framework (`import Shared`). Change nothing else: the file creates the ONNX Runtime session from
    the verified model bytes in memory, writes no model file, and passes only numbers per detection pass.
 

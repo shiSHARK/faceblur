@@ -14,7 +14,7 @@ public object FaceBlurInfo {
     public const val LICENSE: String = "Apache-2.0"
 
     /** The library version (equal to the build's VERSION_NAME; a test keeps them in step). */
-    internal const val VERSION: String = "0.1.1"
+    internal const val VERSION: String = "0.1.2"
 
     /** Returns a one-line description, for example `FaceBlur (Apache-2.0)`. */
     public fun describe(): String = "$NAME ($LICENSE)"
