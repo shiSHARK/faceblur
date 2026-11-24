@@ -24,7 +24,9 @@ give the person a way to cancel.
   session. Each session gets half of `onnxThreads`: 2 threads each when it is 0 (the default), otherwise the first
   session gets half rounded up and the second the rest, so `onnxThreads = 1` keeps one session. If the runtime cannot
   create the second session, or reports it differently from `modelInfo`, detection runs on one session with the same
-  result. `close()` releases both.
+  result. `close()` releases both. The second session keeps its own runtime memory: on Android a masker holds
+  noticeably more native memory once it has detected a photo that needs tiles, until it is closed (iOS: a small
+  increase). Close a masker when the screen or task that uses it ends; set `onnxThreads = 1` to keep a single session.
 - **Cancellation is cooperative.** Pass a `CancellationToken` to the call. FaceBlur reads it before detection,
   between detector passes, in long loops over many detections and immediately before writing masks. A pass already
   inside the runtime is not interrupted, and `DetectorModel.load` cannot be cancelled.

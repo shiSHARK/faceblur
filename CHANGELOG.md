@@ -22,7 +22,10 @@ Patch release; the public API is unchanged. One version number covers the Maven 
   merged in tile order, so the faces and masks are the same as with one session. Each session gets half of
   `onnxThreads` (2 each when it is 0, the default); with `onnxThreads = 1`, or when the runtime cannot create the second
   session, detection runs on one session. Every run of both sessions has the existing time limit, and a run that times
-  out or fails in either session fails the call with the existing errors. `close()` releases both sessions.
+  out or fails in either session fails the call with the existing errors. `close()` releases both sessions. The
+  second session keeps its own runtime memory: on Android a masker holds noticeably more native memory once it has
+  detected a photo that needs tiles, until it is closed (iOS: a small increase). Close a masker when the screen or
+  task that uses it ends; set `onnxThreads = 1` to keep a single session.
 - A runtime session opened again after a timeout must report the same `modelInfo` as the first one; otherwise the call
   fails with `ModelOutputInvalid` (`RUN_FAILED`). A cancellation requested while that session was being opened is
   honoured before detection starts.

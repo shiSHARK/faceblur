@@ -69,6 +69,11 @@ The model, its licence and its training data are your responsibility; assess you
 reads and hashes the whole file and cannot be cancelled: do it once, off the main thread. Then create one
 `FaceMasker(model)` per worker and call `close()` when you are done with it.
 
+A masker keeps a second runtime session for photos that need tiles (detection runs two passes at a time). That session
+keeps its own runtime memory: on Android a masker holds noticeably more native memory once it has detected such a
+photo, until it is closed. Close a masker when the screen or task that uses it ends; set `onnxThreads = 1` to keep a
+single session.
+
 ## File mode
 
 File mode reads an image file (JPEG, HEIC or PNG), decodes it with the platform decoder, covers the faces and writes a
