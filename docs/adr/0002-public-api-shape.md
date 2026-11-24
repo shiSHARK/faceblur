@@ -642,8 +642,10 @@ the measured renderer). Then, for every mask and every pixel:
    0.45 < r ≤ 1 the colour changes, as a colour gradient, from `color` towards the colours sampled in a ring just
    outside the mask (outside every mask); alpha stays 255 throughout (rule 1).
 
-Where masks overlap, rule 1 of any mask takes precedence over rules 2 and 3 of another. Where two soft edges overlap,
-the blends are applied one after the other; rules 2 and 4 still hold (the alpha never decreases, and the result
+Where masks overlap, rule 1 of any mask takes precedence over rules 2 and 3 of another. Masks are composited smallest
+first (the area of the opaque mask as drawn; masks of the same size keep the plan order), so a bigger mask is on top of
+a smaller one it overlaps. Where two soft edges overlap, the blends are applied one after the other; rules 2 and 4
+still hold (the alpha never decreases, and the result
 stays between the fills and the input). The soft edge equals the
 configured `feather` (for example r up to 1.10 by default) only for masks whose smaller radius is at least
 1 / `feather` pixels (10 px by default); smaller masks get a one-pixel soft edge.

@@ -195,7 +195,8 @@ with straight (non-premultiplied) alpha; two exceptions are noted under Conseque
      today. Fills test this bit instead of scanning the other masks. A lookup on a tile without coverage bits reads
      "not covered", which is exact, because a bit can only be set inside an opaque rectangle. "Never sample a pixel
      inside any mask" stays exact, and the cost is the summed area of the opaque rectangles.
-   - For each mask in plan order:
+   - For each mask in draw order (smallest drawn mask first, bigger masks on top; masks of the same size keep the plan
+     order; the engine composites the list it is given, and the stage hands it the plan sorted this way):
      - read the original pixels it needs from the caller's image, row by row along its read rectangle (only the
        rows the fill samples), in runs of at most 64 pixels, each into the reserved run buffer of exactly that
        length. Nothing has been written yet, so these are the original pixels, as in the old two-phase groups, and
@@ -228,9 +229,10 @@ with straight (non-premultiplied) alpha; two exceptions are noted under Conseque
      pixel) counts as work too.
 
 - **Groups are not needed.** Every fill reads original pixels, because nothing is written before step 3. Compositing
-  in plan order gives the result the old groups gave, because masks of different groups never write the same
+  in draw order gives the result the old groups gave, because masks of different groups never write the same
   pixels (each write rectangle lies inside its read rectangle, and groups were the overlap components of read
-  rectangles).
+  rectangles). Draw order is smallest drawn mask first, stable for masks of the same size; it decides only the
+  pixels that two masks reach.
 - **Cost:** O(masks + summed working area + shadow area). There is no step over pairs of masks and no per-pixel scan
   over other masks.
 - **Memory (peak):** the working area of decision 6, all of it allocated in step 1:

@@ -202,12 +202,12 @@ internal object MaskPainter {
 
     /**
      * The area in square pixels of [g]'s opaque mask as the stage draws it (radii below [PreparedMask.MIN_RADIUS]
-     * raised to it): π·rx·ry for an ellipse, 4·rx·ry for a rectangle. NaN for a mask the stage rejects.
+     * raised to it): π·(rx·ry) for an ellipse, 4·rx·ry for a rectangle. NaN for a mask the stage rejects.
      */
     fun drawnArea(g: MaskGeometry): Double {
         val rx = max(g.rx, PreparedMask.MIN_RADIUS).toDouble()
         val ry = max(g.ry, PreparedMask.MIN_RADIUS).toDouble()
-        return if (g.shape == MaskShape.ELLIPSE) PI * rx * ry else 4.0 * rx * ry
+        return if (g.shape == MaskShape.ELLIPSE) PI * (rx * ry) else 4.0 * rx * ry
     }
 
     /** Ascending [drawnArea] (a total order: NaN last); no boxing. */

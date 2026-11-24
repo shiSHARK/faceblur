@@ -148,6 +148,19 @@ class MaskOrderTest {
         assertEquals(equal.reversed(), MaskPainter.drawOrder(equal.reversed()))
     }
 
+    @Test
+    fun ellipsesWithSwappedRadiiHaveTheSameSizeAndKeepThePlanOrder() {
+        // With the radii multiplied before pi the two products would differ in the last bit (153996.46333433126 and
+        // 153996.4633343313), and the rounding would decide the order.
+        val a = 382.12353515625f
+        val b = 128.27944946289062f
+        val wide = MaskGeometry(500f, 300f, a, b, MaskShape.ELLIPSE)
+        val tall = MaskGeometry(520f, 310f, b, a, MaskShape.ELLIPSE)
+        assertEquals(MaskPainter.drawnArea(wide), MaskPainter.drawnArea(tall))
+        assertEquals(listOf(wide, tall), MaskPainter.drawOrder(listOf(wide, tall)))
+        assertEquals(listOf(tall, wide), MaskPainter.drawOrder(listOf(tall, wide)))
+    }
+
     /** Random overlapping masks of many sizes, some across the edges and some raised to 1 px. */
     private fun plan(seed: Int): List<MaskGeometry> {
         val r = Random(seed)
