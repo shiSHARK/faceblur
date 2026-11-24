@@ -428,7 +428,7 @@ jobs:
 
       - name: Maven Central mirror (install the Gradle init script)
         if: steps.present.outputs.present == 'true'
-        run: sh scripts/ci-steps.sh maven-mirror-install
+        run: sh scripts/ci-steps.sh maven-mirror-install-verification
 
       - name: Verification checks
         if: steps.present.outputs.present == 'true'
@@ -456,4 +456,4 @@ jobs:
 
       - name: Maven Central mirror (report)
         if: always() && steps.present.outputs.present == 'true'
-        run: sh scripts/ci-steps.sh maven-mirror-report
+        run: sh scripts/ci-steps.sh maven-mirror-report-verification

@@ -7,7 +7,9 @@
 #
 # Usage: scripts/ci-steps.sh <step>            run one step (exit code of the check)
 #        scripts/ci-steps.sh --list <job>      print the steps of a job in order (gates | build | verification)
-# maven-mirror-install / maven-mirror-report (first and last step of the Gradle jobs): on GitHub Actions the Gradle jobs
+# maven-mirror-install / maven-mirror-report (first and last step of the build job; the verification job has the same
+# two under the names maven-mirror-install-verification / maven-mirror-report-verification, because the CI check wants
+# each step name exactly once in ci.yml): on GitHub Actions the Gradle jobs
 # resolve Maven Central through Google's mirror of it, Maven Central stays the fallback (shared runner IPs get HTTP 429).
 # The local merge gate is not a GitHub Actions run: for these two steps it prints one line and does nothing, because
 # the maintainer's gate installs the same kind of init script into its own Gradle home.
@@ -24,7 +26,7 @@ GATES="data-admission dco spdx licence-index api-wording wording internal-ids in
 osv-build-tooling gate-self-tests ort-telemetry ort-options ci-step-list"
 BUILD="maven-mirror-install build-main publish-local publication-contents consumer-manifest guide-snippets osv-runtime-gate licence-notices runtime-deps test-results local-fixture-tests large-heap-switch eval-smoke
 privacy-crosscheck changed-lines-coverage test-model-controls artifact-paths model-leak reports-paths maven-mirror-report"
-VERIFICATION="maven-mirror-install verification-check verification-results verification-reports-paths maven-mirror-report"
+VERIFICATION="maven-mirror-install-verification verification-check verification-results verification-reports-paths maven-mirror-report-verification"
 
 # The Gradle tasks of the build job (one list for CI and the local gate).
 BUILD_TASKS="jvmTest testAndroidHostTest checkKotlinAbi lint ktlintCheck koverVerify
@@ -181,13 +183,13 @@ run_step() {
         # CI and the local merge gate run the same checks (scripts/check-ci-steps.py, both directions).
         ci-step-list) python3 -I scripts/check-ci-steps.py . ;;
         # --- build ---------------------------------------------------------------------------------------------------
-        maven-mirror-install)
+        maven-mirror-install | maven-mirror-install-verification)
             if [ "${GITHUB_ACTIONS:-}" = true ]; then
                 mirror_install
             else
                 echo "ci-steps: maven-mirror-install: not a GitHub Actions run, nothing installed (the local gate handles its own mirror)"
             fi ;;
-        maven-mirror-report)
+        maven-mirror-report | maven-mirror-report-verification)
             if [ "${GITHUB_ACTIONS:-}" = true ]; then
                 mirror_report
             else
