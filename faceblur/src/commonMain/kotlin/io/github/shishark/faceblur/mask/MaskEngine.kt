@@ -9,6 +9,8 @@ import io.github.shishark.faceblur.MutablePixelImage
 import io.github.shishark.faceblur.internal.runtime.FaceBlurRuntime
 import io.github.shishark.faceblur.isFatal
 import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -437,7 +439,107 @@ private class MaskStage private constructor(
         }
     }
 
-    /** One bit per pixel whose centre lies inside the opaque mask of any mask (the same float test as the fills). */
+    // ---- Row spans ---------------------------------------------------------------------------------------------------
+    //
+    // Within one row of a mask, the normalised radius r(x) of pixel x is computed with exactly the float expression of
+    // the per-pixel test, (x + 0.5f - cx) / rx, then sqrt(dx² + dy²) or max(|dx|, |dy|). Every float step is rounded
+    // monotonically, so d(x) = x + 0.5f - cx never decreases with x. Let `split` be the last pixel with d <= 0: r never
+    // rises from the left up to `split` and never falls from `split` + 1 on. So the pixels of a row whose r passes a
+    // bound (r <= 1, or r < 1 + feather) are always one interval, and it is found exactly with the per-pixel test at
+    // its two ends: on the left part the test is false ... false true ... true, on the right part true ... false. An
+    // estimate of each end only says where to start testing; a wrong estimate costs time, never a pixel.
+
+    /** The start of the last span found by [span] (inclusive). */
+    private var spanStart = 0
+
+    /** The end of the last span found by [span] (exclusive). */
+    private var spanEnd = 0
+
+    /** The last pixel x of [lo] - 1 .. [hi] - 1 with x + 0.5f - cx <= 0 ([lo] - 1 when there is none). */
+    private fun splitOf(lo: Int, hi: Int, cx: Float): Int {
+        var x = floor(cx.toDouble() - 0.5).coerceIn((lo - 1).toDouble(), (hi - 1).toDouble()).toInt()
+        while (x + 1 < hi && x + 1 + 0.5f - cx <= 0f) x++
+        while (x >= lo && x + 0.5f - cx > 0f) x--
+        return x
+    }
+
+    /** The normalised radius of pixel [x] in a row with [dy]: the float expression of the per-pixel test. */
+    private fun radiusAt(x: Int, cx: Float, rx: Float, dy: Float, ellipse: Boolean): Float {
+        val dx = (x + 0.5f - cx) / rx
+        return if (ellipse) sqrt(dx * dx + dy * dy) else max(abs(dx), abs(dy))
+    }
+
+    /** True when pixel [x] passes the bound: r < [limit] with [strict], r <= [limit] without. */
+    private fun passes(
+        x: Int,
+        cx: Float,
+        rx: Float,
+        dy: Float,
+        ellipse: Boolean,
+        limit: Float,
+        strict: Boolean,
+    ): Boolean {
+        val r = radiusAt(x, cx, rx, dy, ellipse)
+        return if (strict) r < limit else r <= limit
+    }
+
+    /**
+     * Finds the pixels of [lo]..[hi]) of a row with [dy] whose radius passes the bound (see [passes]) and returns
+     * false when there are none; otherwise they are [spanStart]..[spanEnd]). [split] is [splitOf] for [lo], [hi].
+     */
+    private fun span(
+        lo: Int,
+        hi: Int,
+        split: Int,
+        cx: Float,
+        rx: Float,
+        dy: Float,
+        ellipse: Boolean,
+        limit: Float,
+        strict: Boolean,
+    ): Boolean {
+        val left = split >= lo && passes(split, cx, rx, dy, ellipse, limit, strict)
+        val right = split + 1 < hi && passes(split + 1, cx, rx, dy, ellipse, limit, strict)
+        if (!left && !right) return false
+        // Estimated half-width of the span in pixels (only where testing starts).
+        val reach = if (ellipse) {
+            val q = limit.toDouble() * limit - dy.toDouble() * dy
+            if (q > 0.0) rx * sqrt(q) else 0.0
+        } else {
+            rx.toDouble() * limit
+        }
+        val centre = cx.toDouble() - 0.5
+        if (left) {
+            var a = ceil(centre - reach).coerceIn(lo.toDouble(), split.toDouble()).toInt()
+            if (passes(a, cx, rx, dy, ellipse, limit, strict)) {
+                while (a > lo && passes(a - 1, cx, rx, dy, ellipse, limit, strict)) a--
+            } else {
+                // Ends at the latest on [split], which passes.
+                while (!passes(a, cx, rx, dy, ellipse, limit, strict)) a++
+            }
+            spanStart = a
+        } else {
+            spanStart = split + 1
+        }
+        if (right) {
+            var b = floor(centre + reach).coerceIn((split + 1).toDouble(), (hi - 1).toDouble()).toInt()
+            if (passes(b, cx, rx, dy, ellipse, limit, strict)) {
+                while (b + 1 < hi && passes(b + 1, cx, rx, dy, ellipse, limit, strict)) b++
+            } else {
+                // Ends at the latest on [split] + 1, which passes.
+                while (!passes(b, cx, rx, dy, ellipse, limit, strict)) b--
+            }
+            spanEnd = b + 1
+        } else {
+            spanEnd = split + 1
+        }
+        return true
+    }
+
+    /**
+     * One bit per pixel whose centre lies inside the opaque mask of any mask (r <= 1, the same float test as the
+     * fills), set per row span (see [span]). One unit per row and per coverage word written.
+     */
     private fun buildCoverage(n: Int, c: FillContext) {
         for (i in 0 until n) {
             work.add(1)
@@ -451,33 +553,44 @@ private class MaskStage private constructor(
             val rx = c.rx(i)
             val ry = c.ry(i)
             val ellipse = c.ellipse(i)
+            val split = splitOf(ol, or, cx)
             for (y in ot until ob) {
+                work.add(1)
                 val dy = (y + 0.5f - cy) / ry
-                for (x in ol until or) {
-                    work.add(1)
-                    val dx = (x + 0.5f - cx) / rx
-                    val r = if (ellipse) sqrt(dx * dx + dy * dy) else max(abs(dx), abs(dy))
-                    if (r <= 1f) setCovered(x, y)
-                }
+                if (span(ol, or, split, cx, rx, dy, ellipse, 1f, strict = false)) setCovered(spanStart, spanEnd, y)
             }
         }
     }
 
-    private fun setCovered(x: Int, y: Int) {
-        val t = (y ushr FillContext.TILE_SHIFT) * tilesX + (x ushr FillContext.TILE_SHIFT)
-        var slot = area.coverageTable[t]
-        if (slot == 0) {
-            if (coverageUsed >= area.layout.coverageSlots) throw CoreFailure.InvalidMask("coverage tiles exhausted")
-            slot = ++coverageUsed
-            area.coverageTable[t] = slot
+    /** Sets the coverage bits of the pixels [xa]..[xb]) of row [y], one 64-bit word per tile at a time. */
+    private fun setCovered(xa: Int, xb: Int, y: Int) {
+        var x = xa
+        while (x < xb) {
+            work.add(1)
+            val tileX = x ushr FillContext.TILE_SHIFT
+            val end = min(xb, (tileX + 1) shl FillContext.TILE_SHIFT)
+            val t = (y ushr FillContext.TILE_SHIFT) * tilesX + tileX
+            var slot = area.coverageTable[t]
+            if (slot == 0) {
+                if (coverageUsed >= area.layout.coverageSlots) throw CoreFailure.InvalidMask("coverage tiles exhausted")
+                slot = ++coverageUsed
+                area.coverageTable[t] = slot
+            }
+            val len = end - x
+            val bits = if (len >= TILE) -1L else ((1L shl len) - 1L) shl (x and FillContext.TILE_MASK)
+            val i = (slot - 1) * TILE + (y and FillContext.TILE_MASK)
+            area.coverage[i] = area.coverage[i] or bits
+            x = end
         }
-        val i = (slot - 1) * TILE + (y and FillContext.TILE_MASK)
-        area.coverage[i] = area.coverage[i] or (1L shl (x and FillContext.TILE_MASK))
     }
 
     /**
      * Composites mask [i] in its write rectangle, tile by tile, into the shadow: inside the mask the fill with alpha
      * 255; in the outward feather band a smoothstep blend of colour and alpha towards the fill; beyond it nothing.
+     *
+     * Per row of a tile part: the span of pixels with r < 1 + feather (nothing is written outside it), within it the
+     * span with r <= 1, which gets the fill without computing a radius, and the band on either side, which gets the
+     * per-pixel code of [bandPixel]. The same pixels as testing every pixel (see [span]).
      */
     private fun composite(i: Int, c: FillContext, oval: GradientOvalFill, smooth: SmoothFill) {
         val wl = c.rect(i, FillContext.WRITE)
@@ -492,6 +605,7 @@ private class MaskStage private constructor(
         val ellipse = c.ellipse(i)
         val outer = 1f + featherN
         val solid = config.color or OPAQUE
+        val style = config.style
         for (ty in wt / TILE..(wb - 1) / TILE) {
             for (tx in wl / TILE..(wr - 1) / TILE) {
                 val slot = shadowSlot(tx, ty)
@@ -504,39 +618,86 @@ private class MaskStage private constructor(
                 val ya = max(wt, y0)
                 val yb = min(wb, y0 + tileHeight(ty))
                 markRows(slot, xa - x0, xb - x0, ya - y0, yb - y0)
-                when (config.style) {
+                when (style) {
                     MaskStyle.SOLID -> Unit
                     MaskStyle.GRADIENT_OVAL -> oval.prepareTile(xa, ya, xb, yb)
                     MaskStyle.SMOOTH_FILL -> smooth.prepareColumns(xa, xb)
                 }
+                val split = splitOf(xa, xb, cx)
                 for (y in ya until yb) {
+                    work.add(xb - xa)
                     val dy = (y + 0.5f - cy) / ry
+                    if (!span(xa, xb, split, cx, rx, dy, ellipse, outer, strict = true)) continue
+                    val oa = spanStart
+                    val ob = spanEnd
+                    // The inside lies within the outer span (r <= 1 < 1 + feather); empty when no pixel has r <= 1.
+                    // d(x) never decreases, so the split of the outer span is the tile part's split clamped to it.
+                    var ia = ob
+                    var ib = ob
+                    val innerSplit = split.coerceIn(oa - 1, ob - 1)
+                    if (span(oa, ob, innerSplit, cx, rx, dy, ellipse, 1f, strict = false)) {
+                        ia = spanStart
+                        ib = spanEnd
+                    }
+                    if (style == MaskStyle.SMOOTH_FILL) smooth.prepareRow(y)
                     val row = (y - y0) * tw - x0
-                    if (config.style == MaskStyle.SMOOTH_FILL) smooth.prepareRow(y)
-                    for (x in xa until xb) {
-                        work.add(1)
-                        val dx = (x + 0.5f - cx) / rx
-                        val r = if (ellipse) sqrt(dx * dx + dy * dy) else max(abs(dx), abs(dy))
-                        if (r >= outer) continue
-                        val e = when (config.style) {
-                            MaskStyle.SOLID -> solid
-                            MaskStyle.GRADIENT_OVAL -> oval.value(x, y)
-                            MaskStyle.SMOOTH_FILL -> smooth.value(x)
+                    for (x in oa until ia) {
+                        bandPixel(tile, row, x, y, cx, rx, dy, ellipse, featherN, solid, oval, smooth)
+                    }
+                    when (style) {
+                        MaskStyle.SOLID -> tile.fill(OPAQUE or (solid and 0xFFFFFF), row + ia, row + ib)
+
+                        MaskStyle.GRADIENT_OVAL -> for (x in ia until ib) {
+                            tile[row + x] = OPAQUE or (oval.value(x, y) and 0xFFFFFF)
                         }
-                        val p = row + x
-                        if (r <= 1f) {
-                            tile[p] = OPAQUE or (e and 0xFFFFFF)
-                        } else {
-                            val a = (alpha(r, featherN) * 256f + 0.5f).toInt()
-                            if (a <= 0) continue
-                            val o = tile[p]
-                            val oA = o ushr 24
-                            val na = oA + (((255 - oA) * a + 128) shr 8)
-                            tile[p] = (na shl 24) or blendColour(o, oA, e, a)
+
+                        MaskStyle.SMOOTH_FILL -> for (x in ia until ib) {
+                            tile[row + x] = OPAQUE or (smooth.value(x) and 0xFFFFFF)
                         }
+                    }
+                    for (x in ib until ob) {
+                        bandPixel(tile, row, x, y, cx, rx, dy, ellipse, featherN, solid, oval, smooth)
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Pixel [x] of row [y] (index base [row] in the shadow [tile]) outside the inside span: the per-pixel code of the
+     * composite, unchanged (nothing at r >= 1 + feather, the fill at r <= 1, otherwise the soft-edge blend).
+     */
+    private fun bandPixel(
+        tile: IntArray,
+        row: Int,
+        x: Int,
+        y: Int,
+        cx: Float,
+        rx: Float,
+        dy: Float,
+        ellipse: Boolean,
+        featherN: Float,
+        solid: Int,
+        oval: GradientOvalFill,
+        smooth: SmoothFill,
+    ) {
+        val r = radiusAt(x, cx, rx, dy, ellipse)
+        if (r >= 1f + featherN) return
+        val e = when (config.style) {
+            MaskStyle.SOLID -> solid
+            MaskStyle.GRADIENT_OVAL -> oval.value(x, y)
+            MaskStyle.SMOOTH_FILL -> smooth.value(x)
+        }
+        val p = row + x
+        if (r <= 1f) {
+            tile[p] = OPAQUE or (e and 0xFFFFFF)
+        } else {
+            val a = (alpha(r, featherN) * 256f + 0.5f).toInt()
+            if (a <= 0) return
+            val o = tile[p]
+            val oA = o ushr 24
+            val na = oA + (((255 - oA) * a + 128) shr 8)
+            tile[p] = (na shl 24) or blendColour(o, oA, e, a)
         }
     }
 
@@ -651,6 +812,10 @@ private class MaskStage private constructor(
         work.count(TILE * TILE)
     }
 
+    /**
+     * Writes the [len] pixels of the shadow [tile] from index [from] at ([x], [y]) as one row run, reads them back and
+     * compares every pixel written with alpha 255 with the shadow tile.
+     */
     private fun writeRun(tile: IntArray, from: Int, x: Int, y: Int, len: Int) {
         val stage = area.runRead[len] ?: throw CoreFailure.InvalidMask("no run buffer")
         val back = area.runBack[len] ?: throw CoreFailure.InvalidMask("no run buffer")
@@ -663,8 +828,10 @@ private class MaskStage private constructor(
             if (isFatal(e)) throw e
             throw CoreFailure.WriteInterrupted(e)
         }
+        // Compared with the shadow tile itself (the library's copy, never handed to the image), not with the staged
+        // array: an image that changed the array it was given must not make a wrong write read back as applied.
         for (j in 0 until len) {
-            val p = stage[j]
+            val p = tile[from + j]
             if (p ushr 24 == 0xFF && back[j] != p) throw CoreFailure.WriteNotApplied()
         }
         work.count(len)

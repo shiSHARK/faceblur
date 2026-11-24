@@ -23,6 +23,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A runtime session opened again after a timeout must report the same `modelInfo` as the first one; otherwise the call
   fails with `ModelOutputInvalid` (`RUN_FAILED`). A cancellation requested while that session was being opened is
   honoured before detection starts.
+- Masking is faster, especially for large masks: each row of a mask is filled as one span, and only the pixels of the
+  soft edge are computed one by one. The masked pixels are unchanged.
+
+### Fixed
+
+- The read-back check of the mask copy compares every row run with the library's own copy of the masked pixels, as it
+  already did for whole 64 × 64 blocks, so an image that changes the pixel array it is given fails closed.
 
 ## [0.1.1] - 2026-11-23
 
