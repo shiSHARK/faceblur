@@ -68,11 +68,16 @@ public interface OnnxBridge {
 }
 
 /**
- * Creates one [OnnxBridge] per runtime session: when a `FaceMasker` is created, and again whenever a masker replaces a
- * session after a run timeout. [create] is called on a library thread, not on the app's calling thread. The calls on
- * one glue never overlap: [OnnxBridge.open], [OnnxBridge.run] and the version and provider queries run on library
- * threads; [OnnxBridge.close] runs on the masker's calling thread, on a library thread when the session cannot be
- * opened, or, for a session given up after a timeout, on the library thread of its stuck call once that call returns.
+ * Creates one [OnnxBridge] per runtime session. A `FaceMasker` has up to two sessions: the first when it is created,
+ * the second at its first detection that needs at least two tiles (detection runs two passes at a time), and new ones
+ * whenever the masker replaces its sessions after a run timeout or a failure. [create] is called on a library thread,
+ * not on the app's calling thread. The two glues of one masker run their passes at the same time on different
+ * library threads, so glue instances must not share mutable state of their own (the published glue keeps its state per
+ * instance and shares only the process-wide runtime environment). The calls on one glue never overlap:
+ * [OnnxBridge.open], [OnnxBridge.run] and the version and provider queries run on library threads; [OnnxBridge.close]
+ * runs on the masker's calling thread, on a library thread when the session cannot be opened, or, for a session given
+ * up while one of its passes is running (after a timeout, or a failure in the other session), on the library thread of
+ * that pass once it returns.
  */
 public fun interface OnnxBridgeFactory {
     public fun create(): OnnxBridge

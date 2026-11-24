@@ -21,6 +21,13 @@ import kotlin.math.roundToInt
  * and its earlier state stays as a part mask unless the grown box's mask covers it, so a lower threshold never
  * removes or shrinks a mask. The candidates of all passes are bounded ([DetectionSettings.maxMergeCandidates]) and
  * so is the merge work ([DetectionSettings.maxMergeWork]); either bound fails closed.
+ *
+ * Two engines ([secondEngine]): with at least two tiles, every other tile runs on the second engine. Each
+ * pass is prepared (crop, tensor) on the calling thread and handed to its engine, which runs it on its own pass
+ * thread while the caller prepares the other engine's pass; the results are taken back in tile order, so the merge
+ * gets exactly the candidates, in exactly the order, of one engine. A failure of either pass fails the call: the pass
+ * still in flight is abandoned (its session retired, never read). A cancellation lets a pass in flight end and drops
+ * its result. Without a second engine (null from [secondEngine]) every pass runs on [engine], as before.
  */
 internal class TiledFaceDetector(
     private val engine: FaceDetectorEngine,
@@ -29,6 +36,13 @@ internal class TiledFaceDetector(
     private val stageClock: StageClock? = null,
     /** Called before every pass and during long loops; cooperative cancellation throws from here. */
     private val checkCancelled: () -> Unit = {},
+    /**
+     * The second engine, asked for once per detection when it has at least two tiles; null (or a null
+     * result): every pass on [engine]. Its own failure fails the detection.
+     */
+    private val secondEngine: (() -> FaceDetectorEngine?)? = null,
+    /** Test seam: sees every candidate as it enters the merge input (box, score, cut), in merge-input order. */
+    private val mergeInputObserver: ((DetectedFace, Boolean) -> Unit)? = null,
 ) {
     private val tileWidth: Int get() = engine.inputWidth
     private val tileHeight: Int get() = engine.inputHeight
@@ -66,10 +80,7 @@ internal class TiledFaceDetector(
         val candidates = MergeCandidates(config.maxMergeCandidates)
         checkCancelled()
         runPass(image, intArrayOf(0, 0, w, h), isTile = false, candidates)
-        for (tile in planTiles(w, h)) {
-            checkCancelled()
-            runPass(image, tile, isTile = true, candidates)
-        }
+        searchTiles(image, planTiles(w, h), candidates)
         val count = candidates.size
         val merged =
             timed(stageClock, "merge") {
@@ -109,6 +120,66 @@ internal class TiledFaceDetector(
     }
 
     /**
+     * Runs the passes of [tiles] in tile order and adds their candidates to [out]. With at least two tiles and a
+     * second engine, every other tile runs on that engine at the same time (see the class); the candidates are added
+     * in tile order all the same.
+     */
+    private fun searchTiles(image: DetectionImage, tiles: List<IntArray>, out: MergeCandidates) {
+        if (tiles.isEmpty()) return
+        val second = if (tiles.size >= 2) secondEngine?.invoke() else null
+        if (second == null) {
+            for (tile in tiles) {
+                checkCancelled()
+                runPass(image, tile, isTile = true, out)
+            }
+            return
+        }
+        second.joinPhoto(engine, config.maxNmsWork)
+        val engines = arrayOf(engine, second)
+        val inFlight = ArrayDeque<Started>(2)
+        val add: (DetectedFace, Boolean) -> Unit = { f, cut -> addCandidate(out, f, cut) }
+        try {
+            for ((k, tile) in tiles.withIndex()) {
+                checkCancelled()
+                val lane = k % 2
+                // The engine's previous pass (and every earlier one) is taken back first, in tile order.
+                while (inFlight.any { it.lane == lane }) finishPass(inFlight.removeFirst(), image, add)
+                startPass(engines[lane], lane, image, tile, isTile = true)?.let { inFlight.addLast(it) }
+            }
+            while (inFlight.isNotEmpty()) finishPass(inFlight.removeFirst(), image, add)
+        } catch (e: Throwable) {
+            endInFlight(inFlight, e)
+            throw e
+        }
+    }
+
+    /**
+     * Ends the passes still in flight after [cause] stopped the tile loop. A cancellation lets them end (the runtime is
+     * never interrupted) and drops their results, so both sessions stay usable; if one of them fails, that failure is
+     * the call's and the rest are abandoned. Any other failure abandons them at once (fail closed: their sessions are
+     * retired and nothing of their runs is read).
+     */
+    private fun endInFlight(inFlight: ArrayDeque<Started>, cause: Throwable) {
+        if (cause is FaceMaskException.Cancelled) {
+            while (inFlight.isNotEmpty()) {
+                val s = inFlight.removeFirst()
+                try {
+                    s.pass.value.finish()
+                } catch (e: Throwable) {
+                    abandonAll(inFlight)
+                    throw e
+                }
+            }
+        } else {
+            abandonAll(inFlight)
+        }
+    }
+
+    private fun abandonAll(inFlight: ArrayDeque<Started>) {
+        while (inFlight.isNotEmpty()) inFlight.removeFirst().pass.value.abandon()
+    }
+
+    /**
      * Test hook (ADR 0009): the boxes of the global pass alone, mapped to the image and clipped to it exactly like
      * the candidates of [detect], without the cross-pass merge.
      */
@@ -120,40 +191,105 @@ internal class TiledFaceDetector(
     }
 
     private fun runPass(image: DetectionImage, rect: IntArray, isTile: Boolean, out: MergeCandidates) =
-        runPass(image, rect, isTile) { f, cut -> out.add(f.rect, f.score, cut) }
+        runPass(image, rect, isTile) { f, cut -> addCandidate(out, f, cut) }
+
+    private fun addCandidate(out: MergeCandidates, f: DetectedFace, cut: Boolean) {
+        out.add(f.rect, f.score, cut)
+        mergeInputObserver?.invoke(f, cut)
+    }
 
     private fun runPass(image: DetectionImage, rect: IntArray, isTile: Boolean, out: (DetectedFace, Boolean) -> Unit) {
+        val pass =
+            withCrop(image, rect, isTile) { crop ->
+                timed(stageClock, "engine") { engine.detect(crop, config.minScore, checkCancelled) }
+            } ?: return
+        deliver(pass.value, image, rect, isTile, pass.sx, pass.sy, out)
+    }
+
+    /** A pass handed to the engine of [lane], with what [finishPass] needs to map its boxes. */
+    private class Started(val pass: Cropped<PendingPass>, val lane: Int, val rect: IntArray, val isTile: Boolean)
+
+    /** What a pass made of a crop, and the crop's scale back to the image ([sx], [sy] source pixels per crop pixel). */
+    private class Cropped<T>(val value: T, val sx: Float, val sy: Float)
+
+    /** Crops [rect] and hands its pass to [engine] ([FaceDetectorEngine.start]); null when the crop is empty. */
+    private fun startPass(
+        engine: FaceDetectorEngine,
+        lane: Int,
+        image: DetectionImage,
+        rect: IntArray,
+        isTile: Boolean,
+    ): Started? {
+        val pass =
+            withCrop(image, rect, isTile) { crop ->
+                timed(stageClock, "engine") { engine.start(crop, config.minScore, checkCancelled) }
+            } ?: return null
+        return Started(pass, lane, rect, isTile)
+    }
+
+    /** Waits for the pass of [s] and gives its boxes to [out] as [runPass] does. */
+    private fun finishPass(s: Started, image: DetectionImage, out: (DetectedFace, Boolean) -> Unit) {
+        val found = timed(stageClock, "engine") { s.pass.value.finish() }
+        deliver(found, image, s.rect, s.isTile, s.pass.sx, s.pass.sy, out)
+    }
+
+    /**
+     * Runs [block] on the crop of [rect] (a tile at its own size, the global pass scaled to fit the model input) and
+     * releases the crop afterwards; null without running [block] when the crop is empty.
+     */
+    private inline fun <T> withCrop(
+        image: DetectionImage,
+        rect: IntArray,
+        isTile: Boolean,
+        block: (DetectionImage) -> T,
+    ): Cropped<T>? {
         val (x, y, tw, th) = rect
         val target = if (isTile) max(tw, th) else fitMaxSide(tw, th, tileWidth, tileHeight)
         val crop = timed(stageClock, "crop") { image.cropScaled(x, y, tw, th, max(1, target)) }
         try {
-            if (crop.width <= 0 || crop.height <= 0) return
+            if (crop.width <= 0 || crop.height <= 0) return null
             val sx = tw.toFloat() / crop.width
             val sy = th.toFloat() / crop.height
-            val found = timed(stageClock, "engine") { engine.detect(crop, config.minScore, checkCancelled) }
-            // Box edges this close to an inner tile border count as "cut" (2 % of the tile, ≥ 2 px).
-            val marginX = max(2f, tw * 0.02f)
-            val marginY = max(2f, th * 0.02f)
-            val iw = image.width.toFloat()
-            val ih = image.height.toFloat()
-            for (f in found) {
-                f.requireValidDetection()
-                val m = f.mapped(x.toFloat(), y.toFloat(), sx, sy)
-                val cut =
-                    isTile &&
-                        (
-                            (x > 0 && m.rect.left <= x + marginX) ||
-                                (y > 0 && m.rect.top <= y + marginY) ||
-                                (x + tw < image.width && m.rect.right >= x + tw - marginX) ||
-                                (y + th < image.height && m.rect.bottom >= y + th - marginY)
-                            )
-                // Faces at the edge are normal: clipped to the image; only a box left empty covers no pixel.
-                val clipped = m.rect.clampTo(iw, ih)
-                if (clipped.isEmpty) continue
-                out(m.copy(rect = clipped), cut)
-            }
+            return Cropped(block(crop), sx, sy)
         } finally {
             crop.release()
+        }
+    }
+
+    /**
+     * Maps the boxes [found] of the crop of [rect] (scale [sx], [sy]) back to [image], marks those at an inner tile
+     * border as cut, clips them to the image and gives every non-empty one to [out].
+     */
+    private fun deliver(
+        found: List<DetectedFace>,
+        image: DetectionImage,
+        rect: IntArray,
+        isTile: Boolean,
+        sx: Float,
+        sy: Float,
+        out: (DetectedFace, Boolean) -> Unit,
+    ) {
+        val (x, y, tw, th) = rect
+        // Box edges this close to an inner tile border count as "cut" (2 % of the tile, ≥ 2 px).
+        val marginX = max(2f, tw * 0.02f)
+        val marginY = max(2f, th * 0.02f)
+        val iw = image.width.toFloat()
+        val ih = image.height.toFloat()
+        for (f in found) {
+            f.requireValidDetection()
+            val m = f.mapped(x.toFloat(), y.toFloat(), sx, sy)
+            val cut =
+                isTile &&
+                    (
+                        (x > 0 && m.rect.left <= x + marginX) ||
+                            (y > 0 && m.rect.top <= y + marginY) ||
+                            (x + tw < image.width && m.rect.right >= x + tw - marginX) ||
+                            (y + th < image.height && m.rect.bottom >= y + th - marginY)
+                        )
+            // Faces at the edge are normal: clipped to the image; only a box left empty covers no pixel.
+            val clipped = m.rect.clampTo(iw, ih)
+            if (clipped.isEmpty) continue
+            out(m.copy(rect = clipped), cut)
         }
     }
 

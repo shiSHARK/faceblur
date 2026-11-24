@@ -18,6 +18,13 @@ give the person a way to cancel.
 - **Create once, reuse, close.** Creating a masker opens a runtime session and runs one pass on a grey input: do it
   off the main thread, keep the instance for several photos and call `close()` when done. Calls after `close()` throw
   `Closed`.
+- **Two detector passes at a time.** The first detection of a photo that needs at least two tiles opens a second
+  runtime session, created and checked like the first, and from then on the tiles alternate between the two sessions,
+  so two passes run at the same time. The faces are merged in tile order, so the result is the same as with one
+  session. Each session gets half of `onnxThreads`: 2 threads each when it is 0 (the default), otherwise the first
+  session gets half rounded up and the second the rest, so `onnxThreads = 1` keeps one session. If the runtime cannot
+  create the second session, or reports it differently from `modelInfo`, detection runs on one session with the same
+  result. `close()` releases both.
 - **Cancellation is cooperative.** Pass a `CancellationToken` to the call. FaceBlur reads it before detection,
   between detector passes, in long loops over many detections and immediately before writing masks. A pass already
   inside the runtime is not interrupted, and `DetectorModel.load` cannot be cancelled.
@@ -25,9 +32,22 @@ give the person a way to cancel.
   (the larger of 2 seconds and 20 times the duration of the check pass at creation) ends the call with
   `ModelOutputInvalid` (finding `RUN_TIMEOUT`), and creating a `FaceMasker` that takes longer than 60 seconds fails with
   `ModelRejected` (finding `TIMEOUT`). Nothing is written, and treat the photo as not masked. The next call on the same
-  `FaceMasker` opens a new runtime session first. A run that the runtime cannot stop (on iOS none can) keeps a thread
-  and its session's memory until it returns, so the number of such runs is bounded for the whole process: when the
-  bound is reached, every `FaceMasker` in the process fails at once with the same errors until one of them returns.
+  `FaceMasker` opens a new runtime session first.
+- **Two sessions, one call.** Every run of both sessions has the limit above, and a run that times out or fails in
+  either session fails the whole call; the pass still running in the other session is given up and nothing of it is
+  read. What is used again afterwards:
+  - after a timeout in either session, neither session: the next call that detects opens new ones;
+  - after any other failure of a detection that had given tiles to the second session, neither session either;
+  - after any other failure before that (in the pass over the whole image, or while the masker runs one session),
+    both sessions are kept, as with one session before;
+  - after `Cancelled`, the passes already running end, their results are dropped and both sessions are kept;
+  - when creating the second session takes longer than its limit the call fails with `RUN_TIMEOUT`, and when its
+    check pass fails, with `RUN_FAILED`; the first session is kept and the next detection that needs two tiles tries
+    the second again.
+- **Runs that cannot be stopped.** A run that the runtime cannot stop (on iOS none can) keeps a thread and its
+  session's memory until it returns, so the number of such runs is bounded for the whole process (the runs of both
+  sessions count): when the bound is reached, every `FaceMasker` in the process fails at once with the same errors
+  until one of them returns.
 - **What the image looks like after `Cancelled`.** If cancellation was seen before the finished masks were copied into
   the image, the image is untouched. If it was requested during that final copy, the copy completes first (the image
   is fully masked) and `Cancelled` is thrown afterwards. An image is never half-masked by a cancellation. Your app
@@ -116,8 +136,9 @@ it can reach about 1.4 times the image itself.
 
 - The fixed part is not reserved on every call: it is sized from the plan (at most 128 bytes per mask, the fill
   scratch of the largest mask, and the bits of the partial tiles at the image edges).
-- The detector's own buffers come on top (one model input at a time). While instances are created, the model itself
-  needs several times its file size.
+- The detector's own buffers come on top (two model inputs at a time), and so does the memory of the two runtime
+  sessions of each instance: the second session holds about as much as the first. While instances are created, the
+  model itself needs several times its file size.
 - The working area is needed **per call, not per instance**. N calls running in parallel need up to N times the
   working area of one call.
 - Each call checks the memory that is free now (on Android and the JVM the heap that remains, on iOS the memory the

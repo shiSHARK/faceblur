@@ -16,7 +16,10 @@ import io.github.shishark.faceblur.internal.runtime.PassOutput
  * The exact threshold sweep of faceblur-eval (DX-MA-001): per image, the model runs once per pass; every pass output
  * is stored, and the detection of every other threshold replays the stored outputs through the library's unchanged
  * decode, in-pass NMS, mapping and cross-pass merge. The model outputs do not depend on the threshold, so each result
- * equals a full rerun with that threshold in the profile (tested against such reruns).
+ * equals a full rerun with that threshold in the profile (tested against such reruns). The maskers run as in
+ * production (two sessions, two passes at a time): a pass is replayed by its input, not by its position, because the
+ * two sessions start their runs in either order. Every threshold runs the same passes, so a successful replay must use
+ * every recorded pass exactly once ([ReplayMismatch] otherwise).
  *
  * One instance per thread. [close] releases the one runtime session.
  */
@@ -52,6 +55,9 @@ internal class ThresholdSweep(
 
     /** Model passes actually run, creation contract runs included (for tests). */
     val modelRuns: Int get() = replay.modelRuns
+
+    /** Contract runs of the sessions created so far (for tests). */
+    val contractRuns: Int get() = replay.contractRuns
 
     /** The masker of the highest threshold (its report and settings are those of every threshold). */
     val reportMasker: FaceMasker get() = maskers.last()
@@ -101,24 +107,32 @@ internal class ThresholdSweep(
 
 /**
  * A runtime that opens the real session once and shares it: in pass-through mode it runs the model, in record mode
- * it also stores each pass's input digest and outputs, in replay mode it returns the stored outputs in order and
- * fails loudly when the input or the number of passes differs from the recording.
+ * it also stores each pass's input digest and outputs, in replay mode it returns the stored outputs of the same input
+ * (each recorded pass once) and fails loudly for an input the recording does not have. Runs are serialized: the two
+ * sessions of a masker share the one real session and the recording.
  */
 internal class ReplayRuntime(private val real: ModelRuntime) : ModelRuntime {
     private enum class Mode { PASS, RECORD, REPLAY }
 
     private var mode = Mode.PASS
     private var shared: ModelSession? = null
+    private val lock = Any()
     private val recordedInputs = ArrayList<String>()
     private val recordedOutputs = ArrayList<Map<String, PassOutput>>()
-    private var cursor = 0
+
+    /** Which recorded passes a replay has used. */
+    private var used = BooleanArray(0)
 
     /** The first replay fault since [replay], if any (the library hides the error itself behind RUN_FAILED). */
     var fault: String? = null
         private set
 
-    /** Model passes actually run (for tests). */
+    /** Model passes actually run, contract runs included (for tests). */
     var modelRuns: Int = 0
+        private set
+
+    /** Contract runs at the creation of a session (the second session of a masker is created by its first tiles). */
+    var contractRuns: Int = 0
         private set
 
     fun record() {
@@ -131,7 +145,7 @@ internal class ReplayRuntime(private val real: ModelRuntime) : ModelRuntime {
     }
 
     fun replay() {
-        cursor = 0
+        used = BooleanArray(recordedOutputs.size)
         fault = null
         mode = Mode.REPLAY
     }
@@ -139,31 +153,58 @@ internal class ReplayRuntime(private val real: ModelRuntime) : ModelRuntime {
     fun finishReplay(allUsed: Boolean) {
         mode = Mode.PASS
         fault?.let { throw ReplayMismatch(it) }
-        if (allUsed && cursor != recordedOutputs.size) {
-            throw ReplayMismatch("replay used $cursor of ${recordedOutputs.size} recorded passes")
+        val n = used.count { it }
+        if (allUsed && n != recordedOutputs.size) {
+            throw ReplayMismatch("replay used $n of ${recordedOutputs.size} recorded passes")
         }
     }
 
     fun clear() {
         recordedInputs.clear()
         recordedOutputs.clear()
-        cursor = 0
+        used = BooleanArray(0)
     }
 
     override fun open(model: DetectorModel, threads: Int): ModelSession {
         val s = shared ?: real.open(model, threads).also { shared = it }
         return object : ModelSession by s {
+            /** The first run of every session is its contract run at creation: never recorded or replayed. */
+            private var contractDone = false
+
             override fun run(
                 input: FloatArray,
                 inputShape: LongArray,
                 outputNames: List<String>,
                 maxElements: Long,
                 timeoutMillis: Long,
+            ): Map<String, PassOutput> =
+                synchronized(lock) { runLocked(input, inputShape, outputNames, maxElements, timeoutMillis) }
+
+            private fun runLocked(
+                input: FloatArray,
+                inputShape: LongArray,
+                outputNames: List<String>,
+                maxElements: Long,
+                timeoutMillis: Long,
             ): Map<String, PassOutput> {
+                if (!contractDone) {
+                    contractDone = true
+                    modelRuns++
+                    contractRuns++
+                    return s.run(input, inputShape, outputNames, maxElements, timeoutMillis)
+                }
                 if (mode == Mode.REPLAY) {
-                    if (cursor >= recordedOutputs.size) fail("replay asked for more passes than recorded")
-                    if (recordedInputs[cursor] != digest(input)) fail("replay input differs from the recording")
-                    return recordedOutputs[cursor++]
+                    val d = digest(input)
+                    val i = recordedInputs.indices.firstOrNull { recordedInputs[it] == d && !used[it] }
+                        ?: fail(
+                            if (d in recordedInputs) {
+                                "replay asked for more passes than recorded"
+                            } else {
+                                "replay input differs from the recording"
+                            },
+                        )
+                    used[i] = true
+                    return recordedOutputs[i]
                 }
                 modelRuns++
                 val result = s.run(input, inputShape, outputNames, maxElements, timeoutMillis)

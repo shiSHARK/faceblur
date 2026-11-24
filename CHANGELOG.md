@@ -14,6 +14,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   fallback, because GitHub's shared runners are sometimes refused by Maven Central (HTTP 429). Two steps of
   `scripts/ci-steps.sh` install and report one Gradle init script. Dependency verification stays strict and unchanged,
   no cache is added, and `scripts/ci-local.sh` behaves as before.
+- Detection runs two passes at a time. The first detection of a photo that needs at least two tiles opens a second
+  runtime session, created and checked like the first, and the tiles alternate between the two sessions. The faces are
+  merged in tile order, so the faces and masks are the same as with one session. Each session gets half of
+  `onnxThreads` (2 each when it is 0, the default); with `onnxThreads = 1`, or when the runtime cannot create the second
+  session, detection runs on one session. Every run of both sessions has the existing time limit, and a run that times
+  out or fails in either session fails the call with the existing errors. `close()` releases both sessions.
+- A runtime session opened again after a timeout must report the same `modelInfo` as the first one; otherwise the call
+  fails with `ModelOutputInvalid` (`RUN_FAILED`). A cancellation requested while that session was being opened is
+  honoured before detection starts.
 
 ## [0.1.1] - 2026-11-23
 

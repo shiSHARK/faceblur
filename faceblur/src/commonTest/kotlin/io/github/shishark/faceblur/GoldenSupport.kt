@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
+@file:OptIn(ExperimentalAtomicApi::class)
+
 package io.github.shishark.faceblur
 
 import io.github.shishark.faceblur.detect.TensorRunner
 import io.github.shishark.faceblur.internal.model.Sha256
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.math.ln
 
 /**
@@ -81,7 +85,10 @@ internal object Golden {
  */
 internal class TensorFaceRunner(override val inputWidth: Int = 640, override val inputHeight: Int = 640) :
     TensorRunner {
-    val inputs: MutableList<String> = ArrayList()
+    private val recorded = RecordedInputs()
+
+    /** The digests of every input, in the order the runs started (two sessions can run it at the same time). */
+    val inputs: List<String> get() = recorded.list
 
     override fun initialize() = Unit
 
@@ -89,7 +96,7 @@ internal class TensorFaceRunner(override val inputWidth: Int = 640, override val
 
     override fun run(input: FloatArray): Map<String, FloatArray> {
         val hash = Golden.fnv(input)
-        inputs += hash
+        recorded.add(hash)
         val mix = hash.toULong(16).toLong().let { (it xor (it ushr 29)).toInt() }
         val m = HashMap<String, FloatArray>()
         for (s in intArrayOf(8, 16, 32)) {
@@ -110,5 +117,19 @@ internal class TensorFaceRunner(override val inputWidth: Int = 640, override val
         m.getValue("bbox_32")[cell * 4 + 2] = ln(2f)
         m.getValue("bbox_32")[cell * 4 + 3] = ln(2f)
         return m
+    }
+}
+
+/** A list of input digests that runs on two pass threads can append to at the same time. */
+internal class RecordedInputs {
+    private val values = AtomicReference<List<String>>(emptyList())
+
+    val list: List<String> get() = values.load()
+
+    fun add(value: String) {
+        while (true) {
+            val before = values.load()
+            if (values.compareAndSet(before, before + value)) return
+        }
     }
 }

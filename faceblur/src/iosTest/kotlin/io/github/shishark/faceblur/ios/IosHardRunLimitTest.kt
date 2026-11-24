@@ -238,7 +238,10 @@ class IosHardRunLimitTest {
 
             // The next call on the same masker (a new glue) writes the same file as a normal masker.
             masker.use { it.maskFile("$d/in.jpg", OutputTarget.NewFile("$d/next.jpg")) }
-            assertEquals(2, bridges.size, "a new glue was opened")
+            // A new glue replaces the stuck one; the tiles of the working image open the second glue (two passes at
+            // a time). Neither is the stuck glue.
+            assertEquals(3, bridges.size, "a new glue was opened, and the second one for the tiles")
+            assertEquals(2, bridges[0].runs, "the stuck glue never ran again")
             assertContentEquals(normal, IosFiles.read("$d/next.jpg"), "the same output as a normal run")
             IosFiles.removeDir("$d/next.jpg")
             assertEquals(listOf("in.jpg"), names(d))

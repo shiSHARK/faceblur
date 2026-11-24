@@ -5,12 +5,14 @@ package io.github.shishark.faceblur.ios
 
 import io.github.shishark.faceblur.FaceBox
 import io.github.shishark.faceblur.FaceMasker
+import io.github.shishark.faceblur.FaceMaskerConfig
 import io.github.shishark.faceblur.FileOptions
 import io.github.shishark.faceblur.Mask
 import io.github.shishark.faceblur.MaskPlan
 import io.github.shishark.faceblur.MetadataPolicy
 import io.github.shishark.faceblur.OneFaceRunner
 import io.github.shishark.faceblur.detect.TensorRunner
+import io.github.shishark.faceblur.detect.testYuNetModel
 import io.github.shishark.faceblur.filemode.CallContext
 import io.github.shishark.faceblur.filemode.FileSizing
 import io.github.shishark.faceblur.filemode.FileSource
@@ -85,7 +87,15 @@ class ModeAgreementIosTest {
     @AfterTest
     fun cleanUp() = FaceBlurRuntime.installImageCodec(null)
 
-    private fun masker(): FaceMasker = IosFiles.masker { InputFaceRunner(seen) }
+    /**
+     * One session ([FaceMaskerConfig.onnxThreads] 1): [seen] then lists every tensor in the order it was handed over.
+     * That two sessions give the result of one is tested on its own (`TwoSessionsTest`, `IosTwoSessionsTest`).
+     */
+    private fun masker(): FaceMasker = FaceMasker.forTest(
+        testYuNetModel(),
+        FaceMaskerConfig(onnxThreads = 1),
+        IosModelRuntime(FakeFactory { FakeBridge(InputFaceRunner(seen)) }),
+    )
 
     private class Run(
         val inputs: List<Int>,

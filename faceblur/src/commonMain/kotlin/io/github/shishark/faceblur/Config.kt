@@ -129,7 +129,11 @@ public class FaceMaskerConfig
 constructor(
     /** Mask appearance; default [MaskingConfig]. */
     public val masking: MaskingConfig = MaskingConfig(),
-    /** ONNX Runtime worker threads: 0 (automatic, the default) to 4. */
+    /**
+     * ONNX Runtime worker threads: 0 (automatic, the default) to 4. They are split over the masker's two runtime
+     * sessions (detection runs two passes at a time): 0 gives each session 2 threads; otherwise the first session
+     * gets half of [onnxThreads] rounded up and the second the rest, so 1 keeps a single session with one thread.
+     */
     public val onnxThreads: Int = 0,
 ) {
     init {

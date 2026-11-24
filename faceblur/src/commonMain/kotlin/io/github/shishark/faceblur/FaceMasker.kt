@@ -42,6 +42,12 @@ import kotlin.time.TimeSource
  * after [close] throw [FaceMaskException.Closed]. A Java caller passing `null` for the model gets Kotlin's
  * `NullPointerException` before any work.
  *
+ * Two detector passes at a time: the first detection with at least two tiles opens a second runtime session the same
+ * way, and every other tile runs on it while the next one is prepared; the faces are merged in tile order, so the
+ * result is that of one session. Each session gets half of [FaceMaskerConfig.onnxThreads] (2 each when it is 0);
+ * with one thread the instance keeps one session. If the runtime cannot create the second session, or reports it
+ * differently from [modelInfo], detection runs on one session with the same result.
+ *
  * In-memory mode: [detect] reads an image, [applyMasks] writes a (possibly user-edited) [MaskPlan], [maskInPlace]
  * does both. These calls never decode, encode or touch metadata; the app decides what it encodes afterwards.
  *
@@ -52,16 +58,18 @@ import kotlin.time.TimeSource
  * Detected faces get masks whose expansion is, per axis, the larger of the profile's minimum
  * ([DetectorProfile.minMaskExpandX]/`Y`) and [MaskingConfig.expandX]/`Y`; [Detection.masking] carries it.
  *
- * Every model run and every creation of a runtime session has a time limit. A run still going at its limit ends the
- * call at the limit with [FaceMaskException.ModelOutputInvalid] (`RUN_TIMEOUT`; at creation
+ * Every model run and every creation of a runtime session has a time limit, in both sessions. A run still going at its
+ * limit ends the call at the limit with [FaceMaskException.ModelOutputInvalid] (`RUN_TIMEOUT`; at creation
  * [FaceMaskException.ModelRejected] with `TIMEOUT`), also when the runtime never returns; nothing of that run is used
- * again, and the next call that detects opens a new runtime session first. A session creation still going at its
- * limit ends the same way (at creation `ModelRejected` with `TIMEOUT`, during a call `RUN_TIMEOUT`); a session it
- * returns later is closed and never used. Each such run or creation keeps a thread and its session's memory until it
- * returns, so their number is bounded process-wide: once the bound is reached, every masker in the process, also one
- * with a healthy model, fails at once (calls with `RUN_TIMEOUT`, creation with `ModelRejected` and `TIMEOUT`) until
- * one of them returns. So `TIMEOUT` and `RUN_TIMEOUT` also mean "creation took too long" and "refused at the bound",
- * not only "this model is too slow".
+ * again, and the next call that detects opens new runtime sessions first: a timeout in either session replaces both.
+ * Once a detection has given tiles to the second session, any other failure of it (not a cancellation) replaces both
+ * sessions the same way; a run failure before that (in the global pass, or with one session) keeps them, as before. A
+ * session creation still going at its limit ends the same way (at creation `ModelRejected` with `TIMEOUT`, during a
+ * call `RUN_TIMEOUT`); a session it returns later is closed and never used. Each such run or creation keeps a thread
+ * and its session's memory until it returns, so their number is bounded process-wide (the runs of both sessions
+ * count): once the bound is reached, every masker in the process, also one with a healthy model, fails at once (calls
+ * with `RUN_TIMEOUT`, creation with `ModelRejected` and `TIMEOUT`) until one of them returns. So `TIMEOUT` and
+ * `RUN_TIMEOUT` also mean "creation took too long" and "refused at the bound", not only "this model is too slow".
  *
  * @throws FaceMaskException.RuntimeUnavailable when no ONNX Runtime binding is installed for this platform or a
  * required session option cannot be set.
@@ -93,13 +101,28 @@ public class FaceMasker private constructor(
     private var current: Opened?
 
     /**
+     * The second checked session (two passes at a time), opened by the first detection with at least two tiles; null
+     * until then and after it was dropped. Read and written like [current].
+     */
+    private var second: Opened? = null
+
+    /**
+     * True when the second session could not be created for the session in [current]: detection runs on one session
+     * (the same result) until [current] is replaced.
+     */
+    private var secondUnavailable = false
+
+    /** True once this call's detection was given the second session (its failure then drops both sessions). */
+    private var secondInCall = false
+
+    /**
      * Report of this instance: the model report plus the runtime version read from the runtime, the execution provider
      * actually used and the FaceBlur version. FaceBlur never logs it.
      */
     public val modelInfo: MaskerModelInfo
 
     init {
-        val first = openSession(model, config, runtime, runLimits)
+        val first = openSession(model, leadThreads(config), runtime, runLimits)
         current = first
         modelInfo = first.checked.info
     }
@@ -260,7 +283,7 @@ public class FaceMasker private constructor(
      * parallel on phones is recommended (see the documentation). If the working area does not fit in the memory that
      * is available now, the call throws `NotEnoughMemory` and the image is untouched. If the call ends
      * with an error that is not a `FaceMaskException` (for example an `OutOfMemoryError` on Android), discard the
-     * image. The detector's own buffers come on top (one model input at a time).
+     * image. The detector's own buffers come on top (two model inputs at a time, and the second runtime session).
      *
      * Masking time depends on the image and the phone; slower phones take longer. Run masking off the main thread and
      * offer cancellation.
@@ -456,7 +479,7 @@ public class FaceMasker private constructor(
     )
 
     /**
-     * Releases the runtime session. Idempotent and never throws. If a call is running on another thread, that call
+     * Releases the runtime sessions. Idempotent and never throws. If a call is running on another thread, that call
      * completes and the session is released when it returns; later calls throw [FaceMaskException.Closed].
      */
     override fun close() {
@@ -479,12 +502,15 @@ public class FaceMasker private constructor(
      * again either way. Only the JVM's fatal errors pass (ADR 0002 decision 9); on iOS nothing escapes.
      */
     private fun closeRunner() {
-        val session = current?.session ?: return
+        val sessions = listOfNotNull(current?.session, second?.session)
         current = null
-        try {
-            session.close()
-        } catch (e: Throwable) {
-            if (isFatal(e)) throw e
+        second = null
+        for (session in sessions) {
+            try {
+                session.close()
+            } catch (e: Throwable) {
+                if (isFatal(e)) throw e
+            }
         }
     }
 
@@ -496,9 +522,11 @@ public class FaceMasker private constructor(
      */
     private fun detectorForCall(): ModelDetector {
         current?.let { return it.checked.detector }
+        // A replacement starts over: no second session of the old one is kept or reused.
+        dropSessions()
         val fresh =
             try {
-                openSession(model, config, runtime, runLimits)
+                openSession(model, leadThreads(config), runtime, runLimits)
             } catch (e: FaceMaskException.ModelRejected) {
                 val code = if (OpenedSession.TIMEOUT in
                     e.findings
@@ -511,17 +539,80 @@ public class FaceMasker private constructor(
             } catch (e: FaceMaskException) {
                 throw FaceMaskException.ModelOutputInvalid(listOf(ModelDetector.RUN_FAILED))
             }
+        if (fresh.checked.info != modelInfo) {
+            // The replacement is not the session this instance reported (another runtime or execution provider).
+            closeQuietly(fresh.session)
+            throw FaceMaskException.ModelOutputInvalid(listOf(ModelDetector.RUN_FAILED))
+        }
         current = fresh
+        secondUnavailable = false
         return fresh.checked.detector
     }
 
-    /** Drops a session retired by a run timeout (its own pass thread or its timeout already released it). */
-    private fun dropRetiredSession() {
-        val session = current?.session ?: return
-        if (session.retired) {
-            current = null
-            session.close()
+    /**
+     * The detector of the second session for this call's tiles, opened and checked on first use exactly like the
+     * first session (same limits, the other half of the threads). Null (one session, the same result) when the
+     * configuration has one thread or the runtime cannot create a second session or reports it differently from
+     * [modelInfo]; such a failure is not retried until the first session is replaced. A creation or contract run
+     * past its limit, or refused at the bound of stuck runs, fails the call with `RUN_TIMEOUT`, and a second session
+     * that fails its check fails it with `RUN_FAILED`: as for the first session, never by leaving a tile out.
+     */
+    private fun secondDetectorForCall(): ModelDetector? {
+        second?.let {
+            secondInCall = true
+            return it.checked.detector
         }
+        val threads = secondThreads(config)
+        if (threads == 0 || secondUnavailable) return null
+        val fresh =
+            try {
+                openSession(model, threads, runtime, runLimits)
+            } catch (e: FaceMaskException.ModelRejected) {
+                when {
+                    OpenedSession.TIMEOUT in e.findings ->
+                        throw FaceMaskException.ModelOutputInvalid(listOf(ModelDetector.RUN_TIMEOUT))
+
+                    e.findings == listOf(OpenedSession.RUNTIME_REJECTED) -> {
+                        secondUnavailable = true
+                        return null
+                    }
+
+                    else -> throw FaceMaskException.ModelOutputInvalid(listOf(ModelDetector.RUN_FAILED))
+                }
+            } catch (e: FaceMaskException.RuntimeUnavailable) {
+                secondUnavailable = true
+                return null
+            } catch (e: FaceMaskException) {
+                throw FaceMaskException.ModelOutputInvalid(listOf(ModelDetector.RUN_FAILED))
+            }
+        if (fresh.checked.info != modelInfo) {
+            closeQuietly(fresh.session)
+            secondUnavailable = true
+            return null
+        }
+        second = fresh
+        secondInCall = true
+        return fresh.checked.detector
+    }
+
+    /**
+     * Closes both sessions (a retired one only lets go of its wrapper: its pass thread or its timeout released it);
+     * the next call that detects opens new ones. Never throws, except the JVM's fatal errors.
+     */
+    private fun dropSessions() {
+        val sessions = listOfNotNull(current?.session, second?.session)
+        current = null
+        second = null
+        for (session in sessions) closeQuietly(session)
+    }
+
+    /**
+     * Drops the sessions after a run timeout: a retired session (its own pass thread or its timeout already released
+     * it) is never reused, and neither is the other session of the masker.
+     */
+    private fun dropRetiredSession() {
+        val retired = current?.session?.retired == true || second?.session?.retired == true
+        if (retired) dropSessions()
     }
 
     private fun detectNow(
@@ -533,8 +624,26 @@ public class FaceMasker private constructor(
         checkCancelled(cancellation)
         val mark = TimeSource.Monotonic.markNow()
         val detector = detectorForCall()
-        val tiler = TiledFaceDetector(detector, limits, checkCancelled = { checkCancelled(cancellation) })
-        val outcome = tiler.detect(PixelDetectionImage(image))
+        // Opening a replacement session can take a while: a cancellation requested meanwhile is honoured now.
+        checkCancelled(cancellation)
+        val tiler =
+            TiledFaceDetector(
+                detector,
+                limits,
+                checkCancelled = { checkCancelled(cancellation) },
+                secondEngine = { secondDetectorForCall() },
+            )
+        secondInCall = false
+        val outcome =
+            try {
+                tiler.detect(PixelDetectionImage(image))
+            } catch (e: Throwable) {
+                // Fail closed with two sessions: after a failure of either, nothing of either run is reused (sessions,
+                // outputs, buffers); the next call opens new ones. A cancellation lets the passes in flight end and
+                // keeps both.
+                if (secondInCall && e !is FaceMaskException.Cancelled) dropSessions()
+                throw e
+            }
         val faces = outcome.faces.map { it.toFaceBox() }
         val detectMs = mark.elapsedNow().toDouble(DurationUnit.MILLISECONDS)
         return Detection(
@@ -674,7 +783,7 @@ public class FaceMasker private constructor(
          */
         private fun openSession(
             model: DetectorModel,
-            config: FaceMaskerConfig,
+            threads: Int,
             runtime: ModelRuntime?,
             runLimits: RunLimits,
         ): Opened {
@@ -685,7 +794,7 @@ public class FaceMasker private constructor(
             val session =
                 try {
                     DeadlineSession.open(runLimits.openMillis, runLimits.threads) {
-                        factory.open(model, config.onnxThreads)
+                        factory.open(model, threads)
                     }
                 } catch (e: SessionTimeout) {
                     // The creation passed its limit (or too many runs are stuck in the runtime): abandoned, never used.
@@ -715,6 +824,26 @@ public class FaceMasker private constructor(
         }
 
         private fun checkSize(width: Int, height: Int) = MaskWrite.checkSize(width, height)
+
+        /** Runtime threads per session when [FaceMaskerConfig.onnxThreads] is 0 (automatic): two sessions of 2. */
+        private const val AUTOMATIC_SESSION_THREADS = 2
+
+        /** Runtime threads of the first session: automatic 2, otherwise half of the configured threads, rounded up. */
+        internal fun leadThreads(config: FaceMaskerConfig): Int =
+            if (config.onnxThreads == 0) AUTOMATIC_SESSION_THREADS else (config.onnxThreads + 1) / 2
+
+        /** Runtime threads of the second session: automatic 2, otherwise the other half; 0 = no second session. */
+        internal fun secondThreads(config: FaceMaskerConfig): Int =
+            if (config.onnxThreads == 0) AUTOMATIC_SESSION_THREADS else config.onnxThreads / 2
+
+        /** A close whose failure is not reported (the masker never throws from it), except the JVM's fatal errors. */
+        private fun closeQuietly(session: DeadlineSession) {
+            try {
+                session.close()
+            } catch (e: Throwable) {
+                if (isFatal(e)) throw e
+            }
+        }
 
         /** A checked session and its hard-limit wrapper (the same session). */
         private class Opened(val checked: OpenedSession, val session: DeadlineSession)

@@ -48,10 +48,31 @@ internal interface FaceDetectorEngine {
     fun detect(image: DetectionImage, minScore: Float, checkCancelled: () -> Unit = {}): List<DetectedFace>
 
     /**
+     * Starts the pass [detect] would make on [image] and returns it unfinished where the engine can run it while the
+     * caller prepares another engine's pass ([ModelDetector]); [image] is no longer read after this returns. This
+     * default runs [detect] at once. The caller ends the pass with exactly one of [PendingPass.finish] or
+     * [PendingPass.abandon] before it starts the next pass of this engine.
+     */
+    fun start(image: DetectionImage, minScore: Float, checkCancelled: () -> Unit = {}): PendingPass {
+        val found = detect(image, minScore, checkCancelled)
+        return object : PendingPass {
+            override fun finish(): List<DetectedFace> = found
+
+            override fun abandon() = Unit
+        }
+    }
+
+    /**
      * Starts a new photo: the engine's per-photo work counts (the in-pass NMS pair checks) start at 0, with the bound
      * [maxNmsWork]. The tiler calls it before the first pass of every photo.
      */
     fun beginPhoto(maxNmsWork: Long) {}
+
+    /**
+     * Starts a new photo as the second engine of [lead] (after [lead]'s [beginPhoto]): its per-photo work counts in
+     * [lead]'s where both engines share that count (two [ModelDetector]s), otherwise as [beginPhoto] ([maxNmsWork]).
+     */
+    fun joinPhoto(lead: FaceDetectorEngine, maxNmsWork: Long) = beginPhoto(maxNmsWork)
 
     /** Diagnostics: in-pass NMS pair checks since [beginPhoto] (0 for engines without an in-pass NMS). */
     val nmsWork: Long get() = 0L
@@ -62,6 +83,24 @@ internal interface FaceDetectorEngine {
         set(_) {}
 
     fun close()
+}
+
+/** A pass started with [FaceDetectorEngine.start]: ended with exactly one of [finish] or [abandon]. */
+internal interface PendingPass {
+    /** Waits for the pass and returns what [FaceDetectorEngine.detect] returns (or throws what it throws). */
+    fun finish(): List<DetectedFace>
+
+    /** Gives the pass up without reading anything of it (fail closed: a model session is retired, never run again). */
+    fun abandon()
+
+    companion object {
+        /** The pass of an empty image: no faces, nothing to wait for. */
+        val NONE: PendingPass = object : PendingPass {
+            override fun finish(): List<DetectedFace> = emptyList()
+
+            override fun abandon() = Unit
+        }
+    }
 }
 
 /**

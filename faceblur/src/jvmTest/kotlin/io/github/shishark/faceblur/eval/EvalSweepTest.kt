@@ -53,7 +53,11 @@ class EvalSweepTest {
             val results = sweep.run(img).map { it.getOrThrow() }
             val passes = results.first().timings.passes
             assertTrue(passes > 1, "the mosaic is tiled")
-            assertEquals(creationRuns + passes, sweep.modelRuns, "the model ran once per pass, not once per threshold")
+            assertEquals(
+                sweep.contractRuns + passes,
+                sweep.modelRuns,
+                "the model ran once per pass, not once per threshold (and once per session for its contract run)",
+            )
             val counts = ArrayList<Int>()
             for ((i, t) in sweep.thresholds.withIndex()) {
                 FaceMasker(TestModels.yunet(t)).use { brute ->
@@ -139,6 +143,8 @@ class EvalSweepTest {
         val b = FloatArray(640 * 640 * 3) { 2f }
         val shape = longArrayOf(1, 3, 640, 640)
         val names = session.outputs.map { it.name }
+        // The first run of a session is its contract run: passed through, never recorded or replayed.
+        session.run(b, shape, names, Long.MAX_VALUE, 0)
         replay.record()
         val recorded = session.run(a, shape, names, Long.MAX_VALUE, 0)
         replay.stop()
@@ -151,7 +157,8 @@ class EvalSweepTest {
         assertFailsWith<IllegalStateException> { replay.finishReplay(allUsed = true) }
         replay.replay()
         replay.finishReplay(allUsed = false)
-        assertEquals(1, replay.modelRuns)
+        assertEquals(2, replay.modelRuns)
+        assertEquals(1, replay.contractRuns)
         session.close()
         replay.close()
         assertFailsWith<IllegalArgumentException> {

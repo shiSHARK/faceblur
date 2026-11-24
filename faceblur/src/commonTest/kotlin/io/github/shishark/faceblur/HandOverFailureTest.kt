@@ -82,33 +82,57 @@ class HandOverFailureTest {
     }
 
     @Test
-    fun aStartThatFailsRetiresTheSessionWithoutCountingARun() {
+    fun aStartThatFailsRetiresTheSessionWithoutCountingARunAndClosesItAtOnce() {
         val inner = stuck(blockFrom = NEVER)
         val session = DeadlineSession(inner, threads)
         threads.start = FaultyThreads.Start.FAIL
         assertFailsWith<StartFailed> { session.pass() }
         assertTrue(session.retired, "a failed start retires the session")
-        assertEquals(0, AbandonedRuns.count(), "a pass that may never run is not counted")
+        assertEquals(0, AbandonedRuns.count(), "a pass that never began is not counted")
+        assertEquals(1, inner.closes, "its task never began: the session is closed at once, not left in memory")
         assertFailsWith<SessionTimeout> { session.pass() }
         assertEquals(0, inner.runs, "the session never ran")
+        session.close()
+        assertEquals(1, inner.closes, "close of the retired session touches nothing")
     }
 
     @Test
-    fun aStartThatFailsAfterTheHandOverNeverRunsTheSessionAndItsTaskClosesIt() {
+    fun aStartThatFailsAfterTheHandOverClosesTheSessionAtOnceAndItsLateTaskNeverTouchesIt() {
         val inner = stuck(blockFrom = NEVER)
         val session = DeadlineSession(inner, threads)
         threads.start = FaultyThreads.Start.FAIL_AFTER_HAND_OVER
         assertFailsWith<StartFailed> { session.pass() }
         assertTrue(session.retired)
-        assertEquals(0, AbandonedRuns.count())
+        assertEquals(0, AbandonedRuns.count(), "a pass whose task has not begun is not counted")
+        assertEquals(1, inner.closes, "its task has not begun: the session is closed at once")
         session.close()
-        assertEquals(0, inner.closes, "the handed-over task owns the session")
+        assertEquals(1, inner.closes)
 
         threads.releaseHandedOver()
-        assertTrue(inner.awaitClosed(10_000L), "the task of the failed start closes the session")
+        assertTrue(threads.awaitHandedOverTask(10_000L), "the handed-over task has run")
         assertEquals(0, inner.runs, "the task of an abandoned start never runs the session")
-        assertEquals(1, inner.closes)
+        assertEquals(1, inner.closes, "nor closes it again")
         assertEquals(0, AbandonedRuns.count(), "nothing was given back that was not counted")
+    }
+
+    @Test
+    fun aStartThatFailsAfterItsTaskBeganCountsTheRunUntilItReturnsAndTheRunClosesTheSession() {
+        val inner = stuck(blockFrom = 1)
+        val session = DeadlineSession(inner, threads)
+        threads.start = FaultyThreads.Start.FAIL_AFTER_TASK_BEGAN
+        threads.beforeFail = { awaitBlocked(inner) }
+        assertFailsWith<StartFailed> { session.pass() }
+        assertTrue(session.retired)
+        assertEquals(1, AbandonedRuns.count(), "the run inside the runtime is counted (exact on a late failure)")
+        assertEquals(0, inner.closes, "the session is left to its pass thread while its run is going")
+        session.close()
+        assertEquals(0, inner.closes)
+
+        release.open()
+        assertTrue(inner.awaitClosed(10_000L), "the pass thread closes the session when its run returns")
+        assertNoAbandonedRunsLeft()
+        assertEquals(1, inner.runs)
+        assertEquals(1, inner.closes)
     }
 
     @Test
@@ -171,7 +195,7 @@ class HandOverFailureTest {
         threads.start = FaultyThreads.Start.FAIL_AFTER_HAND_OVER
         assertFailsWith<StartFailed> { DeadlineSession.open(5_000L, threads) { rt.open(model, 1) } }
         threads.releaseHandedOver()
-        pause(200L)
+        assertTrue(threads.awaitHandedOverTask(10_000L), "the handed-over task has run")
         assertEquals(0, rt.opens, "the task of an abandoned start never creates a session")
         assertEquals(0, AbandonedRuns.count())
     }

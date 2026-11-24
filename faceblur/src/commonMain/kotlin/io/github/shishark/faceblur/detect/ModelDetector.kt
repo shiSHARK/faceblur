@@ -14,9 +14,11 @@ import io.github.shishark.faceblur.geometry.DetectedFace
 import io.github.shishark.faceblur.geometry.RectF
 import io.github.shishark.faceblur.internal.model.ModelLoader
 import io.github.shishark.faceblur.internal.model.YuNetShapes
+import io.github.shishark.faceblur.internal.runtime.DeadlineSession
 import io.github.shishark.faceblur.internal.runtime.ModelSession
 import io.github.shishark.faceblur.internal.runtime.PassOutput
 import io.github.shishark.faceblur.internal.runtime.SessionTimeout
+import io.github.shishark.faceblur.internal.runtime.StartedRun
 import io.github.shishark.faceblur.isFatal
 import kotlin.math.exp
 import kotlin.math.floor
@@ -82,19 +84,44 @@ internal class ModelDetector(
     var inPassNmsRuns: Int = 0
         private set
 
-    /** The in-pass NMS work of the current photo and its bound (reset by [beginPhoto]). */
-    private val nmsBudget = NmsWork(Limits.MAX_NMS_PAIR_CHECKS_PER_PHOTO)
+    /** This detector's own in-pass NMS work of the current photo and its bound (reset by [beginPhoto]). */
+    private val ownBudget = NmsWork(Limits.MAX_NMS_PAIR_CHECKS_PER_PHOTO)
+
+    /** The budget the passes of the current photo count in: [ownBudget], or the lead's after [joinPhoto]. */
+    private var nmsBudget = ownBudget
 
     override fun beginPhoto(maxNmsWork: Long) {
-        nmsBudget.reset(maxNmsWork)
+        nmsBudget = ownBudget
+        ownBudget.reset(maxNmsWork)
+    }
+
+    /**
+     * Counts the in-pass NMS work of the current photo in [lead]'s budget (started by its [beginPhoto]), so the
+     * per-photo bound covers the passes of both detectors in the order they are decoded. Not with an engine of another
+     * type (fakes): then this detector starts its own budget with the bound of [maxNmsWork].
+     */
+    override fun joinPhoto(lead: FaceDetectorEngine, maxNmsWork: Long) {
+        if (lead is ModelDetector) {
+            nmsBudget = lead.ownBudget
+        } else {
+            beginPhoto(maxNmsWork)
+        }
     }
 
     override val nmsWork: Long get() = nmsBudget.used
 
-    override fun detect(image: DetectionImage, minScore: Float, checkCancelled: () -> Unit): List<DetectedFace> {
+    override fun detect(image: DetectionImage, minScore: Float, checkCancelled: () -> Unit): List<DetectedFace> =
+        start(image, minScore, checkCancelled).finish()
+
+    /**
+     * The first half of [detect] on the caller's thread: the pixels and the tensor of [image], then the run is handed
+     * to the session ([DeadlineSession.start]; a session of another type runs it here). [image] is no longer read
+     * after this returns. The pass's own input array goes back to this detector only when the pass ends normally.
+     */
+    override fun start(image: DetectionImage, minScore: Float, checkCancelled: () -> Unit): PendingPass {
         val iw = image.width
         val ih = image.height
-        if (iw <= 0 || ih <= 0) return emptyList()
+        if (iw <= 0 || ih <= 0) return PendingPass.NONE
         var src = image
         try {
             val argb =
@@ -110,14 +137,39 @@ internal class ModelDetector(
             }
             val input = takeInput(inputWidth * inputHeight * 3)
             timed(stageClock, "model.tensor") { fillTensor(argb, src.width, src.height, input) }
-            val outputs = timed(stageClock, "model.inference") { runPass(input) }
-            spareInput = input
-            val inputBoxes = timed(stageClock, "model.decode") { decode(outputs, minScore, checkCancelled) }
+            val run = timed(stageClock, "model.inference") { startPass(input) }
             val sx = iw.toFloat() / src.width
             val sy = ih.toFloat() / src.height
-            return inputBoxes.map { it.mapped(0f, 0f, sx, sy) }
+            return Pending(run, input, sx, sy, minScore, checkCancelled)
         } finally {
             if (src !== image) src.release()
+        }
+    }
+
+    /** A pass of this detector whose run was handed to the session. */
+    private inner class Pending(
+        private val run: StartedRun,
+        private val input: FloatArray,
+        private val sx: Float,
+        private val sy: Float,
+        private val minScore: Float,
+        private val checkCancelled: () -> Unit,
+    ) : PendingPass {
+        private var ended = false
+
+        override fun finish(): List<DetectedFace> {
+            check(!ended) { "the pass has ended already" }
+            ended = true
+            val outputs = timed(stageClock, "model.inference") { awaitPass(run) }
+            spareInput = input
+            val inputBoxes = timed(stageClock, "model.decode") { decode(outputs, minScore, checkCancelled) }
+            return inputBoxes.map { it.mapped(0f, 0f, sx, sy) }
+        }
+
+        override fun abandon() {
+            if (ended) return
+            ended = true
+            run.abandon()
         }
     }
 
@@ -144,8 +196,31 @@ internal class ModelDetector(
 
     override fun close() = session.close()
 
-    private fun runPass(input: FloatArray): Map<String, PassOutput> = try {
-        session.run(input, inputShape, outputNames, Limits.MAX_ELEMENTS, timeoutMillis)
+    private fun runPass(input: FloatArray): Map<String, PassOutput> = awaitPass(startPass(input))
+
+    /**
+     * Hands the run of [input] to the session: a [DeadlineSession] starts it on a pass thread and returns at once;
+     * any other session (unit tests) runs it now. Failures as [awaitPass].
+     */
+    private fun startPass(input: FloatArray): StartedRun = runChecked {
+        val s = session
+        if (s is DeadlineSession) {
+            s.start(input, inputShape, outputNames, Limits.MAX_ELEMENTS, timeoutMillis)
+        } else {
+            val outputs = s.run(input, inputShape, outputNames, Limits.MAX_ELEMENTS, timeoutMillis)
+            object : StartedRun {
+                override fun await(): Map<String, PassOutput> = outputs
+
+                override fun abandon() = Unit
+            }
+        }
+    }
+
+    /** The outputs of a started run: a timeout is `RUN_TIMEOUT`, any other runtime failure `RUN_FAILED`. */
+    private fun awaitPass(run: StartedRun): Map<String, PassOutput> = runChecked { run.await() }
+
+    private inline fun <T> runChecked(block: () -> T): T = try {
+        block()
     } catch (e: SessionTimeout) {
         throw OutputCheckFailed(listOf(RUN_TIMEOUT))
     } catch (e: Throwable) {

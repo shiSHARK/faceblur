@@ -32,6 +32,12 @@ internal class FaultyThreads : PassThreads {
          * [StartFailed] (a failure after the hand-over).
          */
         FAIL_AFTER_HAND_OVER,
+
+        /**
+         * The task runs on a pass thread at once, and [start] throws [StartFailed] after [beforeFail] returned (for
+         * example: once the task is inside the runtime): a failure after the task began.
+         */
+        FAIL_AFTER_TASK_BEGAN,
     }
 
     enum class Wait {
@@ -63,8 +69,17 @@ internal class FaultyThreads : PassThreads {
     /** Runs before the next [Wait.THROW], [Wait.MISS] or [Wait.WAKE] wait acts (for example: until the run blocks). */
     var beforeWait: () -> Unit = {}
 
+    /** Runs before a [Start.FAIL_AFTER_TASK_BEGAN] start throws. */
+    var beforeFail: () -> Unit = {}
+
+    /** Signalled each time the task of a [Start.FAIL_AFTER_HAND_OVER] start has returned. */
+    private val handedOverDone = base.newSignal()
+
     /** Lets the tasks of [Start.FAIL_AFTER_HAND_OVER] starts go on. */
     fun releaseHandedOver() = handOver.open()
+
+    /** True when the task of a [Start.FAIL_AFTER_HAND_OVER] start has returned within [millis]. */
+    fun awaitHandedOverTask(millis: Long): Boolean = handedOverDone.await(millis)
 
     override fun start(task: () -> Unit) {
         val mode = start
@@ -79,8 +94,20 @@ internal class FaultyThreads : PassThreads {
             Start.FAIL_AFTER_HAND_OVER -> {
                 base.start {
                     handOver.await()
-                    task()
+                    try {
+                        task()
+                    } finally {
+                        handedOverDone.signal()
+                    }
                 }
+                throw StartFailed()
+            }
+
+            Start.FAIL_AFTER_TASK_BEGAN -> {
+                base.start(task)
+                val before = beforeFail
+                beforeFail = {}
+                before()
                 throw StartFailed()
             }
         }

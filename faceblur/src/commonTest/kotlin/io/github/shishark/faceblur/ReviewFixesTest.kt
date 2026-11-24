@@ -234,7 +234,10 @@ class ReviewFixesTest {
         MaskingConfig(expandX = 3f, expandY = 3f, feather = 0f)
     }
 
-    /** ST-008 AC5 and the AC1 timings: 200 sequential calls on one instance, then close; passes = 1 + tiles. */
+    /**
+     * ST-008 AC5 and the AC1 timings: 200 sequential calls on one instance, then close; passes = 1 + tiles. The first
+     * call with at least two tiles opens the second session (two passes at a time); close releases both.
+     */
     @Test
     fun twoHundredCallsReuseOneSessionAndPassesCountTheTiles() {
         val runner = OneFaceRunner()
@@ -249,9 +252,13 @@ class ReviewFixesTest {
         assertEquals(1, created)
         assertEquals(201, runner.runs, "one contract run at creation, then one pass per call")
         assertEquals(5, m.detect(IntArrayPixels(1000, 800)).timings.passes, "1 global pass + 4 tiles of 640 px")
+        assertEquals(2, created, "the tiles opened the second session")
+        assertEquals(5, m.detect(IntArrayPixels(1000, 800)).timings.passes)
+        assertEquals(2, created, "both sessions are reused")
+        assertEquals(0, runner.closed)
         m.close()
         assertFailsWith<FaceMaskException.Closed> { m.detect(IntArrayPixels(64, 48)) }
-        assertEquals(1, runner.closed)
+        assertEquals(2, runner.closed, "close released both sessions")
     }
 
     /** Mask.toString carries no coordinates. */
