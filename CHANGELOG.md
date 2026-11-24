@@ -6,7 +6,10 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The project follows
 [Semantic Versioning](https://semver.org/); the API is not stable before 1.0, and breaking changes are listed here.
 
-## [Unreleased]
+## [0.1.2] - 2026-11-24
+
+Patch release; the public API is unchanged. One version number covers the Maven artifact
+`io.github.shishark:faceblur`, the `FaceBlurCore` XCFramework and the `faceblur-swift` Swift package.
 
 ### Changed
 
@@ -29,6 +32,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   same size in the plan's order), so a small mask, for example a part mask or a neighbouring face, no longer draws its
   soft edge or fill over the inside of a bigger one. Every pixel inside every mask stays opaque; only pixels that two
   masks reach can change. `MaskPlan.masks` and `MaskResult.masks` keep the plan's order.
+- iOS: the thread contract of `OnnxBridgeFactory` is documented: `create` runs on a library thread, not on the app's
+  thread; calls on one glue never overlap; a masker now uses two glues that may run at the same time;
+  `OnnxBridge.close` runs on the masker's calling thread, on a library thread when the session cannot be opened, or,
+  for a session given up while one of its passes is running (after a timeout, or a failure in the other session), on the
+  library thread of that pass once it returns. A glue that assumed the main thread or one fixed thread must be checked.
 
 ### Fixed
 
