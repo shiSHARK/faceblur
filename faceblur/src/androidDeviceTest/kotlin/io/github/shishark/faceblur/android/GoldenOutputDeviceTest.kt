@@ -29,6 +29,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.security.MessageDigest
+import java.util.Collections
 import kotlin.test.assertEquals
 
 /**
@@ -47,7 +48,8 @@ import kotlin.test.assertEquals
  * the JVM's, while the exact box values (and so the masked pixels) differ: the model's arithmetic differs between
  * ONNX Runtime with XNNPACK on the phone and the JVM's CPU runtime. Digests only, nothing of a picture is logged.
  * Where masks overlap the values are those of the smallest-first draw order; pictures without overlapping masks kept
- * their earlier values.
+ * their earlier values. The tensor digests of a picture are taken in pass order (global pass, then the tiles in tile
+ * order), whichever of the two sessions of the defaults ran a pass and whatever order they started their runs in.
  */
 @RunWith(AndroidJUnit4::class)
 class GoldenOutputDeviceTest : TimeLimitedDeviceTest() {
@@ -56,9 +58,16 @@ class GoldenOutputDeviceTest : TimeLimitedDeviceTest() {
         DeviceFixtures.yunetProfile(),
     )
 
-    /** A session that records the FNV-1a digest of every input tensor and passes the run on unchanged. */
-    private class RecordingSession(private val inner: ModelSession, private val seen: MutableList<String>) :
-        ModelSession by inner {
+    /**
+     * A session that records the FNV-1a digest of every pass input it runs, in the order it ran them, and passes the
+     * run on unchanged. Its first run is the contract run at opening (mid-grey, no pass of a picture): not recorded.
+     */
+    private class RecordingSession(private val inner: ModelSession) : ModelSession by inner {
+        val passes: MutableList<String> = Collections.synchronizedList(ArrayList())
+
+        @Volatile
+        private var contractRunDone = false
+
         override fun run(
             input: FloatArray,
             inputShape: LongArray,
@@ -66,9 +75,20 @@ class GoldenOutputDeviceTest : TimeLimitedDeviceTest() {
             maxElements: Long,
             timeoutMillis: Long,
         ): Map<String, PassOutput> {
-            seen += fnv(input)
+            if (contractRunDone) passes += fnv(input) else contractRunDone = true
             return inner.run(input, inputShape, outputNames, maxElements, timeoutMillis)
         }
+    }
+
+    /**
+     * The pass inputs of one picture in pass order: the global pass first, then the tiles in tile order. With two
+     * sessions (the defaults) the global pass and every even tile run on the first, every odd tile on the second, each
+     * session in pass order; the two sessions start their runs in no fixed order, so run order is not pass order.
+     */
+    private fun passOrder(first: List<String>, second: List<String>): List<String> {
+        if (second.isEmpty()) return first
+        val tiles = first.size - 1 + second.size
+        return listOf(first[0]) + (0 until tiles).map { k -> if (k % 2 == 0) first[1 + k / 2] else second[k / 2] }
     }
 
     private fun verify(actual: Map<String, String>, expected: Map<String, String>) {
@@ -114,8 +134,10 @@ class GoldenOutputDeviceTest : TimeLimitedDeviceTest() {
             val compositeFile = File(dir, "composite.png")
             compositeFile.outputStream().use { check(composite(bytes).compress(Bitmap.CompressFormat.PNG, 100, it)) }
             val model = model()
-            val inputs = ArrayList<String>()
-            val runtime = ModelRuntime { m, threads -> RecordingSession(AndroidModelRuntime.open(m, threads), inputs) }
+            val sessions = ArrayList<RecordingSession>()
+            val runtime = ModelRuntime { m, threads ->
+                RecordingSession(AndroidModelRuntime.open(m, threads)).also { sessions += it }
+            }
             val actual = LinkedHashMap<String, String>()
             for (style in MaskStyle.entries) {
                 val config = FaceMaskerConfig(MaskingConfig(style = style))
@@ -133,16 +155,22 @@ class GoldenOutputDeviceTest : TimeLimitedDeviceTest() {
                     if (first) actual["$COMPOSITE maskFile boxes"] = boxes(result.faces)
                     actual["maskFile $COMPOSITE $style"] = sha256(output.readBytes())
                 }
+                sessions.clear()
                 FaceMasker.forTest(model, config, runtime).use { masker ->
                     val images = names.indices.map { i -> names[i] to { decoded(bytes[i]) } } +
                         (COMPOSITE to { composite(bytes) })
                     val masked = images.map { (name, image) ->
                         val bitmap = image()
-                        val start = inputs.size
+                        val lead = sessions.first()
+                        val leadStart = lead.passes.size
+                        val secondStart = sessions.getOrNull(1)?.passes?.size ?: 0
                         val result = masker.maskInPlace(bitmap)
                         if (first) {
                             actual["$name boxes"] = boxes(result.faces)
-                            val passes = inputs.subList(start, inputs.size).joinToString(",")
+                            val passes = passOrder(
+                                lead.passes.drop(leadStart),
+                                sessions.getOrNull(1)?.passes?.drop(secondStart).orEmpty(),
+                            ).joinToString(",")
                             actual["$name inputs"] = combined(listOf(passes))
                         }
                         "$name ${fnv(pixels(bitmap))}"
