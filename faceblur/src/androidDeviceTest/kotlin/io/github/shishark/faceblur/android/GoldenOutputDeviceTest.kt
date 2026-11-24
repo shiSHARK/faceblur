@@ -46,6 +46,8 @@ import kotlin.test.assertEquals
  * recording the synthetic pixels and every model input equalled the common and JVM values; the face counts equalled
  * the JVM's, while the exact box values (and so the masked pixels) differ: the model's arithmetic differs between
  * ONNX Runtime with XNNPACK on the phone and the JVM's CPU runtime. Digests only, nothing of a picture is logged.
+ * Where masks overlap the values are those of the smallest-first draw order; pictures without overlapping masks kept
+ * their earlier values.
  */
 @RunWith(AndroidJUnit4::class)
 class GoldenOutputDeviceTest : TimeLimitedDeviceTest() {
@@ -192,12 +194,12 @@ class GoldenOutputDeviceTest : TimeLimitedDeviceTest() {
         val EXPECTED_SYNTHETIC: Map<String, String> = mapOf(
             "applyMasks synthetic GRADIENT_OVAL" to "f09321b725b41c5c",
             "planMasker maskFile synthetic GRADIENT_OVAL" to
-                "09f2ddd13bb1bebb98d488da07019ee451075f9d7e993b07d28e9eba467f9708",
+                "4f4dd930400da7a2f14a21c638e133f6326e110cd3f774ecb03a1b454d88404b",
             "applyMasks synthetic SMOOTH_FILL" to "accca04284c4ff11",
             "planMasker maskFile synthetic SMOOTH_FILL" to
-                "52c8bf1fbb30ffc1a1c0c677cf89ebe56d64eed36ff087aa3705915966e90405",
+                "07cdf000249cb09750745a0bc8047db3eba0adc650860e71b2f6482456692b11",
             "applyMasks synthetic SOLID" to "4b9c46f9275ed22a",
-            "planMasker maskFile synthetic SOLID" to "b773a42e59bc5ec76092917afb9216d516b6d16db5caac21bbbe8fdb2523a75c",
+            "planMasker maskFile synthetic SOLID" to "5e2439d6c56f44c5aa9c3b1ce2d5334e55b24fdec7f2ea86e9a27caa43ce66f9",
         )
 
         val EXPECTED_FIXTURES: Map<String, String> = mapOf(
@@ -245,11 +247,11 @@ class GoldenOutputDeviceTest : TimeLimitedDeviceTest() {
                 "5 e5b486ca1157c035d9d1fe247c64262a1101c94634315de33e0879ca692e4743",
             "pd/pd-p07-s100-x01616-y01074.png maskJpeg boxes" to
                 "2 8e057f3cfb3c23bf563f5b66a7a0649778a3f3950fb099993551e7fe7e70ae13",
-            "maskJpeg GRADIENT_OVAL" to "150a920ed02860849e75cc9d0d3f14a7b80adf62479827dcffa67e02a4a8e885",
+            "maskJpeg GRADIENT_OVAL" to "a6ac186dab9afe54b1c53c1c9ff801b725889196aa5b3280a9a34512c0ea5757",
             "composite 1920x1280 maskFile boxes" to
                 "39 0fcc357838e3235742750fa12d4bd7fdeddb1e7969b8c19908ee9309bc4e9047",
             "maskFile composite 1920x1280 GRADIENT_OVAL" to
-                "e05e08dd0135c7018ab7abec402bc7488622630d88ac9a9cf3d74e1d4023fbdc",
+                "a536d0ba1f650b1188efd0a80c10fe585d226ae53c2fe8c1e095adf3c23a1111",
             "pd/pd-p01-s025-x00938-y00610.png boxes" to
                 "11 fbcc17f57f352ba883dc8ab380a2b27169996c10137ebb13889a74b8371e8b1e",
             "pd/pd-p01-s025-x00938-y00610.png inputs" to
@@ -340,14 +342,14 @@ class GoldenOutputDeviceTest : TimeLimitedDeviceTest() {
                 "8974f2f05dd23bbaa2a5a8c9bf2c9ab750e3bf439ce45f133ebac9e1fc9b3c27",
             "composite 1920x1280 boxes" to "39 0fcc357838e3235742750fa12d4bd7fdeddb1e7969b8c19908ee9309bc4e9047",
             "composite 1920x1280 inputs" to "a63b08691aa52de7d6d43b817588e9d001cd8763dde7705e976f1d9ae63a9de7",
-            "masked GRADIENT_OVAL" to "3a6d260673f6241ac774cdaf94a6e0f36d97b6b3207c6cee9893fa489a9e97ae",
-            "maskJpeg SMOOTH_FILL" to "10018a27f82a519288de0751cabfc3232316d866cce20cc118bd75d56a6f6881",
+            "masked GRADIENT_OVAL" to "b7995529b79ef0c45424cd4d8813166073a7b8a267d77b6ef993891335a2b2a3",
+            "maskJpeg SMOOTH_FILL" to "50b60aca54e44bf63d30de2faaea782f85680bfe65c38b9fe7cd62fdaa8234ef",
             "maskFile composite 1920x1280 SMOOTH_FILL" to
-                "e8bbfca4abcdeb314a3b71e27773913ce1af57921deb982ac6fb21475716ec64",
-            "masked SMOOTH_FILL" to "244621eddb4099d68ae2fad66809896e47252ebbe714c1c7098d51abe2590a2d",
-            "maskJpeg SOLID" to "1e941c55ec0a4e9551e7669e6d88991d34aad6e64de09a181f6fc3cc5cf2c70b",
-            "maskFile composite 1920x1280 SOLID" to "244163515a1e903c64b21cf353a1a2749baa7895a19b187b1243f1c4fa07de4d",
-            "masked SOLID" to "05d82628c9c4ffa49f29208c6f6236092acc094c138d150f33e6d78984e78c77",
+                "9ecdca52993b8afd75ff06dc39679719de98c324c23ccec245484a6ca8ae179a",
+            "masked SMOOTH_FILL" to "9d388be8e133debe18383ca16f3ebdd1505b4d20ff107029ce4cfb8bbd0bad9f",
+            "maskJpeg SOLID" to "f263cc1b0a7432100d6d95488f6fa84f7410c15415fa26f84cfdbdc43dfc52e5",
+            "maskFile composite 1920x1280 SOLID" to "7b0e0d4deb27fb69ef9434eb6ce090c661b75e7090825018c93e2514f8bb5bd6",
+            "masked SOLID" to "8298f151226c11e19af084255f93f2d24576081976e498d9d520402ddc1b2b66",
         )
 
         fun plan(): MaskPlan = MaskPlan(
