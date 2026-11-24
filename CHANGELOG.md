@@ -25,6 +25,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   honoured before detection starts.
 - Masking is faster, especially for large masks: each row of a mask is filled as one span, and only the pixels of the
   soft edge are computed one by one. The masked pixels are unchanged.
+- Where masks overlap, the bigger mask is now drawn on top: the masks of a plan are drawn smallest first (masks of the
+  same size in the plan's order), so a small mask, for example a part mask or a neighbouring face, no longer draws its
+  soft edge or fill over the inside of a bigger one. Every pixel inside every mask stays opaque; only pixels that two
+  masks reach can change. `MaskPlan.masks` and `MaskResult.masks` keep the plan's order.
 
 ### Fixed
 

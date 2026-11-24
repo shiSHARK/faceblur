@@ -261,7 +261,10 @@ public class MaskPlan private constructor(
         }
     }
 
-    /** The masks, in the order they are written. */
+    /**
+     * The masks, in the order given. Where masks overlap, the bigger mask (by the area of its opaque mask) is drawn
+     * over the smaller one, whatever their order here; masks of the same size are drawn in this order.
+     */
     public val masks: List<Mask> = masks.toList()
 
     /**

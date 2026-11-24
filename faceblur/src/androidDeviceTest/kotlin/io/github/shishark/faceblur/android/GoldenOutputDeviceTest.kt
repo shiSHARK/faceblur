@@ -190,13 +190,13 @@ class GoldenOutputDeviceTest : TimeLimitedDeviceTest() {
         )
 
         val EXPECTED_SYNTHETIC: Map<String, String> = mapOf(
-            "applyMasks synthetic GRADIENT_OVAL" to "962233205ec3d9ff",
+            "applyMasks synthetic GRADIENT_OVAL" to "f09321b725b41c5c",
             "planMasker maskFile synthetic GRADIENT_OVAL" to
                 "09f2ddd13bb1bebb98d488da07019ee451075f9d7e993b07d28e9eba467f9708",
-            "applyMasks synthetic SMOOTH_FILL" to "8e670f9ad7cc518c",
+            "applyMasks synthetic SMOOTH_FILL" to "accca04284c4ff11",
             "planMasker maskFile synthetic SMOOTH_FILL" to
                 "52c8bf1fbb30ffc1a1c0c677cf89ebe56d64eed36ff087aa3705915966e90405",
-            "applyMasks synthetic SOLID" to "85089264dfa22c5d",
+            "applyMasks synthetic SOLID" to "4b9c46f9275ed22a",
             "planMasker maskFile synthetic SOLID" to "b773a42e59bc5ec76092917afb9216d516b6d16db5caac21bbbe8fdb2523a75c",
         )
 

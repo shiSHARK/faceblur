@@ -119,13 +119,13 @@ class GoldenOutputAndroidTest {
         val EXPECTED: Map<String, String> = mapOf(
             "maskJpeg GRADIENT_OVAL" to "cfbc7426e935b464848fdde873c6270c7ae222447c8590ac19f1311b717ffd15",
             "maskInPlace GRADIENT_OVAL" to "4cac2da3de2dce2dd479f07dde528d5f9392d34f8107884a8d760ddd7a624c31",
-            "applyMasks synthetic GRADIENT_OVAL" to "962233205ec3d9ff",
+            "applyMasks synthetic GRADIENT_OVAL" to "f09321b725b41c5c",
             "maskJpeg SMOOTH_FILL" to "2f561bbdb074f2489ae7173761bf457965ca4cd67d7e441b4b14d6d3f3731c66",
             "maskInPlace SMOOTH_FILL" to "ef491d31de4ca881d2306abc5c50b15f9c4c4042fe6b5fce71f340b79467ee18",
-            "applyMasks synthetic SMOOTH_FILL" to "8e670f9ad7cc518c",
+            "applyMasks synthetic SMOOTH_FILL" to "accca04284c4ff11",
             "maskJpeg SOLID" to "6a242b37e6f05ab83b7c8e59113b0a13cc1e3545539926881402b175b237a89d",
             "maskInPlace SOLID" to "0ecfe75278b4a334bb201eddb974571c89140f1c8907f75f6d8bbe73a8b6445a",
-            "applyMasks synthetic SOLID" to "85089264dfa22c5d",
+            "applyMasks synthetic SOLID" to "4b9c46f9275ed22a",
         )
     }
 }

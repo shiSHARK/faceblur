@@ -229,19 +229,19 @@ class DetectionInputGoldenTest {
     private companion object {
         /** The values of the Android device and host tests (GoldenOutputDeviceTest, GoldenOutputAndroidTest). */
         val EXPECTED_DEVICE_PICTURE: Map<String, String> = mapOf(
-            "applyMasks synthetic GRADIENT_OVAL" to "962233205ec3d9ff",
-            "applyMasks synthetic SMOOTH_FILL" to "8e670f9ad7cc518c",
-            "applyMasks synthetic SOLID" to "85089264dfa22c5d",
+            "applyMasks synthetic GRADIENT_OVAL" to "f09321b725b41c5c",
+            "applyMasks synthetic SMOOTH_FILL" to "accca04284c4ff11",
+            "applyMasks synthetic SOLID" to "4b9c46f9275ed22a",
         )
 
         val EXPECTED_YUNET: Map<String, String> = mapOf(
-            "yunet 517x389 GRADIENT_OVAL" to "d044c141294cc8fb8f7bae14922535f99c82b8fa1960d29b42e4abd326a48eb8",
+            "yunet 517x389 GRADIENT_OVAL" to "9ed92d572a38614eced6ac817b7f1515a1ae2d51d0896f2e7dd81ed192d16fbb",
             "yunet 100x90 GRADIENT_OVAL" to "0eaa0ff2023b22f68c1e52ae7a3ee88da5058c090daa893a5c47ea0c6a8dee66",
             "yunet 160x128 GRADIENT_OVAL" to "a9d508a9ee9913478edab58eea65d1c6c0117edeed1d22eb2aa2c994396e81db",
-            "yunet 517x389 SMOOTH_FILL" to "5abd35f26d9fbaaacb26ff3efec65ff2647f41a4e63b44875fe99d0d832ece32",
+            "yunet 517x389 SMOOTH_FILL" to "4c7ba8d5444610bb83e85cc845f23e5c8cc34daa718f18d15da64f02eb1963e1",
             "yunet 100x90 SMOOTH_FILL" to "e61f72a64d0d26938cc853f95956eb56153c4aaf720de893c87518c5ce38ae3a",
             "yunet 160x128 SMOOTH_FILL" to "6b32989b4ba620e7821884c4cad2aa888fbb1c797d49854c6e06aa937e78681b",
-            "yunet 517x389 SOLID" to "0d924f1dff5192bdbbc3fc2616c953023e4f4d5b3c654a5e3faa66efca3cbe65",
+            "yunet 517x389 SOLID" to "093921952bcb37fe69cfa45ef01d7f2dc5844543326bf9a8dd0de4515dbc613e",
             "yunet 100x90 SOLID" to "fa49ab106242dd2faa893aa515b1f59652715179e206dec54b2697c089bb9d06",
             "yunet 160x128 SOLID" to "c1cf18658559311e3fbbb7b97145d6843b6629d5adc6ac63ee5efe4541e8a646",
             "yunet contract run" to "b7819adc5b9ce325",

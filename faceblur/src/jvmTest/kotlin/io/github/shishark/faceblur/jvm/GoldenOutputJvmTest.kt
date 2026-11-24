@@ -184,9 +184,9 @@ class GoldenOutputJvmTest {
                 "8974f2f05dd23bbaa2a5a8c9bf2c9ab750e3bf439ce45f133ebac9e1fc9b3c27",
             "composite 1920x1280 boxes" to "39 53e4fc3d762594bcc073b9f427b5e87815b6228bf447820711925d2a37d8018b",
             "composite 1920x1280 inputs" to "a63b08691aa52de7d6d43b817588e9d001cd8763dde7705e976f1d9ae63a9de7",
-            "masked GRADIENT_OVAL" to "7a601bbeebaabc0bb604fee49c1f9288f4507b7b19a9744714169b895e0143b0",
-            "masked SMOOTH_FILL" to "2c34211a789f587b763815d7d804b89878d941f0ab0d8026e7b05a4e5cabd5f9",
-            "masked SOLID" to "b33392fb081b292d18a678c4b64850f16735614e3a499a59ae463922ed8e3020",
+            "masked GRADIENT_OVAL" to "0da02f12dd47c427bb474385bcb51f70d62bdee3afcf8911fe49797e7e8d75ef",
+            "masked SMOOTH_FILL" to "cee2d2c307562a877d679be62692fea3503c10c84b1bac06b81d1cee0503665a",
+            "masked SOLID" to "631950837b4175a7760b2d08772ce5fdad1164e48e7ce7905025b6c32a119df4",
         )
     }
 }

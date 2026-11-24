@@ -235,8 +235,9 @@ public class MaskResult internal constructor(
     /** Faces detected by this call (`maskInPlace`); empty when a given plan was applied (`applyMasks`). */
     public val faces: List<FaceBox>,
     /**
-     * The masks that were written, in order. After detection (`maskInPlace`) these are the face masks and the part
-     * masks of merged faces, so there can be more masks than [faces] (see [Detection.toMaskPlan]).
+     * The masks that were written, in the plan's order (where masks overlap, the bigger one is drawn on top: see
+     * [MaskPlan.masks]). After detection (`maskInPlace`) these are the face masks and the part masks of merged faces,
+     * so there can be more masks than [faces] (see [Detection.toMaskPlan]).
      */
     public val masks: List<Mask>,
     /** Time per step. */
@@ -307,7 +308,8 @@ public class FileResult internal constructor(
     public val faces: List<FaceBox> = faces.readOnly()
 
     /**
-     * The masks that were written, in order, in pixels of the working image (see [MaskResult.masks]); read-only.
+     * The masks that were written, in the plan's order, in pixels of the working image (see [MaskResult.masks]);
+     * read-only.
      */
     public val masks: List<Mask> = masks.readOnly()
 

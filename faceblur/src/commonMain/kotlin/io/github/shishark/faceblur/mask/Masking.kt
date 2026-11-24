@@ -7,6 +7,7 @@ import io.github.shishark.faceblur.MaskShape
 import io.github.shishark.faceblur.MaskStyle
 import io.github.shishark.faceblur.MutablePixelImage
 import io.github.shishark.faceblur.geometry.DetectedFace
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.sqrt
@@ -137,8 +138,10 @@ internal data class MaskGeometry(val cx: Float, val cy: Float, val rx: Float, va
  *   opacity never increases with r; beyond the soft edge nothing is changed.
  * * SOLID, GRADIENT_OVAL and SMOOTH_FILL never use the colour of a pixel that lies inside ANY face's mask (not only
  *   their own), so neither the face itself nor a neighbouring face leaks into the fill.
- * * Every fill is computed from the ORIGINAL pixels (nothing is written before the final copy), and the fills are
- *   composited in list order, so overlapping faces do not feed each other's fills.
+ * * Every fill is computed from the ORIGINAL pixels (nothing is written before the final copy), so overlapping faces
+ *   do not feed each other's fills.
+ * * The masks are composited smallest first ([drawOrder]): where masks overlap, the bigger mask is on top. Only pixels
+ *   that two masks reach (inside or soft edge) depend on the order.
  */
 internal object MaskPainter {
     /**
@@ -172,9 +175,9 @@ internal object MaskPainter {
     }
 
     /**
-     * Apply [config] to explicit masks (e.g. masks drawn or edited by the user). [MaskSettings.shape] is ignored.
-     * [checkCancelled] is called during the computation (it throws to stop, before anything is written). Synthetic on
-     * the JVM and Android ([HiddenFromJava]), as it takes the [StageSeams].
+     * Apply [config] to explicit masks (e.g. masks drawn or edited by the user), composited in [drawOrder].
+     * [MaskSettings.shape] is ignored. [checkCancelled] is called during the computation (it throws to stop, before
+     * anything is written). Synthetic on the JVM and Android ([HiddenFromJava]), as it takes the [StageSeams].
      */
     @HiddenFromJava
     fun applyMasks(
@@ -184,6 +187,29 @@ internal object MaskPainter {
         checkCancelled: () -> Unit = {},
         seams: StageSeams = StageSeams(),
     ) {
-        MaskEngine.apply(image, masks, config, checkCancelled, seams)
+        MaskEngine.apply(image, drawOrder(masks), config, checkCancelled, seams)
     }
+
+    /**
+     * The order in which [masks] are composited: smallest first, so that where masks overlap the bigger mask is drawn
+     * over the smaller one (a small mask never draws its soft edge or fill over a bigger mask's inside). The size is
+     * the area of the opaque mask as drawn ([drawnArea]). Masks of the same size keep their order (stable sort). Every
+     * mask's inside stays opaque in any order, and every fill is computed from the original pixels, so the order only
+     * decides pixels that two masks reach.
+     */
+    fun drawOrder(masks: List<MaskGeometry>): List<MaskGeometry> =
+        if (masks.size < 2) masks else masks.sortedWith(byDrawnArea)
+
+    /**
+     * The area in square pixels of [g]'s opaque mask as the stage draws it (radii below [PreparedMask.MIN_RADIUS]
+     * raised to it): π·rx·ry for an ellipse, 4·rx·ry for a rectangle. NaN for a mask the stage rejects.
+     */
+    fun drawnArea(g: MaskGeometry): Double {
+        val rx = max(g.rx, PreparedMask.MIN_RADIUS).toDouble()
+        val ry = max(g.ry, PreparedMask.MIN_RADIUS).toDouble()
+        return if (g.shape == MaskShape.ELLIPSE) PI * rx * ry else 4.0 * rx * ry
+    }
+
+    /** Ascending [drawnArea] (a total order: NaN last); no boxing. */
+    private val byDrawnArea = Comparator<MaskGeometry> { a, b -> drawnArea(a).compareTo(drawnArea(b)) }
 }
