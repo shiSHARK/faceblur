@@ -19,6 +19,12 @@ import kotlin.test.assertEquals
  * the detection input and the mask stage were reworked for speed. The fake model's face comes from a hash of every
  * input tensor ([TensorFaceRunner]), so a changed detector input changes the output too. Fixtures of the local gate
  * are not part of the golden set.
+ *
+ * The expected values belong to the iOS 27.2 simulator runtime: its ImageIO encoder produced the JPEG bytes. A newer
+ * runtime or Xcode may encode differently and fail this test without any change in the library. In that case do not
+ * re-record on the changed code alone: first prove that the output is otherwise unchanged (the pixel goldens and the
+ * detection-input golden pass), then re-record on the commit that introduced the new runtime, never in the same
+ * commit as a change of masking or detection code.
  */
 class GoldenOutputIosTest {
     @AfterTest
